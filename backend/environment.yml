@@ -1,0 +1,17 @@
+name: apaatlas
+channels:
+  - conda-forge
+  - bioconda
+  - defaults
+dependencies:
+  - python=3.11
+  - pip
+  - pip:
+    - fastapi
+    - uvicorn[standard]
+    - sqlalchemy
+    - pydantic
+    - pydantic-settings
+    - python-multipart
+    - pandas
+prefix: /opt/homebrew/Cellar/mamba/1.5.10_2/arm64/opt/mamba
