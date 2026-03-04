@@ -55,7 +55,12 @@
           <v-col cols="12" md="4">
             <h4 class="text-h6 mb-2">Contact</h4>
             <p class="text-body-2 text-grey-darken-1">
-              For questions or feedback, please contact the database administrators.
+              For questions or feedback, please contact:
+            </p>
+            <p class="text-body-2">
+              <a href="mailto:tf.chan@cuhk.edu.hk" class="text-primary text-decoration-none">
+                tf.chan@cuhk.edu.hk
+              </a>
             </p>
           </v-col>
         </v-row>
