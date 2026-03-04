@@ -66,7 +66,7 @@
             :cx="site.x"
             :cy="centerY - markerHeight - 5"
             r="4"
-            :fill="getApaSiteColor(site)"
+            :fill="APA_SITE_COLOR"
           />
           <text
             :x="site.x"
@@ -75,7 +75,7 @@
             font-size="10"
             fill="#E94560"
           >
-            {{ site.type || 'APA' }}
+            APA
           </text>
         </g>
         
@@ -205,26 +205,11 @@ const scaledExons = computed(() => {
 const scaledApaSites = computed(() => {
   return props.apaSites.map(site => {
     const x = (site.site_position - minPosition.value) * scale.value
-    return {
-      x,
-      type: site.apa_type?.replace('-APA', '') || '',
-      apa_type: site.apa_type
-    }
+    return { x }
   })
 })
 
-const getApaSiteColor = (site) => {
-  switch (site.apa_type) {
-    case '3UTR-APA':
-      return '#E94560'
-    case 'Intronic-APA':
-      return '#FF6B6B'
-    case 'Exonic-APA':
-      return '#F97316'
-    default:
-      return '#E94560'
-  }
-}
+const APA_SITE_COLOR = '#E94560'
 
 const formatPosition = (pos) => {
   if (pos >= 1000000) {

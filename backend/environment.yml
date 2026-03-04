@@ -14,4 +14,3 @@ dependencies:
     - pydantic-settings
     - python-multipart
     - pandas
-prefix: /opt/homebrew/Cellar/mamba/1.5.10_2/arm64/opt/mamba

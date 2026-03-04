@@ -50,20 +50,6 @@
             <path d="M10,0 L10,10 L0,5 z" fill="#666" />
           </marker>
           
-          <!-- APA arrow markers (colored) -->
-          <marker
-            v-for="color in apaColors"
-            :key="`apa-arrow-${color}`"
-            :id="`apa-arrow-${color.replace('#', '')}`"
-            markerWidth="8"
-            markerHeight="10"
-            refX="4"
-            refY="5"
-            orient="auto-start-reverse"
-          >
-            <path d="M0,0 L0,10 L8,5 z" :fill="color" />
-          </marker>
-
           <!-- Clip path for track content area -->
           <clipPath id="track-clip">
             <rect
@@ -150,8 +136,8 @@ const labelWidth = 138
 // Dynamic width: fill container
 const containerWidth = ref(1100)
 
-// APA color palette
-const apaColors = ['#E94560', '#FF6B6B', '#F97316', '#14919B']
+// APA color (single fixed color)
+const APA_COLOR = '#14919B'
 
 // Computed layout
 const trackOffsets = computed(() => {
@@ -514,7 +500,7 @@ const renderSampleTracks = () => {
       if (!sampleData || sampleData.site_abundance === 0) return
 
       const x = xScale.value(site.site_position)
-      const color = getApaTypeColor(site.apa_type)
+      const color = '#14919B'
       const abundance = sampleData.site_abundance
       const lineHeight = Math.max(2, abundance * maxMarkerHeight)  // Min 2px visible
 
@@ -544,7 +530,6 @@ const renderSampleTracks = () => {
           { label: 'Sample', value: sample },
           { label: 'Abundance', value: abundance.toFixed(2) },
           { label: 'Count', value: sampleData.site_count.toLocaleString() },
-          { label: 'APA Type', value: site.apa_type || 'Unknown' },
           { label: 'PAS Motif', value: site.pas_motif || 'N/A' },
           { label: 'PAS Position', value: site.pas_position ? `${site.pas_position}bp` : 'N/A' },
           { label: 'PAS Type', value: site.pas_type || 'N/A' }
@@ -558,16 +543,6 @@ const renderSampleTracks = () => {
       })
     })
   })
-}
-
-// Color scheme for APA types
-const getApaTypeColor = (apaType) => {
-  switch (apaType) {
-    case '3UTR-APA': return '#E94560'
-    case 'Intronic-APA': return '#FF6B6B'
-    case 'Exonic-APA': return '#F97316'
-    default: return '#14919B'
-  }
 }
 
 // Tooltip helpers

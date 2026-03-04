@@ -7,6 +7,7 @@ import os
 import json
 import csv
 import io
+import re
 from app.models.database import get_db, Gene, Transcript, APASite, Species, Sample
 from app.schemas.schemas import (
     SearchResult, DashboardStats, LocusDetail, 
@@ -14,6 +15,42 @@ from app.schemas.schemas import (
 )
 
 router = APIRouter()
+
+# ---------------------------------------------------------------------------
+# GTF index cache: loaded lazily per GTF path, kept in memory for fast lookup
+# ---------------------------------------------------------------------------
+_GTF_INDEX_CACHE: dict = {}  # gtf_path -> {transcript_id: [(offset, length), ...]}
+_GTF_ATTR_RE = re.compile(r'transcript_id "([^"]+)"')
+
+
+def _load_gtf_index(gtf_path: str) -> dict:
+    """Load (or return cached) byte-offset index for a GTF file."""
+    if gtf_path in _GTF_INDEX_CACHE:
+        return _GTF_INDEX_CACHE[gtf_path]
+
+    idx_path = gtf_path + '.tidx'
+    if not os.path.exists(idx_path):
+        # Index not built yet – return empty so caller falls back gracefully
+        return {}
+
+    with open(idx_path, 'r') as f:
+        idx = json.load(f)
+    _GTF_INDEX_CACHE[gtf_path] = idx
+    return idx
+
+
+def _fetch_transcript_lines(gtf_path: str, transcript_id: str) -> list:
+    """Return decoded GTF lines for a transcript using the byte-offset index."""
+    idx = _load_gtf_index(gtf_path)
+    spans = idx.get(transcript_id)
+    if not spans:
+        return []
+    lines = []
+    with open(gtf_path, 'rb') as f:
+        for offset, length in spans:
+            f.seek(offset)
+            lines.append(f.read(length).decode('utf-8', errors='replace'))
+    return lines
 
 DATA_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(__file__)))), "data")
 
@@ -233,6 +270,13 @@ def autocomplete(
 
 
 import json
+import sys
+import os as _os
+
+# Make backend root importable so we can use build_fasta_index helpers
+_BACKEND_ROOT = _os.path.dirname(_os.path.dirname(_os.path.dirname(_os.path.dirname(__file__))))
+if _BACKEND_ROOT not in sys.path:
+    sys.path.insert(0, _BACKEND_ROOT)
 
 @router.get("/transcript/{transcript_id}/structure")
 def get_transcript_structure(transcript_id: str, db: Session = Depends(get_db)):
@@ -262,21 +306,12 @@ def get_transcript_structure(transcript_id: str, db: Session = Depends(get_db)):
     if not gtf_path:
         raise HTTPException(status_code=404, detail="GTF file not available for this species")
     
-    # Parse transcript structure using fast grep + parse
-    import subprocess
+    # Parse transcript structure using byte-offset index for O(1) lookup
     try:
-        # Use grep to extract only lines for this transcript (much faster than parsing 3GB file)
-        grep_result = subprocess.run(
-            ['grep', transcript_id, gtf_path],
-            capture_output=True,
-            text=True,
-            timeout=10
-        )
+        gtf_lines = _fetch_transcript_lines(gtf_path, transcript_id)
+        if not gtf_lines:
+            raise HTTPException(status_code=404, detail="Transcript not found in GTF index")
         
-        if grep_result.returncode != 0:
-            raise HTTPException(status_code=404, detail="Transcript not found in GTF")
-        
-        # Parse the filtered lines
         exons = []
         cds = []
         chrom = None
@@ -284,7 +319,7 @@ def get_transcript_structure(transcript_id: str, db: Session = Depends(get_db)):
         gene_name_val = None
         gene_id_val = None
         
-        for line in grep_result.stdout.strip().split('\n'):
+        for line in gtf_lines:
             if not line:
                 continue
             fields = line.split('\t')
@@ -295,7 +330,7 @@ def get_transcript_structure(transcript_id: str, db: Session = Depends(get_db)):
             start = int(fields[3])
             end = int(fields[4])
             
-            if not chrom:
+            if chrom is None:
                 chrom = fields[0]
                 strand = fields[6]
                 # Parse attributes for gene info
@@ -319,21 +354,16 @@ def get_transcript_structure(transcript_id: str, db: Session = Depends(get_db)):
         # Calculate UTRs (exon regions not in CDS)
         utrs = []
         for ex_start, ex_end in exons:
-            # Check if this exon has any CDS overlap
             cds_in_exon = [(max(ex_start, c_start), min(ex_end, c_end)) 
                            for c_start, c_end in cds 
                            if c_start < ex_end and c_end > ex_start]
             
             if not cds_in_exon:
-                # Entire exon is UTR
                 utrs.append((ex_start, ex_end))
             else:
-                # Partial UTR regions
                 cds_in_exon.sort()
-                # 5' UTR part
                 if ex_start < cds_in_exon[0][0]:
                     utrs.append((ex_start, cds_in_exon[0][0] - 1))
-                # 3' UTR part
                 if ex_end > cds_in_exon[-1][1]:
                     utrs.append((cds_in_exon[-1][1] + 1, ex_end))
         
@@ -347,8 +377,8 @@ def get_transcript_structure(transcript_id: str, db: Session = Depends(get_db)):
             'utrs': utrs
         }
         
-    except subprocess.TimeoutExpired:
-        raise HTTPException(status_code=504, detail="GTF parsing timed out")
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to parse GTF: {str(e)}")
     
@@ -400,6 +430,13 @@ def get_locus_detail(transcript_id: str, db: Session = Depends(get_db)):
             site_count=int(asite.site_count),
             site_abundance=float(asite.site_abundance),
             sample_data=asite.sample_data,
+            pas_motif=asite.pas_motif,
+            pas_position=asite.pas_position,
+            pas_type=asite.pas_type,
+            pas_confidence=asite.pas_confidence,
+            apa_type=asite.apa_type,
+            apa_region=asite.apa_region,
+            apa_confidence=asite.apa_confidence,
             id=int(asite.id),
             transcript=transcript,
             species=species,
@@ -696,3 +733,399 @@ def download_transcripts(
         media_type=media_type,
         headers={'Content-Disposition': f'attachment; filename={filename}'}
     )
+
+
+# ---------------------------------------------------------------------------
+# FASTA index cache
+# ---------------------------------------------------------------------------
+_FASTA_INDEX_CACHE: dict = {}   # fasta_path -> dict of chrom entries
+
+
+def _load_fasta_index(fasta_path: str) -> dict:
+    if fasta_path in _FASTA_INDEX_CACHE:
+        return _FASTA_INDEX_CACHE[fasta_path]
+    idx_path = fasta_path + '.fidx'
+    if not os.path.exists(idx_path):
+        return {}
+    with open(idx_path) as fh:
+        idx = json.load(fh)
+    _FASTA_INDEX_CACHE[fasta_path] = idx
+    return idx
+
+
+def _fetch_fasta_seq(fasta_path: str, chrom: str, start: int, end: int) -> str:
+    """Return sequence [start, end) (0-based half-open) for chrom. Returns '' on failure."""
+    idx = _load_fasta_index(fasta_path)
+    # Accept both 'chr1' and '1' style chroms
+    entry = idx.get(chrom) or idx.get(chrom.lstrip('chr')) or idx.get('chr' + chrom)
+    if not entry:
+        return ''
+    offset     = entry['offset']
+    line_len   = entry['line_len']
+    line_bytes = entry['line_bytes']
+
+    if start < 0:
+        start = 0
+    if end <= start:
+        return ''
+
+    lines_before_start = start // line_len
+    byte_start = offset + lines_before_start * line_bytes + (start % line_len)
+
+    lines_before_end = (end - 1) // line_len
+    byte_end = offset + lines_before_end * line_bytes + ((end - 1) % line_len) + 1
+
+    with open(fasta_path, 'rb') as fh:
+        fh.seek(byte_start)
+        raw = fh.read(byte_end - byte_start)
+
+    seq = raw.replace(b'\n', b'').replace(b'\r', b'').decode('ascii', errors='replace').upper()
+    return seq[:end - start]
+
+
+def _rev_comp(seq: str) -> str:
+    comp = str.maketrans('ACGTNacgtn', 'TGCANtgcan')
+    return seq.translate(comp)[::-1]
+
+
+def _derive_cds_end(transcript_id: str, strand: str, gtf_path: str):
+    """Return genomic CDS end position (int) or None."""
+    gtf_lines = _fetch_transcript_lines(gtf_path, transcript_id)
+    cds_positions = []
+    for line in gtf_lines:
+        if not line:
+            continue
+        fields = line.split('\t')
+        if len(fields) < 9 or fields[2] != 'CDS':
+            continue
+        cds_positions += [int(fields[3]), int(fields[4])]
+    if not cds_positions:
+        return None
+    return min(cds_positions) if strand == '-' else max(cds_positions)
+
+
+def _utr_genomic_coords(site_pos: int, cds_end_pos, strand: str):
+    """Return (genomic_start, genomic_end) of the UTR region (1-based inclusive)."""
+    if cds_end_pos is None:
+        if strand == '-':
+            return site_pos, site_pos + 500
+        else:
+            return max(1, site_pos - 500), site_pos
+    return min(site_pos, cds_end_pos), max(site_pos, cds_end_pos)
+
+
+@router.get("/transcript/{transcript_id}/utr-sequence/{site_id}")
+def get_utr_sequence(transcript_id: str, site_id: str, db: Session = Depends(get_db)):
+    """
+    Return the 3' UTR sequence from the CDS end to the APA cleavage site as FASTA.
+    """
+    transcript = db.query(Transcript).filter(Transcript.transcript_id == transcript_id).first()
+    if not transcript:
+        raise HTTPException(status_code=404, detail="Transcript not found")
+
+    gene = db.query(Gene).filter(Gene.id == transcript.gene_id).first()
+    if not gene:
+        raise HTTPException(status_code=404, detail="Gene not found")
+
+    apa_site = db.query(APASite).filter(
+        APASite.transcript_id == transcript.id,
+        APASite.site_id == site_id
+    ).first()
+    if not apa_site:
+        raise HTTPException(status_code=404, detail="APA site not found")
+
+    species_obj = db.query(Species).filter(Species.id == apa_site.species_id).first()
+    if not species_obj:
+        raise HTTPException(status_code=404, detail="Species not found")
+
+    fasta_path = get_species_ref_path(str(species_obj.name), 'fasta')
+    if not fasta_path:
+        raise HTTPException(status_code=404, detail="FASTA file not available for this species")
+
+    strand = str(gene.strand)
+    chrom  = str(gene.chromosome)
+
+    gtf_path = get_species_ref_path(str(species_obj.name), 'gtf')
+    cds_end_pos = _derive_cds_end(transcript_id, strand, gtf_path) if gtf_path else None
+
+    site_pos = int(apa_site.site_position)
+    g_start, g_end = _utr_genomic_coords(site_pos, cds_end_pos, strand)
+
+    seq = _fetch_fasta_seq(fasta_path, chrom, g_start - 1, g_end)
+    if not seq:
+        raise HTTPException(status_code=500, detail="Could not retrieve sequence from genome FASTA")
+
+    if strand == '-':
+        seq = _rev_comp(seq)
+
+    utr_len = len(seq)
+    header = (
+        f">{site_id} | {transcript_id} | "
+        f"chr{chrom}:{g_start}-{g_end}({strand}) | "
+        f"3UTR_length={utr_len}nt"
+    )
+    wrapped = '\n'.join(seq[i:i+60] for i in range(0, len(seq), 60))
+    fasta_text = header + '\n' + wrapped + '\n'
+
+    filename = f"{site_id}_3utr.fa"
+    return PlainTextResponse(
+        content=fasta_text,
+        media_type='text/plain',
+        headers={'Content-Disposition': f'attachment; filename="{filename}"'}
+    )
+
+
+@router.get("/transcript/{transcript_id}/utr-composition")
+def get_utr_composition(transcript_id: str, db: Session = Depends(get_db)):
+    """
+    Return sequence composition metrics for each APA site's 3'UTR region.
+    """
+    ARE_CORE = 'ATTTA'
+
+    transcript = db.query(Transcript).filter(Transcript.transcript_id == transcript_id).first()
+    if not transcript:
+        raise HTTPException(status_code=404, detail="Transcript not found")
+
+    gene = db.query(Gene).filter(Gene.id == transcript.gene_id).first()
+    if not gene:
+        raise HTTPException(status_code=404, detail="Gene not found")
+
+    apa_sites = db.query(APASite).filter(APASite.transcript_id == transcript.id).all()
+    if not apa_sites:
+        return []
+
+    apa_site_0 = apa_sites[0]
+    species_obj = db.query(Species).filter(Species.id == apa_site_0.species_id).first()
+    fasta_path = get_species_ref_path(str(species_obj.name), 'fasta') if species_obj else None
+
+    strand = str(gene.strand)
+    chrom  = str(gene.chromosome)
+
+    gtf_path = get_species_ref_path(str(species_obj.name), 'gtf') if species_obj else None
+    cds_end_pos = _derive_cds_end(transcript_id, strand, gtf_path) if gtf_path else None
+
+    DINUCS = ['AA','AC','AG','AT','CA','CC','CG','CT',
+              'GA','GC','GG','GT','TA','TC','TG','TT']
+
+    result = []
+    for site in apa_sites:
+        site_pos = int(site.site_position)
+        g_start, g_end = _utr_genomic_coords(site_pos, cds_end_pos, strand)
+
+        seq = ''
+        if fasta_path:
+            seq = _fetch_fasta_seq(fasta_path, chrom, g_start - 1, g_end)
+            if seq and strand == '-':
+                seq = _rev_comp(seq)
+
+        utr_len = len(seq)
+        if utr_len == 0:
+            result.append({
+                'site_id': site.site_id,
+                'site_position': site_pos,
+                'utr_length': 0,
+                'gc_pct': None,
+                'au_pct': None,
+                'are_density': None,
+                'are_count': None,
+                'dinuc_counts': {},
+                'sequence_available': False,
+            })
+            continue
+
+        gc = seq.count('G') + seq.count('C')
+        gc_pct = round(gc / utr_len * 100, 1)
+
+        au = seq.count('A') + seq.count('T')
+        au_pct = round(au / utr_len * 100, 1)
+
+        are_count = sum(1 for i in range(len(seq) - 4) if seq[i:i+5] == ARE_CORE)
+        are_density = round(are_count / utr_len * 100, 2)
+
+        total_di = utr_len - 1 if utr_len > 1 else 1
+        dinuc_counts = {
+            dn: round(sum(1 for i in range(utr_len - 1) if seq[i:i+2] == dn) / total_di * 100, 1)
+            for dn in DINUCS
+        }
+
+        result.append({
+            'site_id': site.site_id,
+            'site_position': site_pos,
+            'utr_length': utr_len,
+            'gc_pct': gc_pct,
+            'au_pct': au_pct,
+            'are_density': are_density,
+            'are_count': are_count,
+            'dinuc_counts': dinuc_counts,
+            'sequence_available': True,
+        })
+
+    return result
+
+
+# ---------------------------------------------------------------------------
+# RBP binding motif scanner
+# ---------------------------------------------------------------------------
+
+# Curated RBP motif table.
+# Each entry: name, consensus regex (DNA/RNA-style T=U), colour for the UI,
+# and a brief function blurb shown in the tooltip.
+# Sources: Ray et al. 2013 (Nature), Gerstberger et al. 2014 (Nat Rev MCB),
+#          RBPDB, ATtRACT database.
+_RBP_MOTIFS = [
+    {
+        "rbp":      "HuR (ELAVL1)",
+        "motif":    r"AUUUA|UUUUU|UUAUUU",           # ARED/ARE pentamers
+        "dna":      r"ATTTA|TTTTT|TTATTTT",
+        "color":    "#E53935",
+        "function": "Stabilises mRNA by competing with TTP for AU-rich elements; elevated in many cancers",
+        "category": "Stability",
+    },
+    {
+        "rbp":      "TTP (ZFP36)",
+        "motif":    r"UAUUUAU|AUUUAU",
+        "dna":      r"TATTTTAT|TATTTAT",
+        "color":    "#FB8C00",
+        "function": "Promotes mRNA decay via ARE binding; tumour suppressor in several contexts",
+        "category": "Decay",
+    },
+    {
+        "rbp":      "PUM1/2 (Pumilio)",
+        "motif":    r"UGUAAAUA",
+        "dna":      r"TGTAAATA",
+        "color":    "#8E24AA",
+        "function": "Translational repressor; binds Pumilio Response Element (PRE) in 3′ UTR",
+        "category": "Translation",
+    },
+    {
+        "rbp":      "CPEB1",
+        "motif":    r"UUUUAU|UUUUUAU",
+        "dna":      r"TTTTAT|TTTTTAT",
+        "color":    "#1E88E5",
+        "function": "Cytoplasmic polyadenylation; regulates poly-A tail length and translation activation",
+        "category": "Polyadenylation",
+    },
+    {
+        "rbp":      "miR-7 seed",
+        "motif":    r"UCUUCC",           # reverse complement of miR-7-5p seed UGGAAGA
+        "dna":      r"TCTTCC",
+        "color":    "#00897B",
+        "function": "miR-7 target seed (positions 2–7 of miR-7-5p); silences via RISC in many tumour types",
+        "category": "miRNA",
+    },
+    {
+        "rbp":      "miR-155 seed",
+        "motif":    r"UAAUGCU",
+        "dna":      r"TAATGCT",
+        "color":    "#43A047",
+        "function": "miR-155 target seed; oncomiR upregulated in lymphomas and breast cancer",
+        "category": "miRNA",
+    },
+    {
+        "rbp":      "hnRNPC",
+        "motif":    r"UUUUU",
+        "dna":      r"TTTTT",
+        "color":    "#F4511E",
+        "function": "Binds poly-U tracts; competes with U2AF2 at poly-pyrimidine tracts; affects splicing & stability",
+        "category": "Stability",
+    },
+    {
+        "rbp":      "YTHDF2 (m6A reader)",
+        "motif":    r"GGACU|GGACT",
+        "dna":      r"GGACT",
+        "color":    "#6D4C41",
+        "function": "Recognises m6A-modified GGAC motifs; recruits CCR4-NOT deadenylase complex for decay",
+        "category": "Decay",
+    },
+    {
+        "rbp":      "FMR1 (FMRP)",
+        "motif":    r"ACUK",             # approximate; K = G/T
+        "dna":      r"ACT[GT]",
+        "color":    "#546E7A",
+        "function": "Translational silencer; loss-of-function causes Fragile X syndrome",
+        "category": "Translation",
+    },
+    {
+        "rbp":      "PABPC1",
+        "motif":    r"AAAAAAA",
+        "dna":      r"AAAAAAA",
+        "color":    "#00ACC1",
+        "function": "Poly-A binding protein; protects poly-A tail from deadenylases, stimulates translation",
+        "category": "Stability",
+    },
+]
+
+# Pre-compile DNA-space patterns (we scan DNA sequences from the FASTA)
+for _m in _RBP_MOTIFS:
+    _m["_compiled"] = re.compile(_m["dna"], re.IGNORECASE)
+
+
+@router.get("/transcript/{transcript_id}/rbp-motifs")
+def get_rbp_motifs(transcript_id: str, db: Session = Depends(get_db)):
+    """
+    Scan each APA site's 3′ UTR sequence for known RBP binding motifs.
+    Returns per-site hit counts and per-RBP match positions.
+    """
+    transcript = db.query(Transcript).filter(Transcript.transcript_id == transcript_id).first()
+    if not transcript:
+        raise HTTPException(status_code=404, detail="Transcript not found")
+
+    gene = db.query(Gene).filter(Gene.id == transcript.gene_id).first()
+    if not gene:
+        raise HTTPException(status_code=404, detail="Gene not found")
+
+    apa_sites = db.query(APASite).filter(APASite.transcript_id == transcript.id).all()
+    if not apa_sites:
+        return []
+
+    apa_site_0 = apa_sites[0]
+    species_obj = db.query(Species).filter(Species.id == apa_site_0.species_id).first()
+    fasta_path = get_species_ref_path(str(species_obj.name), 'fasta') if species_obj else None
+    gtf_path   = get_species_ref_path(str(species_obj.name), 'gtf')   if species_obj else None
+
+    strand = str(gene.strand)
+    chrom  = str(gene.chromosome)
+    cds_end_pos = _derive_cds_end(transcript_id, strand, gtf_path) if gtf_path else None
+
+    result = []
+    for site in apa_sites:
+        site_pos = int(site.site_position)
+        g_start, g_end = _utr_genomic_coords(site_pos, cds_end_pos, strand)
+
+        seq = ''
+        if fasta_path:
+            seq = _fetch_fasta_seq(fasta_path, chrom, g_start - 1, g_end)
+            if seq and strand == '-':
+                seq = _rev_comp(seq)
+
+        utr_len = len(seq)
+
+        rbp_hits = []
+        for rbp in _RBP_MOTIFS:
+            if not utr_len:
+                hits = []
+            else:
+                hits = [
+                    {"start": m.start(), "end": m.end(), "match": m.group()}
+                    for m in rbp["_compiled"].finditer(seq)
+                ]
+            rbp_hits.append({
+                "rbp":      rbp["rbp"],
+                "category": rbp["category"],
+                "color":    rbp["color"],
+                "function": rbp["function"],
+                "count":    len(hits),
+                "density":  round(len(hits) / utr_len * 100, 2) if utr_len else 0,
+                # Keep only first 60 positions to limit payload size
+                "positions": [h["start"] for h in hits[:60]],
+            })
+
+        result.append({
+            "site_id":           site.site_id,
+            "site_position":     site_pos,
+            "utr_length":        utr_len,
+            "sequence_available": utr_len > 0,
+            "rbp_hits":          rbp_hits,
+        })
+
+    return result

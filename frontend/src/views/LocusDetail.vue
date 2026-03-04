@@ -23,49 +23,40 @@
       <div v-else-if="locusData">
         <v-card class="mb-6" variant="outlined">
           <v-card-title class="d-flex align-center">
-            <v-icon icon="mdi-gene" class="mr-2" color="primary"></v-icon>
-            {{ locusData.gene.gene_name }}
+            <v-icon icon="mdi-dna" class="mr-2" color="primary"></v-icon>
+            {{ locusData.transcript.transcript_id }}
           </v-card-title>
           <v-card-text>
             <v-row align="center">
               <v-col cols="12" sm="6" md="3">
+                <div class="text-caption text-grey">Gene Symbol</div>
+                <div class="text-body-1 font-weight-medium">{{ locusData.gene.gene_name }}</div>
+              </v-col>
+              <v-col cols="12" sm="6" md="3">
                 <div class="text-caption text-grey">Gene ID</div>
-                <router-link 
+                <router-link
                   :to="{ name: 'GeneDetail', params: { geneId: locusData.gene.gene_id } }"
                   class="text-primary font-weight-medium"
                 >
                   {{ locusData.gene.gene_id }}
                 </router-link>
               </v-col>
-              <v-col cols="12" sm="6" md="3">
-                <div class="text-caption text-grey">Transcript ID</div>
-                <div class="text-body-1 font-weight-medium">{{ locusData.transcript.transcript_id }}</div>
-              </v-col>
               <v-col cols="12" sm="6" md="2">
                 <div class="text-caption text-grey">Chromosome</div>
                 <div class="text-body-1">
                   <v-chip size="small">{{ locusData.gene.chromosome }}</v-chip>
-                  <v-chip size="small" class="ml-1">{{ locusData.gene.strand }}</v-chip>
+                </div>
+              </v-col>
+              <v-col cols="12" sm="6" md="2">
+                <div class="text-caption text-grey">Strand</div>
+                <div class="text-body-1">
+                  <v-chip size="small">{{ locusData.gene.strand }}</v-chip>
                 </div>
               </v-col>
               <v-col cols="12" sm="6" md="2">
                 <div class="text-caption text-grey">APA Sites</div>
                 <div class="text-body-1 font-weight-bold text-primary">
                   {{ locusData.apa_sites.length }}
-                </div>
-              </v-col>
-              <v-col cols="12" sm="6" md="2">
-                <div class="text-caption text-grey">Samples</div>
-                <div class="text-body-1">
-                  <v-chip 
-                    v-for="sample in locusData.samples" 
-                    :key="sample"
-                    size="x-small" 
-                    class="mr-1"
-                    variant="tonal"
-                  >
-                    {{ sample }}
-                  </v-chip>
                 </div>
               </v-col>
             </v-row>
@@ -94,27 +85,7 @@
               :samples="locusData.samples"
             />
             
-            <!-- External browser links -->
-            <div class="mt-4 d-flex flex-wrap ga-2">
-              <v-btn
-                :href="ucscBrowserLink"
-                target="_blank"
-                size="small"
-                variant="outlined"
-                prepend-icon="mdi-open-in-new"
-              >
-                Compare in UCSC
-              </v-btn>
-              <v-btn
-                :href="ensemblBrowserLink"
-                target="_blank"
-                size="small"
-                variant="outlined"
-                prepend-icon="mdi-open-in-new"
-              >
-                View in Ensembl
-              </v-btn>
-            </div>
+
           </v-card-text>
         </v-card>
         
@@ -138,18 +109,6 @@
                 
                 <template v-slot:item.site_position="{ item }">
                   <code>{{ item.site_position }}</code>
-                </template>
-                
-                <template v-slot:item.apa_type="{ item }">
-                  <v-chip 
-                    v-if="item.apa_type"
-                    size="small" 
-                    :color="getApaTypeColor(item.apa_type)"
-                    variant="tonal"
-                  >
-                    {{ item.apa_type }}
-                  </v-chip>
-                  <span v-else class="text-grey">—</span>
                 </template>
                 
                 <template v-slot:item.pas_motif="{ item }">
@@ -267,6 +226,274 @@
             </v-row>
           </v-card-text>
         </v-card>
+
+        <!-- ── Abundance Heatmap ─────────────────────────────────────────── -->
+        <v-card variant="outlined" class="mt-6" v-if="heatmapData.sites.length > 0">
+          <v-card-title class="d-flex align-center">
+            <v-icon icon="mdi-grid" class="mr-2"></v-icon>
+            Per-site Abundance Heatmap
+            <v-tooltip location="bottom" max-width="320">
+              <template #activator="{ props }">
+                <v-icon v-bind="props" icon="mdi-information-outline" size="small" class="ml-2 text-grey"></v-icon>
+              </template>
+              Colour intensity shows relative abundance (0–100%) of each APA site in each sample.
+              Darker = higher usage. White = site not detected in that sample.
+            </v-tooltip>
+          </v-card-title>
+          <v-divider></v-divider>
+          <v-card-text class="pa-6">
+            <div class="heatmap-wrap">
+              <!-- Column headers (samples) -->
+              <div class="heatmap-grid" :style="heatmapGridStyle">
+                <div class="heatmap-row-label"></div>
+                <div
+                  v-for="sample in heatmapData.samples"
+                  :key="sample"
+                  class="heatmap-col-header text-caption font-weight-medium"
+                >
+                  {{ sample }}
+                </div>
+
+                <!-- Data rows -->
+                <template v-for="(site, si) in heatmapData.sites" :key="site.id">
+                  <!-- Row label -->
+                  <div class="heatmap-row-label text-caption text-grey-darken-1">
+                    <div class="heatmap-site-pos">chr{{ locusData.gene.chromosome }}:{{ site.position }}</div>
+                  </div>
+                  <!-- Cells -->
+                  <div
+                    v-for="sample in heatmapData.samples"
+                    :key="sample"
+                    class="heatmap-cell"
+                    :style="heatmapCellStyle(site.id, sample)"
+                  >
+                    <v-tooltip location="top">
+                      <template #activator="{ props }">
+                        <div v-bind="props" class="heatmap-cell-inner">
+                          <span
+                            class="text-caption font-weight-medium"
+                            :style="{ color: heatmapTextColor(site.id, sample) }"
+                          >
+                            {{ heatmapLabel(site.id, sample) }}
+                          </span>
+                        </div>
+                      </template>
+                      <div>
+                        <strong>{{ site.id }}</strong><br/>
+                        Sample: {{ sample }}<br/>
+                        Abundance: {{ heatmapLabel(site.id, sample) }}<br/>
+                        Read count: {{ heatmapCount(site.id, sample) }}
+                      </div>
+                    </v-tooltip>
+                  </div>
+                </template>
+              </div>
+
+              <!-- Legend -->
+              <div class="d-flex align-center mt-4 ga-2">
+                <span class="text-caption text-grey">0%</span>
+                <div class="heatmap-legend-bar"></div>
+                <span class="text-caption text-grey">100%</span>
+                <span class="text-caption text-grey ml-4">
+                  <v-icon size="x-small">mdi-square-outline</v-icon> Not detected
+                </span>
+              </div>
+            </div>
+          </v-card-text>
+        </v-card>
+
+        <!-- ── 3′ UTR Length Consequence ────────────────────────────────── -->
+        <v-card variant="outlined" class="mt-6" v-if="utrLengthData.length > 0">
+          <v-card-title class="d-flex align-center">
+            <v-icon icon="mdi-arrow-expand-horizontal" class="mr-2"></v-icon>
+            3′ UTR Length Consequence
+            <v-tooltip location="bottom" max-width="340">
+              <template #activator="{ props }">
+                <v-icon v-bind="props" icon="mdi-information-outline" size="small" class="ml-2 text-grey"></v-icon>
+              </template>
+              Each bar shows the distance from the last CDS base to the APA site, representing
+              the resulting 3′ UTR length. Shorter isoforms (proximal sites) tend to escape
+              miRNA and RBP regulation encoded in the distal 3′ UTR.
+            </v-tooltip>
+          </v-card-title>
+          <v-divider></v-divider>
+          <v-card-text class="pa-6">
+            <v-row align="start">
+              <!-- Bar chart -->
+              <v-col cols="12" md="7">
+                <div class="utr-chart">
+                  <div
+                    v-for="(item, i) in utrLengthData"
+                    :key="item.siteId"
+                    class="utr-row mb-3"
+                  >
+                    <div class="d-flex align-center mb-1">
+                      <span class="text-caption text-grey-darken-1 utr-row-label">
+                        Site {{ i + 1 }}
+                        <span class="text-grey ml-1">({{ item.position.toLocaleString() }})</span>
+                      </span>
+                      <v-chip size="x-small" :color="item.pasType === 'canonical' ? 'success' : 'warning'" variant="flat" class="ml-2">
+                        {{ item.pasMotif || '—' }}
+                      </v-chip>
+                      <v-tooltip location="top" text="Download 3′ UTR sequence (.fa)">
+                        <template #activator="{ props }">
+                          <v-btn
+                            v-bind="props"
+                            :href="apiService.getUtrSequenceUrl(locusData.transcript.transcript_id, item.siteId)"
+                            download
+                            icon
+                            size="x-small"
+                            variant="text"
+                            color="primary"
+                            class="ml-1"
+                          >
+                            <v-icon size="14">mdi-download</v-icon>
+                          </v-btn>
+                        </template>
+                      </v-tooltip>
+                    </div>
+                    <div class="d-flex align-center ga-2">
+                      <div class="utr-bar-track flex-grow-1">
+                        <div
+                          class="utr-bar"
+                          :style="{
+                            width: item.pct + '%',
+                            background: utrBarColor(i),
+                            opacity: item.utrLength === 0 ? 0.2 : 1
+                          }"
+                        ></div>
+                      </div>
+                      <span class="text-caption font-weight-medium utr-length-label">
+                        {{ item.utrLength > 0 ? item.utrLength.toLocaleString() + ' nt' : 'CDS end' }}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+                <div class="text-caption text-grey mt-2">
+                  * UTR length measured from last annotated CDS base to cleavage site.
+                  Requires transcript structure to be loaded.
+                </div>
+              </v-col>
+
+              <!-- RBP Binding Motif Scanner -->
+              <v-col cols="12" md="5">
+                <div v-if="rbpLoading" class="d-flex justify-center align-center" style="min-height:180px;">
+                  <v-progress-circular indeterminate color="primary" size="32"></v-progress-circular>
+                </div>
+
+                <div v-else-if="rbpData.length > 0" class="rbp-panel">
+                  <!-- Tab strip: one tab per APA site -->
+                  <v-tabs
+                    v-model="rbpTab"
+                    density="compact"
+                    color="primary"
+                    class="mb-3"
+                    show-arrows
+                  >
+                    <v-tab
+                      v-for="(site, i) in rbpData"
+                      :key="site.site_id"
+                      :value="i"
+                      class="text-caption"
+                    >
+                      <span
+                        class="rbp-site-dot mr-1"
+                        :style="{ background: utrBarColor(i) }"
+                      ></span>
+                      Site {{ i + 1 }}
+                    </v-tab>
+                  </v-tabs>
+
+                  <v-window v-model="rbpTab">
+                    <v-window-item
+                      v-for="(site, i) in rbpData"
+                      :key="site.site_id"
+                      :value="i"
+                    >
+                      <div v-if="!site.sequence_available" class="text-caption text-grey pa-2">
+                        Sequence not available for this site
+                      </div>
+                      <div v-else>
+                        <!-- Category legend pills -->
+                        <div class="d-flex flex-wrap ga-1 mb-3">
+                          <v-chip
+                            v-for="cat in rbpCategories"
+                            :key="cat.name"
+                            size="x-small"
+                            :color="cat.color"
+                            variant="tonal"
+                          >{{ cat.name }}</v-chip>
+                        </div>
+
+                        <!-- One row per RBP -->
+                        <div
+                          v-for="hit in site.rbp_hits"
+                          :key="hit.rbp"
+                          class="rbp-row mb-2"
+                        >
+                          <div class="d-flex align-center mb-1 ga-1">
+                            <span
+                              class="rbp-color-dot"
+                              :style="{ background: hit.color }"
+                            ></span>
+                            <v-tooltip location="top" max-width="300">
+                              <template #activator="{ props }">
+                                <span v-bind="props" class="rbp-name text-caption font-weight-medium">
+                                  {{ hit.rbp }}
+                                </span>
+                              </template>
+                              <div>
+                                <strong>{{ hit.rbp }}</strong><br/>
+                                <span class="text-caption">{{ hit.function }}</span>
+                              </div>
+                            </v-tooltip>
+                            <v-spacer></v-spacer>
+                            <v-chip
+                              size="x-small"
+                              :color="hit.count === 0 ? 'default' : hit.color"
+                              :variant="hit.count === 0 ? 'tonal' : 'flat'"
+                              class="rbp-count-chip"
+                            >
+                              {{ hit.count === 0 ? 'none' : hit.count + (hit.count === 1 ? ' site' : ' sites') }}
+                            </v-chip>
+                          </div>
+
+                          <!-- Hit position lollipop track -->
+                          <div class="rbp-lollipop-track">
+                            <template v-if="hit.count > 0">
+                              <div
+                                v-for="(pos, pi) in hit.positions"
+                                :key="pi"
+                                class="rbp-lollipop"
+                                :style="{
+                                  left: ((pos / site.utr_length) * 100).toFixed(1) + '%',
+                                  background: hit.color
+                                }"
+                              ></div>
+                            </template>
+                          </div>
+                        </div>
+
+                        <!-- Footer: UTR length + density summary -->
+                        <div class="d-flex align-center mt-3 ga-2 text-caption text-grey">
+                          <v-icon size="12">mdi-ruler</v-icon>
+                          {{ site.utr_length.toLocaleString() }} nt UTR
+                          <span class="ml-auto">
+                            {{ site.rbp_hits.filter(h => h.count > 0).length }} / {{ site.rbp_hits.length }} RBPs detected
+                          </span>
+                        </div>
+                      </div>
+                    </v-window-item>
+                  </v-window>
+                </div>
+
+                <div v-else class="text-caption text-grey text-center pa-4">
+                  RBP motif data unavailable
+                </div>
+              </v-col>
+            </v-row>
+          </v-card-text>
+        </v-card>
       </div>
     </v-container>
   </div>
@@ -299,11 +526,21 @@ const locusData = ref(null)
 const transcriptStructure = ref(null)
 const selectedSiteId = ref(null)
 const selectedSample = ref(null)
+const rbpData = ref([])
+const rbpLoading = ref(false)
+const rbpTab = ref(0)
+
+const rbpCategories = [
+  { name: 'Stability',        color: 'error'   },
+  { name: 'Decay',            color: 'warning' },
+  { name: 'Translation',      color: 'purple'  },
+  { name: 'Polyadenylation',  color: 'blue'    },
+  { name: 'miRNA',            color: 'teal'    },
+]
 
 const tableHeaders = [
   { title: 'Site ID', key: 'site_id', sortable: true },
   { title: 'Position', key: 'site_position', sortable: true },
-  { title: 'APA Type', key: 'apa_type', sortable: true },
   { title: 'PAS Motif', key: 'pas_motif', sortable: true },
   { title: 'Sample', key: 'sample_name', sortable: true },
   { title: 'Relative Abundance', key: 'site_abundance', sortable: true },
@@ -439,7 +676,6 @@ const flattenedTableData = computed(() => {
         flattened.push({
           site_id: site.site_id,
           site_position: site.site_position,
-          apa_type: site.apa_type,
           pas_motif: site.pas_motif,
           pas_position: site.pas_position,
           pas_type: site.pas_type,
@@ -453,7 +689,6 @@ const flattenedTableData = computed(() => {
       flattened.push({
         site_id: site.site_id,
         site_position: site.site_position,
-        apa_type: site.apa_type,
         pas_motif: site.pas_motif,
         pas_position: site.pas_position,
         pas_type: site.pas_type,
@@ -498,19 +733,6 @@ const geneStructureData = computed(() => {
   }
 })
 
-const getApaTypeColor = (apaType) => {
-  switch (apaType) {
-    case '3UTR-APA':
-      return 'success'
-    case 'Intronic-APA':
-      return 'warning'
-    case 'Exonic-APA':
-      return 'error'
-    default:
-      return 'default'
-  }
-}
-
 const selectAPASiteById = (siteId) => {
   selectedSiteId.value = siteId
 }
@@ -518,6 +740,121 @@ const selectAPASiteById = (siteId) => {
 const onSiteSelected = (site) => {
   selectedSiteId.value = site?.value || null
 }
+
+// ── Heatmap ────────────────────────────────────────────────────────────────
+
+// Build the flat lookup: { [siteId]: { [sampleName]: { abundance, count } } }
+const heatmapLookup = computed(() => {
+  if (!locusData.value) return {}
+  const lookup = {}
+  for (const site of locusData.value.apa_sites) {
+    lookup[site.site_id] = {}
+    for (const sd of (site.sample_details || [])) {
+      lookup[site.site_id][sd.sample_name] = {
+        abundance: sd.site_abundance,
+        count: sd.site_count
+      }
+    }
+  }
+  return lookup
+})
+
+const heatmapData = computed(() => {
+  if (!locusData.value) return { sites: [], samples: [] }
+  const allSamples = locusData.value.samples || []
+  const sites = locusData.value.apa_sites.map(s => ({
+    id: s.site_id,
+    position: s.site_position
+  }))
+  // Sort sites by position (proximal → distal)
+  const strand = locusData.value.gene.strand
+  sites.sort((a, b) => strand === '-' ? b.position - a.position : a.position - b.position)
+  return { sites, samples: allSamples }
+})
+
+const heatmapGridStyle = computed(() => {
+  const n = heatmapData.value.samples.length
+  return {
+    display: 'grid',
+    gridTemplateColumns: `200px repeat(${n}, 1fr)`,
+    gap: '3px'
+  }
+})
+
+const HEATMAP_COLOR = [13, 115, 119]   // RGB of primary teal #0D7377
+
+const heatmapCellStyle = (siteId, sample) => {
+  const entry = heatmapLookup.value[siteId]?.[sample]
+  if (!entry) {
+    return { background: 'rgba(0,0,0,0.04)', border: '1px solid rgba(0,0,0,0.08)' }
+  }
+  const alpha = Math.max(0.08, entry.abundance)
+  const [r, g, b] = HEATMAP_COLOR
+  return {
+    background: `rgba(${r},${g},${b},${alpha})`,
+    border: '1px solid rgba(0,0,0,0.06)'
+  }
+}
+
+const heatmapTextColor = (siteId, sample) => {
+  const entry = heatmapLookup.value[siteId]?.[sample]
+  if (!entry) return 'rgba(0,0,0,0.3)'
+  return entry.abundance > 0.5 ? '#ffffff' : '#1a1a1a'
+}
+
+const heatmapLabel = (siteId, sample) => {
+  const entry = heatmapLookup.value[siteId]?.[sample]
+  if (!entry) return ''
+  return (entry.abundance * 100).toFixed(0) + '%'
+}
+
+const heatmapCount = (siteId, sample) => {
+  const entry = heatmapLookup.value[siteId]?.[sample]
+  return entry ? entry.count : 0
+}
+
+// ── 3′ UTR Length ──────────────────────────────────────────────────────────
+
+const utrLengthData = computed(() => {
+  if (!locusData.value) return []
+  const strand = locusData.value.gene.strand
+
+  // Derive CDS end from transcript structure if available, else fall back
+  // to inferring from site positions (the most-distal detected site ~ CDS end)
+  let cdsEndPos = null
+  if (transcriptStructure.value?.cds?.length) {
+    const cdsPositions = transcriptStructure.value.cds.flatMap(c => [c.start, c.end])
+    cdsEndPos = strand === '-' ? Math.min(...cdsPositions) : Math.max(...cdsPositions)
+  }
+
+  const sites = locusData.value.apa_sites.map(s => ({
+    siteId: s.site_id,
+    position: s.site_position,
+    pasMotif: s.pas_motif,
+    pasType: s.pas_type
+  }))
+
+  // Sort proximal → distal (relative to transcript direction)
+  sites.sort((a, b) => strand === '-' ? b.position - a.position : a.position - b.position)
+
+  // If no CDS info, use the most-proximal site as the reference baseline
+  if (cdsEndPos === null && sites.length > 0) {
+    cdsEndPos = sites[0].position
+  }
+
+  const result = sites.map(s => {
+    const utrLength = cdsEndPos !== null
+      ? Math.abs(s.position - cdsEndPos)
+      : 0
+    return { ...s, utrLength }
+  })
+
+  const maxLen = Math.max(...result.map(r => r.utrLength), 1)
+  return result.map(r => ({ ...r, pct: (r.utrLength / maxLen) * 100 }))
+})
+
+const UTR_BAR_COLORS = ['#0D7377', '#14919B', '#2196F3', '#7B1FA2', '#E53935', '#FB8C00', '#43A047', '#00ACC1']
+const utrBarColor = (i) => UTR_BAR_COLORS[i % UTR_BAR_COLORS.length]
 
 const abundanceBarChartData = computed(() => {
   if (!locusData.value || !selectedSiteId.value) return null
@@ -555,21 +892,45 @@ onMounted(async () => {
   error.value = null
   
   try {
-    // Fetch locus data and transcript structure in parallel
-    const [locusResponse, structureResponse] = await Promise.all([
-      apiService.getLocusDetail(transcriptId),
-      apiService.getTranscriptStructure(transcriptId)
-    ])
-    
+    // Fetch locus data first — this is required for the page
+    const locusResponse = await apiService.getLocusDetail(transcriptId)
     locusData.value = locusResponse
-    transcriptStructure.value = structureResponse
-    
+
     if (locusData.value.apa_sites && locusData.value.apa_sites.length > 0) {
       selectedSiteId.value = locusData.value.apa_sites[0].site_id
     }
     if (locusData.value.samples && locusData.value.samples.length > 0) {
       selectedSample.value = locusData.value.samples[0]
     }
+
+    // Fetch transcript structure separately — failure is non-fatal
+    apiService.getTranscriptStructure(transcriptId)
+      .then(structureResponse => {
+        transcriptStructure.value = structureResponse
+      })
+      .catch(structureErr => {
+        console.warn('Transcript structure not available:', structureErr)
+        // Page still works without structure (genome browser will be hidden)
+      })
+
+    // Fetch RBP motif hits — non-fatal
+    rbpLoading.value = true
+    apiService.getRbpMotifs(transcriptId)
+      .then(data => {
+        // Sort to match utrLengthData order (proximal → distal)
+        const strand = locusData.value?.gene?.strand
+        rbpData.value = [...data].sort((a, b) =>
+          strand === '-'
+            ? b.site_position - a.site_position
+            : a.site_position - b.site_position
+        )
+      })
+      .catch(err => {
+        console.warn('RBP motif data not available:', err)
+      })
+      .finally(() => {
+        rbpLoading.value = false
+      })
   } catch (err) {
     console.error('Failed to load locus detail:', err)
     error.value = 'Failed to load locus details. Please try again.'
@@ -649,5 +1010,141 @@ code {
 
 .elegant-table :deep(thead) {
   background: transparent !important;
+}
+
+/* ── Heatmap ── */
+.heatmap-wrap {
+  overflow-x: auto;
+}
+
+.heatmap-grid {
+  min-width: 400px;
+}
+
+.heatmap-col-header {
+  text-align: center;
+  padding: 4px 2px 8px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.heatmap-row-label {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding-right: 12px;
+  padding-top: 2px;
+  padding-bottom: 2px;
+}
+
+.heatmap-site-pos {
+  font-size: 0.72rem;
+  color: rgba(0, 0, 0, 0.6);
+  font-family: monospace;
+  white-space: nowrap;
+}
+
+.heatmap-cell {
+  border-radius: 4px;
+  min-height: 44px;
+  cursor: default;
+  transition: transform 0.1s, box-shadow 0.1s;
+}
+
+.heatmap-cell:hover {
+  transform: scale(1.06);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.18);
+  z-index: 1;
+  position: relative;
+}
+
+.heatmap-cell-inner {
+  width: 100%;
+  height: 100%;
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.heatmap-legend-bar {
+  width: 160px;
+  height: 12px;
+  border-radius: 6px;
+  background: linear-gradient(to right, rgba(13,115,119,0.08), rgba(13,115,119,1));
+  border: 1px solid rgba(0,0,0,0.1);
+}
+
+/* ── 3′ UTR bars ── */
+.utr-chart {
+  width: 100%;
+}
+
+.utr-row-label {
+  min-width: 160px;
+  display: inline-block;
+}
+
+.utr-bar-track {
+  height: 18px;
+  background: rgba(0,0,0,0.06);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.utr-bar {
+  height: 100%;
+  border-radius: 4px;
+  transition: width 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.utr-length-label {
+  min-width: 72px;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ── RBP Binding Motif Scanner ── */
+.rbp-panel { width: 100%; }
+
+.rbp-site-dot {
+  width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; display: inline-block;
+}
+
+.rbp-color-dot {
+  width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0;
+}
+
+.rbp-name {
+  cursor: default;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 160px;
+}
+
+.rbp-count-chip {
+  font-variant-numeric: tabular-nums;
+  flex-shrink: 0;
+}
+
+/* Lollipop position track */
+.rbp-lollipop-track {
+  position: relative;
+  height: 10px;
+  background: rgba(0,0,0,0.05);
+  border-radius: 5px;
+  overflow: hidden;
+}
+
+.rbp-lollipop {
+  position: absolute;
+  top: 1px;
+  width: 3px;
+  height: 8px;
+  border-radius: 2px;
+  transform: translateX(-50%);
+  opacity: 0.85;
 }
 </style>
