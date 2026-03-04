@@ -325,19 +325,33 @@ def get_detailed_stats(db: Session = Depends(get_db)):
     apa_by_species = db.query(
         Species.name,
         func.count(APASite.id).label('count')
-    ).join(APASite, APASite.species_id == Species.id).group_by(Species.name).all()
+    ).select_from(APASite).join(Species, APASite.species_id == Species.id).group_by(Species.name).all()
     
-    # APA sites by sample
-    apa_by_sample = db.query(
-        Sample.name,
-        func.count(APASite.id).label('count')
-    ).join(APASite).group_by(Sample.name).all()
+    # APA sites by sample - need to parse from sample_data JSON
+    # Since Sample table might not have direct relation with APASite, we'll skip this for now
+    apa_by_sample = []
+    try:
+        all_apa_sites = db.query(APASite).all()
+        sample_counts = {}
+        for site in all_apa_sites:
+            if site.sample_data:
+                import json
+                try:
+                    sample_details = json.loads(site.sample_data)
+                    for sd in sample_details:
+                        sample_name = sd.get('sample_name', 'Unknown')
+                        sample_counts[sample_name] = sample_counts.get(sample_name, 0) + 1
+                except:
+                    pass
+        apa_by_sample = [{"name": k, "count": v} for k, v in sample_counts.items()]
+    except:
+        pass
     
     # APA sites by chromosome
     apa_by_chromosome = db.query(
         Gene.chromosome,
         func.count(APASite.id).label('count')
-    ).join(Transcript).join(APASite).filter(
+    ).select_from(APASite).join(Transcript, APASite.transcript_id == Transcript.id).join(Gene, Transcript.gene_id == Gene.id).filter(
         Gene.chromosome.isnot(None)
     ).group_by(Gene.chromosome).order_by(Gene.chromosome).all()
     
@@ -346,20 +360,25 @@ def get_detailed_stats(db: Session = Depends(get_db)):
         Gene.gene_name,
         Gene.gene_id,
         func.count(APASite.id).label('apa_count')
-    ).join(Transcript).join(APASite).group_by(
+    ).select_from(APASite).join(Transcript, APASite.transcript_id == Transcript.id).join(Gene, Transcript.gene_id == Gene.id).group_by(
         Gene.gene_name, Gene.gene_id
     ).order_by(func.count(APASite.id).desc()).limit(20).all()
     
-    # Average APA sites per transcript
-    avg_apa_per_transcript = db.query(
-        func.avg(func.count(APASite.id)).label('avg')
-    ).join(Transcript).group_by(Transcript.id).scalar() or 0
+    # Average APA sites per transcript - use subquery
+    from sqlalchemy import case
+    count_per_transcript = db.query(
+        Transcript.id,
+        func.count(APASite.id).label('apa_count')
+    ).outerjoin(APASite, APASite.transcript_id == Transcript.id).group_by(Transcript.id).subquery()
+    
+    avg_result = db.query(func.avg(count_per_transcript.c.apa_count)).scalar()
+    avg_apa_per_transcript = float(avg_result) if avg_result else 0
     
     # APA sites by strand
     apa_by_strand = db.query(
         Gene.strand,
         func.count(APASite.id).label('count')
-    ).join(Transcript).join(APASite).filter(
+    ).select_from(APASite).join(Transcript, APASite.transcript_id == Transcript.id).join(Gene, Transcript.gene_id == Gene.id).filter(
         Gene.strand.isnot(None)
     ).group_by(Gene.strand).all()
     
@@ -369,9 +388,9 @@ def get_detailed_stats(db: Session = Depends(get_db)):
         "total_apa_sites": total_apa_sites,
         "total_samples": total_samples,
         "total_species": total_species,
-        "avg_apa_per_transcript": round(float(avg_apa_per_transcript), 2),
+        "avg_apa_per_transcript": round(avg_apa_per_transcript, 2),
         "apa_sites_by_species": [{"name": s[0], "count": s[1]} for s in apa_by_species],
-        "apa_sites_by_sample": [{"name": s[0], "count": s[1]} for s in apa_by_sample],
+        "apa_sites_by_sample": apa_by_sample,
         "apa_sites_by_chromosome": [{"chromosome": c[0], "count": c[1]} for c in apa_by_chromosome],
         "apa_sites_by_strand": [{"strand": s[0], "count": s[1]} for s in apa_by_strand],
         "top_genes_by_apa": [{"gene_name": g[0], "gene_id": g[1], "apa_count": g[2]} for g in top_genes]
