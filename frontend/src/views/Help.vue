@@ -246,6 +246,12 @@
               <p class="text-body-1 mb-4">
                 For questions, bug reports, or feature requests, please contact us:
               </p>
+              <p class="text-body-1 mb-4">
+                <strong>Email:</strong> 
+                <a href="mailto:tf.chan@cuhk.edu.hk" class="text-primary text-decoration-none">
+                  tf.chan@cuhk.edu.hk
+                </a>
+              </p>
               <v-row>
                 <v-col cols="12" md="6">
                   <v-card variant="tonal" class="pa-4" color="surface-variant">
