@@ -1,9 +1,12 @@
 from fastapi import APIRouter, Depends, Query, HTTPException
-from fastapi.responses import PlainTextResponse
+from fastapi.responses import PlainTextResponse, StreamingResponse
 from sqlalchemy.orm import Session
 from sqlalchemy import func, distinct
 from typing import List, Optional
 import os
+import json
+import csv
+import io
 from app.models.database import get_db, Gene, Transcript, APASite, Species, Sample
 from app.schemas.schemas import (
     SearchResult, DashboardStats, LocusDetail, 
@@ -306,3 +309,240 @@ def get_genes(page: int = Query(1, ge=1), limit: int = Query(50, ge=1, le=100), 
     """Get featured/interesting genes."""
     genes = db.query(Gene).offset((page - 1) * limit).limit(limit).all()
     return [{"id": g.id, "gene_id": g.gene_id, "gene_name": g.gene_name, "chromosome": g.chromosome, "strand": g.strand} for g in genes]
+
+
+@router.get("/stats/detailed")
+def get_detailed_stats(db: Session = Depends(get_db)):
+    """Get detailed database statistics."""
+    # Basic counts
+    total_genes = db.query(Gene).count()
+    total_transcripts = db.query(Transcript).count()
+    total_apa_sites = db.query(APASite).count()
+    total_samples = db.query(Sample).count()
+    total_species = db.query(Species).count()
+    
+    # APA sites by species
+    apa_by_species = db.query(
+        Species.name,
+        func.count(APASite.id).label('count')
+    ).join(APASite, APASite.species_id == Species.id).group_by(Species.name).all()
+    
+    # APA sites by sample
+    apa_by_sample = db.query(
+        Sample.name,
+        func.count(APASite.id).label('count')
+    ).join(APASite).group_by(Sample.name).all()
+    
+    # APA sites by chromosome
+    apa_by_chromosome = db.query(
+        Gene.chromosome,
+        func.count(APASite.id).label('count')
+    ).join(Transcript).join(APASite).filter(
+        Gene.chromosome.isnot(None)
+    ).group_by(Gene.chromosome).order_by(Gene.chromosome).all()
+    
+    # Top genes by APA sites
+    top_genes = db.query(
+        Gene.gene_name,
+        Gene.gene_id,
+        func.count(APASite.id).label('apa_count')
+    ).join(Transcript).join(APASite).group_by(
+        Gene.gene_name, Gene.gene_id
+    ).order_by(func.count(APASite.id).desc()).limit(20).all()
+    
+    # Average APA sites per transcript
+    avg_apa_per_transcript = db.query(
+        func.avg(func.count(APASite.id)).label('avg')
+    ).join(Transcript).group_by(Transcript.id).scalar() or 0
+    
+    # APA sites by strand
+    apa_by_strand = db.query(
+        Gene.strand,
+        func.count(APASite.id).label('count')
+    ).join(Transcript).join(APASite).filter(
+        Gene.strand.isnot(None)
+    ).group_by(Gene.strand).all()
+    
+    return {
+        "total_genes": total_genes,
+        "total_transcripts": total_transcripts,
+        "total_apa_sites": total_apa_sites,
+        "total_samples": total_samples,
+        "total_species": total_species,
+        "avg_apa_per_transcript": round(float(avg_apa_per_transcript), 2),
+        "apa_sites_by_species": [{"name": s[0], "count": s[1]} for s in apa_by_species],
+        "apa_sites_by_sample": [{"name": s[0], "count": s[1]} for s in apa_by_sample],
+        "apa_sites_by_chromosome": [{"chromosome": c[0], "count": c[1]} for c in apa_by_chromosome],
+        "apa_sites_by_strand": [{"strand": s[0], "count": s[1]} for s in apa_by_strand],
+        "top_genes_by_apa": [{"gene_name": g[0], "gene_id": g[1], "apa_count": g[2]} for g in top_genes]
+    }
+
+
+@router.get("/download/apa-sites")
+def download_apa_sites(
+    species: Optional[str] = None,
+    sample: Optional[str] = None,
+    gene_name: Optional[str] = None,
+    format: str = Query("csv", regex="^(csv|tsv|txt)$"),
+    db: Session = Depends(get_db)
+):
+    """Download APA sites data in various formats."""
+    query = db.query(
+        Gene.gene_name,
+        Gene.gene_id,
+        Transcript.transcript_id,
+        APASite.site_id,
+        APASite.site_position,
+        APASite.site_count,
+        APASite.site_abundance,
+        Species.name.label('species'),
+        Sample.name.label('sample')
+    ).join(Transcript).join(APASite).join(Species).outerjoin(Sample)
+    
+    if species:
+        query = query.filter(Species.name.ilike(f"%{species}%"))
+    if gene_name:
+        query = query.filter(Gene.gene_name.ilike(f"%{gene_name}%"))
+    
+    results = query.all()
+    
+    # Create CSV/TSV
+    delimiter = ',' if format == 'csv' else '\t'
+    output = io.StringIO()
+    
+    headers = ['gene_name', 'gene_id', 'transcript_id', 'site_id', 'site_position', 
+               'site_count', 'site_abundance', 'species', 'sample']
+    writer = csv.DictWriter(output, fieldnames=headers, delimiter=delimiter)
+    writer.writeheader()
+    
+    for row in results:
+        writer.writerow({
+            'gene_name': row.gene_name or '',
+            'gene_id': row.gene_id or '',
+            'transcript_id': row.transcript_id or '',
+            'site_id': row.site_id or '',
+            'site_position': row.site_position or '',
+            'site_count': row.site_count or '',
+            'site_abundance': row.site_abundance or '',
+            'species': row.species or '',
+            'sample': row.sample or ''
+        })
+    
+    output.seek(0)
+    
+    media_type = 'text/csv' if format == 'csv' else 'text/tab-separated-values'
+    filename = f'apa_sites.{format}'
+    
+    return StreamingResponse(
+        iter([output.getvalue()]),
+        media_type=media_type,
+        headers={'Content-Disposition': f'attachment; filename={filename}'}
+    )
+
+
+@router.get("/download/genes")
+def download_genes(
+    species: Optional[str] = None,
+    format: str = Query("csv", regex="^(csv|tsv|txt)$"),
+    db: Session = Depends(get_db)
+):
+    """Download genes data."""
+    query = db.query(
+        Gene.gene_name,
+        Gene.gene_id,
+        Gene.chromosome,
+        Gene.strand,
+        Species.name.label('species'),
+        func.count(Transcript.id).label('transcript_count'),
+        func.count(APASite.id).label('apa_site_count')
+    ).join(Species).outerjoin(Transcript).outerjoin(APASite).group_by(
+        Gene.gene_name, Gene.gene_id, Gene.chromosome, Gene.strand, Species.name
+    )
+    
+    if species:
+        query = query.filter(Species.name.ilike(f"%{species}%"))
+    
+    results = query.all()
+    
+    delimiter = ',' if format == 'csv' else '\t'
+    output = io.StringIO()
+    
+    headers = ['gene_name', 'gene_id', 'chromosome', 'strand', 'species', 'transcript_count', 'apa_site_count']
+    writer = csv.DictWriter(output, fieldnames=headers, delimiter=delimiter)
+    writer.writeheader()
+    
+    for row in results:
+        writer.writerow({
+            'gene_name': row.gene_name or '',
+            'gene_id': row.gene_id or '',
+            'chromosome': row.chromosome or '',
+            'strand': row.strand or '',
+            'species': row.species or '',
+            'transcript_count': row.transcript_count or 0,
+            'apa_site_count': row.apa_site_count or 0
+        })
+    
+    output.seek(0)
+    
+    media_type = 'text/csv' if format == 'csv' else 'text/tab-separated-values'
+    filename = f'genes.{format}'
+    
+    return StreamingResponse(
+        iter([output.getvalue()]),
+        media_type=media_type,
+        headers={'Content-Disposition': f'attachment; filename={filename}'}
+    )
+
+
+@router.get("/download/transcripts")
+def download_transcripts(
+    species: Optional[str] = None,
+    format: str = Query("csv", regex="^(csv|tsv|txt)$"),
+    db: Session = Depends(get_db)
+):
+    """Download transcripts data."""
+    query = db.query(
+        Gene.gene_name,
+        Gene.gene_id,
+        Transcript.transcript_id,
+        Gene.chromosome,
+        Gene.strand,
+        Species.name.label('species'),
+        func.count(APASite.id).label('apa_site_count')
+    ).join(Gene).join(Species).outerjoin(APASite).group_by(
+        Gene.gene_name, Gene.gene_id, Transcript.transcript_id, Gene.chromosome, Gene.strand, Species.name
+    )
+    
+    if species:
+        query = query.filter(Species.name.ilike(f"%{species}%"))
+    
+    results = query.all()
+    
+    delimiter = ',' if format == 'csv' else '\t'
+    output = io.StringIO()
+    
+    headers = ['gene_name', 'gene_id', 'transcript_id', 'chromosome', 'strand', 'species', 'apa_site_count']
+    writer = csv.DictWriter(output, fieldnames=headers, delimiter=delimiter)
+    writer.writeheader()
+    
+    for row in results:
+        writer.writerow({
+            'gene_name': row.gene_name or '',
+            'gene_id': row.gene_id or '',
+            'transcript_id': row.transcript_id or '',
+            'chromosome': row.chromosome or '',
+            'strand': row.strand or '',
+            'species': row.species or '',
+            'apa_site_count': row.apa_site_count or 0
+        })
+    
+    output.seek(0)
+    
+    media_type = 'text/csv' if format == 'csv' else 'text/tab-separated-values'
+    filename = f'transcripts.{format}'
+    
+    return StreamingResponse(
+        iter([output.getvalue()]),
+        media_type=media_type,
+        headers={'Content-Disposition': f'attachment; filename={filename}'}
+    )

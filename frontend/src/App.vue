@@ -13,6 +13,9 @@
         
         <v-btn variant="text" to="/" class="text-white">Home</v-btn>
         <v-btn variant="text" to="/search" class="text-white">Browse</v-btn>
+        <v-btn variant="text" to="/statistics" class="text-white">Statistics</v-btn>
+        <v-btn variant="text" to="/download" class="text-white">Download</v-btn>
+        <v-btn variant="text" to="/help" class="text-white">Help</v-btn>
         
         <v-btn 
           icon 
@@ -44,6 +47,9 @@
             <div class="d-flex flex-column">
               <router-link to="/" class="text-decoration-none text-grey-darken-1">Home</router-link>
               <router-link to="/search" class="text-decoration-none text-grey-darken-1">Browse Data</router-link>
+              <router-link to="/statistics" class="text-decoration-none text-grey-darken-1">Statistics</router-link>
+              <router-link to="/download" class="text-decoration-none text-grey-darken-1">Download</router-link>
+              <router-link to="/help" class="text-decoration-none text-grey-darken-1">Help & Docs</router-link>
             </div>
           </v-col>
           <v-col cols="12" md="4">

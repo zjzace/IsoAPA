@@ -11,6 +11,11 @@ export const apiService = {
     return response.data
   },
   
+  async getDetailedStats() {
+    const response = await api.get('/stats/detailed')
+    return response.data
+  },
+  
   async search(params) {
     const response = await api.get('/search', { params })
     return response.data
@@ -43,6 +48,30 @@ export const apiService = {
   
   async getGenes(page = 1, limit = 50) {
     const response = await api.get('/genes', { params: { page, limit } })
+    return response.data
+  },
+  
+  async downloadApaSites(params) {
+    const response = await api.get('/download/apa-sites', { 
+      params,
+      responseType: 'blob'
+    })
+    return response.data
+  },
+  
+  async downloadGenes(params) {
+    const response = await api.get('/download/genes', { 
+      params,
+      responseType: 'blob'
+    })
+    return response.data
+  },
+  
+  async downloadTranscripts(params) {
+    const response = await api.get('/download/transcripts', { 
+      params,
+      responseType: 'blob'
+    })
     return response.data
   }
 }
