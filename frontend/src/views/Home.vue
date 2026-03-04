@@ -66,7 +66,7 @@
               
               <v-row class="my-6">
                 <v-col cols="12" md="7">
-                  <div class="apa-diagram pa-4 rounded-lg">
+                  <div class="apa-diagram pa-5 rounded-lg">
                     <!-- Transcript label -->
                     <div class="text-caption text-grey mb-3">Transcript Structure</div>
                     
@@ -121,35 +121,43 @@
                       <div class="d-flex align-center ga-4">
                         <div class="d-flex align-center">
                           <div class="legend-exon"></div>
-                          <span class="text-caption ml-1">Coding Exon</span>
+                          <span class="text-caption ml-2">Coding Exon</span>
                         </div>
                         <div class="d-flex align-center">
                           <div class="legend-utr"></div>
-                          <span class="text-caption ml-1">3' UTR</span>
+                          <span class="text-caption ml-2">3' UTR</span>
                         </div>
                       </div>
                     </div>
                   </div>
                 </v-col>
                 <v-col cols="12" md="5">
-                  <div class="h-100 d-flex flex-column">
-                    <h4 class="text-h6 mb-3">Why APA Matters</h4>
-                    <v-list density="compact" class="flex-grow-0">
-                      <v-list-item prepend-icon="mdi-check-circle" class="px-0">
-                        <v-list-item-title>Regulates mRNA stability and translation efficiency</v-list-item-title>
-                      </v-list-item>
-                      <v-list-item prepend-icon="mdi-check-circle" class="px-0">
-                        <v-list-item-title>Impacts miRNA binding sites in 3' UTR</v-list-item-title>
-                      </v-list-item>
-                      <v-list-item prepend-icon="mdi-check-circle" class="px-0">
-                        <v-list-item-title>Influences protein localization signals</v-list-item-title>
-                      </v-list-item>
-                      <v-list-item prepend-icon="mdi-check-circle" class="px-0">
-                        <v-list-item-title>Dysregulated in cancer and other diseases</v-list-item-title>
-                      </v-list-item>
-                    </v-list>
+                  <div class="why-apa-section pa-4 rounded-lg h-100">
+                    <h4 class="text-h6 mb-4">Why APA Matters</h4>
                     
-                    <v-alert type="info" variant="tonal" class="mt-4">
+                    <div class="why-item mb-3">
+                      <v-icon icon="mdi-check-circle" color="primary" size="small" class="mr-2"></v-icon>
+                      <span class="text-body-2">Regulates mRNA stability and translation efficiency</span>
+                    </div>
+                    
+                    <div class="why-item mb-3">
+                      <v-icon icon="mdi-check-circle" color="primary" size="small" class="mr-2"></v-icon>
+                      <span class="text-body-2">Impacts miRNA binding sites in 3' UTR</span>
+                    </div>
+                    
+                    <div class="why-item mb-3">
+                      <v-icon icon="mdi-check-circle" color="primary" size="small" class="mr-2"></v-icon>
+                      <span class="text-body-2">Influences protein localization signals</span>
+                    </div>
+                    
+                    <div class="why-item mb-4">
+                      <v-icon icon="mdi-check-circle" color="primary" size="small" class="mr-2"></v-icon>
+                      <span class="text-body-2">Dysregulated in cancer and other diseases</span>
+                    </div>
+                    
+                    <v-divider class="mb-4"></v-divider>
+                    
+                    <v-alert type="info" variant="tonal" density="compact" class="mb-0">
                       <strong>Key Insight:</strong> Both isoforms share the same coding sequence (CDS) 
                       but differ in their 3' UTR length, affecting post-transcriptional regulation.
                     </v-alert>
@@ -355,6 +363,7 @@ onMounted(async () => {
   background: #0D7377;
   position: relative;
   min-width: 25px;
+  max-width: 40px;
 }
 
 /* 3' UTR box - now thicker */
@@ -396,6 +405,17 @@ onMounted(async () => {
   width: 20px;
   height: 8px;
   background: #E94560;
+}
+
+/* Why APA Section */
+.why-apa-section {
+  background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+  border: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+.why-item {
+  display: flex;
+  align-items: flex-start;
 }
 
 .gene-card {
