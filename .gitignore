@@ -66,3 +66,16 @@ temp/
 # Build outputs
 *.o
 *.a
+
+# Screenshots (dev/debug artifacts)
+*.png
+
+# Alembic migrations (schema managed by ETL init_db)
+backend/alembic/
+
+# Tier 1 dev docs
+TIER1_FEATURES.md
+TIER1_SUMMARY.md
+
+# Setup scripts (dev only)
+setup_tier1.sh
