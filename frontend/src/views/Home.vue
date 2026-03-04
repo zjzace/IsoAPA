@@ -358,9 +358,9 @@ onMounted(async () => {
   max-width: 60px;
 }
 
-/* 3' UTR box - now thicker */
+/* 3' UTR box */
 .utr-box {
-  height: 8px;
+  height: 10px;
   background: #E94560;
   position: relative;
   display: flex;
@@ -395,7 +395,7 @@ onMounted(async () => {
 
 .legend-utr {
   width: 20px;
-  height: 8px;
+  height: 10px;
   background: #E94560;
 }
 
