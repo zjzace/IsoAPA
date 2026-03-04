@@ -181,7 +181,7 @@
 
             <v-expansion-panel>
               <v-expansion-panel-title>
-                <v-icon icon="mdi-faq" class="mr-2"></v-icon>
+                <v-icon icon="mdi-help-circle-outline" class="mr-2"></v-icon>
                 <span class="text-h6">Frequently Asked Questions</span>
               </v-expansion-panel-title>
               <v-expansion-panel-text>
@@ -238,15 +238,15 @@
 
           <!-- Contact -->
           <v-card variant="outlined" class="mt-6">
-            <v-card-title class="d-flex align-center pa-4">
+            <v-card-title class="d-flex align-center py-2 px-4">
               <v-icon icon="mdi-email" class="mr-2" color="primary"></v-icon>
               <span class="text-h6">Contact & Feedback</span>
             </v-card-title>
-            <v-card-text class="pa-6">
-              <p class="text-body-1 mb-4">
+            <v-card-text class="pa-4 pt-0">
+              <p class="text-body-1 mb-1">
                 For questions, bug reports, or feature requests, please contact us:
               </p>
-              <p class="text-body-1 mb-4">
+              <p class="text-body-1 mb-3">
                 <strong>Email:</strong> 
                 <a href="mailto:tf.chan@cuhk.edu.hk" class="text-primary text-decoration-none">
                   tf.chan@cuhk.edu.hk
