@@ -77,54 +77,56 @@
             <v-icon icon="mdi-table" class="mr-2"></v-icon>
             APA Sites Details
           </v-card-title>
-          <v-card-text>
-            <v-data-table
-              :headers="tableHeaders"
-              :items="locusData.apa_sites"
-              :items-per-page="10"
-              :search="tableSearch"
-            >
-              <template v-slot:top>
-                <v-text-field
-                  v-model="tableSearch"
-                  label="Filter APA Sites"
-                  prepend-inner-icon="mdi-filter"
-                  class="mb-4"
-                  style="max-width: 300px;"
-                ></v-text-field>
-              </template>
-              
-              <template v-slot:item.site_id="{ item }">
-                <code>{{ item.site_id }}</code>
-              </template>
-              
-              <template v-slot:item.site_position="{ item }">
-                <code>{{ item.site_position }}</code>
-              </template>
-              
-              <template v-slot:item.samples="{ item }">
-                <v-chip 
-                  v-for="sd in item.sample_details" 
-                  :key="sd.sample_name"
-                  size="x-small" 
-                  class="mr-1 mb-1"
-                  variant="tonal"
-                >
-                  {{ sd.sample_name }}: {{ (sd.site_abundance * 100).toFixed(1) }}%
-                </v-chip>
-              </template>
-              
-              <template v-slot:item.actions="{ item }">
-                <v-btn 
-                  size="small" 
-                  variant="tonal"
-                  color="primary"
-                  @click="selectAPASite(item)"
-                >
-                  View
-                </v-btn>
-              </template>
-            </v-data-table>
+          <v-divider></v-divider>
+          <v-card-text class="pa-4">
+            <v-card variant="flat" class="rounded-lg overflow-hidden light-card-bg">
+              <v-data-table
+                :headers="tableHeaders"
+                :items="flattenedTableData"
+                :items-per-page="10"
+                class="elegant-table"
+              >
+                <template v-slot:item.site_id="{ item }">
+                  <code>{{ item.site_id }}</code>
+                </template>
+                
+                <template v-slot:item.site_position="{ item }">
+                  <code>{{ item.site_position }}</code>
+                </template>
+                
+                <template v-slot:item.sample_name="{ item }">
+                  <v-chip size="small" variant="tonal" color="primary">
+                    {{ item.sample_name }}
+                  </v-chip>
+                </template>
+                
+                <template v-slot:item.site_abundance="{ item }">
+                  <div class="d-flex align-center ga-2">
+                    <v-progress-linear
+                      :model-value="item.site_abundance * 100"
+                      color="primary"
+                      height="6"
+                      rounded
+                      style="width: 80px;"
+                    ></v-progress-linear>
+                    <span class="text-body-2 font-weight-medium">
+                      {{ (item.site_abundance * 100).toFixed(1) }}%
+                    </span>
+                  </div>
+                </template>
+                
+                <template v-slot:item.actions="{ item }">
+                  <v-btn 
+                    size="small" 
+                    variant="tonal"
+                    color="primary"
+                    @click="selectAPASiteById(item.site_id)"
+                  >
+                    View
+                  </v-btn>
+                </template>
+              </v-data-table>
+            </v-card>
           </v-card-text>
         </v-card>
         
@@ -133,55 +135,61 @@
             <v-icon icon="mdi-chart-bar" class="mr-2"></v-icon>
             APA Site Analysis
           </v-card-title>
+          <v-divider></v-divider>
           <v-card-text>
-            <v-row align="center" class="mb-4">
-              <v-col cols="12" sm="6" md="4">
-                <v-select
-                  v-model="selectedSiteId"
-                  :items="siteIdOptions"
-                  label="Select APA Site"
-                  item-title="label"
-                  item-value="value"
-                  density="compact"
-                  variant="outlined"
-                  return-object
-                  @update:model-value="onSiteSelected"
-                >
-                  <template v-slot:item="{ props, item }">
-                    <v-list-item v-bind="props">
-                      <v-list-item-subtitle>
-                        Position: {{ item.raw.position }} | Samples: {{ item.raw.samples }}
-                      </v-list-item-subtitle>
-                    </v-list-item>
-                  </template>
-                </v-select>
+            <v-row>
+              <!-- Left Panel: Abundance by APA Site (for selected sample) -->
+              <v-col cols="12" md="6">
+                <v-card variant="flat" class="pa-4 light-card-bg rounded-lg">
+                  <div class="d-flex align-center justify-space-between mb-4">
+                    <div class="text-subtitle-1 font-weight-medium">APA Loci Distribution</div>
+                    <v-select
+                      v-model="selectedSample"
+                      :items="sampleOptions"
+                      label="Select Sample"
+                      density="compact"
+                      variant="outlined"
+                      hide-details
+                      style="min-width: 140px; max-width: 180px;"
+                    ></v-select>
+                  </div>
+                  <Bar 
+                    v-if="sampleSiteAbundanceData" 
+                    :data="sampleSiteAbundanceData" 
+                    :options="sampleSiteChartOptions"
+                  ></Bar>
+                  <div v-else class="text-center py-8 text-grey">No data available</div>
+                </v-card>
+              </v-col>
+              
+              <!-- Right Panel: Abundance by Sample (for selected site) -->
+              <v-col cols="12" md="6">
+                <v-card variant="flat" class="pa-4 light-card-bg rounded-lg">
+                  <div class="d-flex align-center justify-space-between mb-4">
+                    <div class="text-subtitle-1 font-weight-medium">Abundance by Sample</div>
+                    <v-select
+                      v-model="selectedSiteId"
+                      :items="siteIdOptions"
+                      label="Select APA Site"
+                      item-title="label"
+                      item-value="value"
+                      density="compact"
+                      variant="outlined"
+                      hide-details
+                      return-object
+                      style="min-width: 180px; max-width: 240px;"
+                      @update:model-value="onSiteSelected"
+                    ></v-select>
+                  </div>
+                  <Bar 
+                    v-if="abundanceBarChartData" 
+                    :data="abundanceBarChartData" 
+                    :options="barChartOptions"
+                  ></Bar>
+                  <div v-else class="text-center py-8 text-grey">No data available</div>
+                </v-card>
               </v-col>
             </v-row>
-            
-            <v-row v-if="selectedSiteId">
-              <v-col cols="12" md="6">
-                <div class="text-subtitle-2 mb-2">Sample Distribution</div>
-                <Bar 
-                  v-if="sampleBarChartData" 
-                  :data="sampleBarChartData" 
-                  :options="chartOptions"
-                ></Bar>
-                <div v-else class="text-center py-8 text-grey">No data available</div>
-              </v-col>
-              <v-col cols="12" md="6">
-                <div class="text-subtitle-2 mb-2">Abundance by Sample</div>
-                <Bar 
-                  v-if="abundanceBarChartData" 
-                  :data="abundanceBarChartData" 
-                  :options="barChartOptions"
-                ></Bar>
-                <div v-else class="text-center py-8 text-grey">No data available</div>
-              </v-col>
-            </v-row>
-            
-            <div v-else class="text-center py-8 text-grey">
-              Select an APA site from the dropdown above to view analysis
-            </div>
           </v-card-text>
         </v-card>
       </div>
@@ -211,22 +219,48 @@ const route = useRoute()
 const loading = ref(true)
 const error = ref(null)
 const locusData = ref(null)
-const tableSearch = ref('')
 const selectedSiteId = ref(null)
+const selectedSample = ref(null)
 
 const tableHeaders = [
   { title: 'Site ID', key: 'site_id', sortable: true },
   { title: 'Position', key: 'site_position', sortable: true },
-  { title: 'Samples', key: 'samples', sortable: false },
+  { title: 'Sample', key: 'sample_name', sortable: true },
+  { title: 'Relative Abundance', key: 'site_abundance', sortable: true },
   { title: '', key: 'actions', sortable: false, width: 100 }
 ]
 
-const chartOptions = {
+const sampleSiteChartOptions = {
   responsive: true,
   maintainAspectRatio: true,
-  indexAxis: 'y',
   plugins: {
-    legend: { display: false }
+    legend: { display: false },
+    tooltip: {
+      callbacks: {
+        label: function(context) {
+          return 'Abundance: ' + (context.raw * 100).toFixed(1) + '%'
+        }
+      }
+    }
+  },
+  scales: {
+    y: {
+      beginAtZero: true,
+      max: 1,
+      title: { display: true, text: 'Abundance' },
+      ticks: {
+        callback: function(value) {
+          return (value * 100).toFixed(0) + '%'
+        }
+      }
+    },
+    x: {
+      title: { display: true, text: 'APA Site' },
+      ticks: {
+        maxRotation: 45,
+        minRotation: 45
+      }
+    }
   }
 }
 
@@ -234,12 +268,26 @@ const barChartOptions = {
   responsive: true,
   maintainAspectRatio: true,
   plugins: {
-    legend: { display: false }
+    legend: { display: false },
+    title: {
+      display: true,
+      text: 'Site Abundance by Sample',
+      font: { size: 14, weight: 'normal' }
+    }
   },
   scales: {
     y: {
       beginAtZero: true,
-      max: 1
+      max: 1,
+      title: { display: true, text: 'Abundance' },
+      ticks: {
+        callback: function(value) {
+          return (value * 100).toFixed(0) + '%'
+        }
+      }
+    },
+    x: {
+      title: { display: true, text: 'Sample' }
     }
   }
 }
@@ -254,34 +302,88 @@ const siteIdOptions = computed(() => {
   }))
 })
 
-const selectAPASite = (item) => {
-  selectedSiteId.value = item.site_id
+const sampleOptions = computed(() => {
+  if (!locusData.value) return []
+  return locusData.value.samples || []
+})
+
+const sampleSiteAbundanceData = computed(() => {
+  if (!locusData.value || !selectedSample.value) return null
+  
+  const sites = locusData.value.apa_sites
+  if (sites.length === 0) return null
+  
+  const labels = []
+  const data = []
+  const colors = ['#0D7377', '#14919B', '#323232', '#E94560', '#FF6B6B', '#4ECDC4', '#5C6BC0', '#AB47BC']
+  
+  sites.forEach((site, index) => {
+    // Shorten site_id for label
+    const shortId = site.site_id.length > 15 
+      ? site.site_id.substring(0, 15) + '...' 
+      : site.site_id
+    labels.push(shortId)
+    
+    // Find abundance for selected sample
+    const sampleDetail = site.sample_details?.find(sd => sd.sample_name === selectedSample.value)
+    data.push(sampleDetail?.site_abundance || 0)
+  })
+  
+  if (labels.length === 0) return null
+  
+  // Dynamic bar width: fixed for few sites, auto for many
+  const siteCount = labels.length
+  const barPercentage = siteCount <= 3 ? 0.4 : 0.7
+  const categoryPercentage = siteCount <= 3 ? 0.5 : 0.8
+  
+  return {
+    labels,
+    datasets: [{
+      label: 'Abundance',
+      data,
+      backgroundColor: colors.slice(0, sites.length),
+      borderRadius: 6,
+      barPercentage,
+      categoryPercentage
+    }]
+  }
+})
+
+const flattenedTableData = computed(() => {
+  if (!locusData.value) return []
+  
+  const flattened = []
+  locusData.value.apa_sites.forEach(site => {
+    if (site.sample_details && site.sample_details.length > 0) {
+      site.sample_details.forEach(sd => {
+        flattened.push({
+          site_id: site.site_id,
+          site_position: site.site_position,
+          sample_name: sd.sample_name,
+          site_abundance: sd.site_abundance,
+          site_count: sd.site_count
+        })
+      })
+    } else {
+      flattened.push({
+        site_id: site.site_id,
+        site_position: site.site_position,
+        sample_name: '-',
+        site_abundance: 0,
+        site_count: 0
+      })
+    }
+  })
+  return flattened
+})
+
+const selectAPASiteById = (siteId) => {
+  selectedSiteId.value = siteId
 }
 
 const onSiteSelected = (site) => {
   selectedSiteId.value = site?.value || null
 }
-
-const sampleBarChartData = computed(() => {
-  if (!locusData.value || !selectedSiteId.value) return null
-  
-  const site = locusData.value.apa_sites.find(s => s.site_id === selectedSiteId.value)
-  if (!site || !site.sample_details) return null
-  
-  const labels = site.sample_details.map(sd => sd.sample_name)
-  const data = site.sample_details.map(sd => sd.site_count)
-  
-  if (labels.length === 0) return null
-  
-  return {
-    labels,
-    datasets: [{
-      label: 'Read Count',
-      data,
-      backgroundColor: ['#0D7377', '#14919B', '#323232', '#E94560', '#FF6B6B', '#4ECDC4']
-    }]
-  }
-})
 
 const abundanceBarChartData = computed(() => {
   if (!locusData.value || !selectedSiteId.value) return null
@@ -294,12 +396,20 @@ const abundanceBarChartData = computed(() => {
   
   if (labels.length === 0) return null
   
+  // Dynamic bar width: fixed for few samples, auto for many
+  const sampleCount = labels.length
+  const barPercentage = sampleCount <= 3 ? 0.5 : 0.8
+  const categoryPercentage = sampleCount <= 3 ? 0.6 : 0.8
+  
   return {
     labels,
     datasets: [{
       label: 'Abundance',
       data,
-      backgroundColor: ['#0D7377', '#14919B', '#323232', '#E94560', '#FF6B6B', '#4ECDC4']
+      backgroundColor: ['#0D7377', '#14919B', '#323232', '#E94560', '#FF6B6B', '#4ECDC4'],
+      borderRadius: 6,
+      barPercentage,
+      categoryPercentage
     }]
   }
 })
@@ -313,6 +423,9 @@ onMounted(async () => {
     
     if (locusData.value.apa_sites.length > 0) {
       selectedSiteId.value = locusData.value.apa_sites[0].site_id
+    }
+    if (locusData.value.samples && locusData.value.samples.length > 0) {
+      selectedSample.value = locusData.value.samples[0]
     }
   } catch (err) {
     console.error('Failed to load locus detail:', err)
@@ -342,5 +455,50 @@ code {
   padding: 2px 6px;
   border-radius: 4px;
   font-size: 0.9em;
+}
+
+.light-card-bg {
+  background: rgba(var(--v-theme-surface), 0.5) !important;
+  border: 1px solid rgba(var(--v-theme-on-surface), 0.08);
+}
+
+.elegant-table {
+  background: transparent !important;
+}
+
+.elegant-table :deep(.v-data-table__th) {
+  background: transparent !important;
+  font-weight: 600;
+  border-bottom: 1px solid rgba(var(--v-theme-on-surface), 0.12);
+}
+
+.elegant-table :deep(.v-data-table__td) {
+  padding: 12px 16px;
+  background: transparent !important;
+}
+
+.elegant-table :deep(.v-data-table__tr:hover) {
+  background: rgba(var(--v-theme-primary), 0.08) !important;
+}
+
+.elegant-table :deep(.v-data-table-footer) {
+  background: transparent !important;
+  border-top: 1px solid rgba(var(--v-theme-on-surface), 0.12);
+}
+
+.elegant-table :deep(.v-data-table) {
+  background: transparent !important;
+}
+
+.elegant-table :deep(table) {
+  background: transparent !important;
+}
+
+.elegant-table :deep(tbody) {
+  background: transparent !important;
+}
+
+.elegant-table :deep(thead) {
+  background: transparent !important;
 }
 </style>
