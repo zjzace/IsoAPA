@@ -64,11 +64,11 @@
                 sites in the 3' untranslated region (UTR). This results in transcripts with different 3' end points.
               </p>
               
-              <v-row align="stretch" class="my-6">
+              <v-row class="my-6">
                 <v-col cols="12" md="7">
-                  <div class="apa-diagram pa-4 rounded-lg h-100">
+                  <div class="apa-diagram pa-4 rounded-lg">
                     <!-- Transcript label -->
-                    <div class="text-caption text-grey mb-2">Transcript Structure</div>
+                    <div class="text-caption text-grey mb-3">Transcript Structure</div>
                     
                     <!-- Short Isoform -->
                     <div class="isoform mb-4">
@@ -85,13 +85,11 @@
                         <div class="exon-box">Exon 2</div>
                         <!-- Intron line -->
                         <div class="intron-line"></div>
-                        <!-- Exon 3 + Short UTR -->
-                        <div class="exon-with-utr">
-                          <div class="exon-box last-exon">Exon 3</div>
-                          <div class="utr-box short">
-                            <span class="pas-marker">▼</span>
-                          </div>
-                        </div>
+                        <!-- Exon 3 -->
+                        <div class="exon-box">Exon 3</div>
+                        <!-- Short UTR -->
+                        <div class="utr-box short"></div>
+                        <div class="pas-marker">▼</div>
                       </div>
                     </div>
                     
@@ -110,14 +108,11 @@
                         <div class="exon-box">Exon 2</div>
                         <!-- Intron line -->
                         <div class="intron-line"></div>
-                        <!-- Exon 3 + Long UTR -->
-                        <div class="exon-with-utr">
-                          <div class="exon-box last-exon">Exon 3</div>
-                          <div class="utr-box long">
-                            <span class="utr-line"></span>
-                            <span class="pas-marker">▼</span>
-                          </div>
-                        </div>
+                        <!-- Exon 3 -->
+                        <div class="exon-box">Exon 3</div>
+                        <!-- Long UTR -->
+                        <div class="utr-box long"></div>
+                        <div class="pas-marker">▼</div>
                       </div>
                     </div>
                     
@@ -154,7 +149,7 @@
                       </v-list-item>
                     </v-list>
                     
-                    <v-alert type="info" variant="tonal" class="mt-auto">
+                    <v-alert type="info" variant="tonal" class="mt-4">
                       <strong>Key Insight:</strong> Both isoforms share the same coding sequence (CDS) 
                       but differ in their 3' UTR length, affecting post-transcriptional regulation.
                     </v-alert>
@@ -344,56 +339,27 @@ onMounted(async () => {
 .exon-box {
   background: linear-gradient(180deg, #0D7377 0%, #14919B 100%);
   color: white;
-  padding: 12px 20px;
-  border-radius: 6px;
-  font-size: 12px;
+  padding: 6px 16px;
+  font-size: 11px;
   font-weight: 600;
-  min-width: 70px;
+  min-width: 55px;
   text-align: center;
   position: relative;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
   z-index: 2;
 }
 
-.exon-box.last-exon {
-  border-top-right-radius: 0;
-  border-bottom-right-radius: 0;
-}
-
 .intron-line {
   flex: 1;
-  height: 3px;
-  background: linear-gradient(90deg, #0D7377 0%, #14919B 100%);
+  height: 2px;
+  background: #0D7377;
   position: relative;
-  min-width: 30px;
+  min-width: 25px;
 }
 
-.intron-line::before,
-.intron-line::after {
-  content: '▼';
-  position: absolute;
-  top: -8px;
-  font-size: 8px;
-  color: #0D7377;
-}
-
-.intron-line::before {
-  left: 0;
-}
-
-.intron-line::after {
-  right: 0;
-}
-
-/* Exon with UTR container */
-.exon-with-utr {
-  display: flex;
-  align-items: center;
-}
-
-/* 3' UTR box - thin compared to exon */
+/* 3' UTR box - now thicker */
 .utr-box {
-  height: 6px;
+  height: 8px;
   background: #E94560;
   position: relative;
   display: flex;
@@ -401,33 +367,18 @@ onMounted(async () => {
 }
 
 .utr-box.short {
-  width: 40px;
-  border-radius: 0 3px 3px 0;
+  width: 30px;
 }
 
 .utr-box.long {
   width: 100px;
-  border-radius: 0 3px 3px 0;
-}
-
-.utr-line {
-  flex: 1;
-  height: 100%;
-  background: linear-gradient(90deg, #E94560 0%, #FF6B6B 100%);
 }
 
 .pas-marker {
   color: #E94560;
   font-size: 12px;
   font-weight: bold;
-  position: absolute;
-  right: 4px;
-  top: 50%;
-  transform: translateY(-50%);
-}
-
-.short .pas-marker {
-  right: 2px;
+  margin-left: 2px;
 }
 
 .diagram-legend {
@@ -437,16 +388,14 @@ onMounted(async () => {
 
 .legend-exon {
   width: 20px;
-  height: 14px;
+  height: 10px;
   background: linear-gradient(180deg, #0D7377 0%, #14919B 100%);
-  border-radius: 2px;
 }
 
 .legend-utr {
   width: 20px;
-  height: 6px;
+  height: 8px;
   background: #E94560;
-  border-radius: 2px;
 }
 
 .gene-card {
