@@ -234,6 +234,137 @@ def autocomplete(
 
 import json
 
+@router.get("/transcript/{transcript_id}/structure")
+def get_transcript_structure(transcript_id: str, db: Session = Depends(get_db)):
+    """Get transcript exon structure for genome browser visualization"""
+    transcript = db.query(Transcript).filter(Transcript.transcript_id == transcript_id).first()
+    if not transcript:
+        raise HTTPException(status_code=404, detail="Transcript not found")
+    
+    gene = db.query(Gene).filter(Gene.id == transcript.gene_id).first()
+    if not gene:
+        raise HTTPException(status_code=404, detail="Gene not found")
+    
+    # Find species for this transcript (via APA sites)
+    # Query only the columns that exist in the database (species_id)
+    apa_site_species = db.query(APASite.species_id).filter(APASite.transcript_id == transcript.id).first()
+    if apa_site_species:
+        species_obj = db.query(Species).filter(Species.id == apa_site_species[0]).first()
+    else:
+        # Default to Human if no APA sites
+        species_obj = db.query(Species).filter(Species.name == 'Human').first()
+    
+    if not species_obj:
+        raise HTTPException(status_code=404, detail="Species not found")
+    
+    # Get GTF path
+    gtf_path = get_species_ref_path(species_obj.name, 'gtf')
+    if not gtf_path:
+        raise HTTPException(status_code=404, detail="GTF file not available for this species")
+    
+    # Parse transcript structure using fast grep + parse
+    import subprocess
+    try:
+        # Use grep to extract only lines for this transcript (much faster than parsing 3GB file)
+        grep_result = subprocess.run(
+            ['grep', transcript_id, gtf_path],
+            capture_output=True,
+            text=True,
+            timeout=10
+        )
+        
+        if grep_result.returncode != 0:
+            raise HTTPException(status_code=404, detail="Transcript not found in GTF")
+        
+        # Parse the filtered lines
+        exons = []
+        cds = []
+        chrom = None
+        strand = None
+        gene_name_val = None
+        gene_id_val = None
+        
+        for line in grep_result.stdout.strip().split('\n'):
+            if not line:
+                continue
+            fields = line.split('\t')
+            if len(fields) < 9:
+                continue
+            
+            feature = fields[2]
+            start = int(fields[3])
+            end = int(fields[4])
+            
+            if not chrom:
+                chrom = fields[0]
+                strand = fields[6]
+                # Parse attributes for gene info
+                attrs = {}
+                for item in fields[8].split(';'):
+                    item = item.strip()
+                    if ' ' in item:
+                        key, val = item.split(' ', 1)
+                        attrs[key] = val.strip('"')
+                gene_name_val = attrs.get('gene_name')
+                gene_id_val = attrs.get('gene_id')
+            
+            if feature == 'exon':
+                exons.append((start, end))
+            elif feature == 'CDS':
+                cds.append((start, end))
+        
+        if not exons:
+            raise HTTPException(status_code=404, detail="No exons found for transcript")
+        
+        # Calculate UTRs (exon regions not in CDS)
+        utrs = []
+        for ex_start, ex_end in exons:
+            # Check if this exon has any CDS overlap
+            cds_in_exon = [(max(ex_start, c_start), min(ex_end, c_end)) 
+                           for c_start, c_end in cds 
+                           if c_start < ex_end and c_end > ex_start]
+            
+            if not cds_in_exon:
+                # Entire exon is UTR
+                utrs.append((ex_start, ex_end))
+            else:
+                # Partial UTR regions
+                cds_in_exon.sort()
+                # 5' UTR part
+                if ex_start < cds_in_exon[0][0]:
+                    utrs.append((ex_start, cds_in_exon[0][0] - 1))
+                # 3' UTR part
+                if ex_end > cds_in_exon[-1][1]:
+                    utrs.append((cds_in_exon[-1][1] + 1, ex_end))
+        
+        structure = {
+            'gene_name': gene_name_val,
+            'gene_id': gene_id_val,
+            'chrom': chrom,
+            'strand': strand,
+            'exons': exons,
+            'cds': cds,
+            'utrs': utrs
+        }
+        
+    except subprocess.TimeoutExpired:
+        raise HTTPException(status_code=504, detail="GTF parsing timed out")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to parse GTF: {str(e)}")
+    
+    # Format response
+    return {
+        "transcript_id": transcript_id,
+        "gene_name": structure['gene_name'] or gene.gene_name,
+        "gene_id": structure['gene_id'] or gene.gene_id,
+        "chromosome": structure['chrom'] or gene.chromosome,
+        "strand": structure['strand'] or gene.strand,
+        "exons": [{"start": s, "end": e} for s, e in structure['exons']],
+        "cds": [{"start": s, "end": e} for s, e in structure['cds']],
+        "utrs": [{"start": s, "end": e} for s, e in structure['utrs']]
+    }
+
+
 @router.get("/transcript/{transcript_id}", response_model=LocusDetail)
 def get_locus_detail(transcript_id: str, db: Session = Depends(get_db)):
     """Get detailed information about a transcript and its APA sites."""

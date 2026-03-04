@@ -5,6 +5,8 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 import csv
 from app.models.database import SessionLocal, Species, Sample, Gene, Transcript, APASite, init_db
+from app.services.pas_annotator import PASAnnotator
+from app.services.apa_classifier import APATypeClassifier
 
 SPECIES_MAP = {
     'homo_sapiens': {'name': 'Human', 'latin_name': 'Homo sapiens', 'assembly': 'GRCh38'},
@@ -216,8 +218,87 @@ def ingest_data(data_dir: str = None):
         print(f"Transcripts: {transcript_count}")
         print(f"APA Sites (unique by position): {apa_site_count}")
         
+        # Tier 1 Enhancement: Annotate APA sites with PAS motifs and APA types
+        print(f"\n=== Tier 1 Annotations ===")
+        for species_folder in os.listdir(DATA_DIR):
+            species_path = os.path.join(DATA_DIR, species_folder)
+            if not os.path.isdir(species_path) or species_folder.startswith('.'):
+                continue
+            
+            # Get reference files
+            gtf_path = get_gtf_path(species_folder)
+            fasta_path = get_fasta_path(species_folder)
+            
+            if not gtf_path or not fasta_path:
+                print(f"Skipping {species_folder}: missing GTF or FASTA files")
+                continue
+            
+            print(f"\nAnnotating {species_folder}...")
+            print(f"  GTF: {os.path.basename(gtf_path)}")
+            print(f"  FASTA: {os.path.basename(fasta_path)}")
+            
+            # Initialize annotators
+            pas_annotator = PASAnnotator(fasta_path)
+            apa_classifier = APATypeClassifier(gtf_path)
+            
+            # Get species ID
+            species_info = SPECIES_MAP.get(species_folder, {'name': species_folder})
+            species = db.query(Species).filter(Species.name == species_info['name']).first()
+            if not species:
+                continue
+            
+            # Get all APA sites for this species
+            apa_sites = db.query(APASite).join(Transcript).join(Gene).filter(
+                APASite.species_id == species.id
+            ).all()
+            
+            print(f"  Processing {len(apa_sites)} APA sites...")
+            annotated_count = 0
+            batch_size = 100
+            
+            for i, apa_site in enumerate(apa_sites):
+                # Get transcript and gene info
+                transcript = apa_site.transcript
+                gene = transcript.gene
+                
+                # Annotate PAS hexamer
+                pas_result = pas_annotator.find_pas_hexamer(
+                    chrom=gene.chromosome,
+                    position=apa_site.site_position,
+                    strand=gene.strand
+                )
+                apa_site.pas_motif = pas_result['motif']
+                apa_site.pas_position = pas_result['position']
+                apa_site.pas_type = pas_result['motif_type']
+                apa_site.pas_confidence = pas_result['confidence']
+                
+                # Classify APA type
+                apa_result = apa_classifier.classify_apa_site(
+                    transcript_id=transcript.transcript_id,
+                    position=apa_site.site_position,
+                    strand=gene.strand
+                )
+                apa_site.apa_type = apa_result['apa_type']
+                apa_site.apa_region = apa_result['region']
+                apa_site.apa_confidence = apa_result['confidence']
+                
+                annotated_count += 1
+                
+                # Commit in batches
+                if (i + 1) % batch_size == 0:
+                    db.commit()
+                    print(f"    Annotated {i + 1}/{len(apa_sites)} sites...")
+            
+            # Final commit
+            db.commit()
+            print(f"  ✓ Annotated {annotated_count} sites for {species_folder}")
+        
+        print(f"\n✓ Annotation complete!")
+        
     except Exception as e:
         print(f"Error: {e}")
+        import traceback
+        traceback.print_exc()
         db.rollback()
         raise
     finally:

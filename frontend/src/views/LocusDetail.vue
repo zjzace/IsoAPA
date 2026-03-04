@@ -72,6 +72,52 @@
           </v-card-text>
         </v-card>
         
+        <v-card variant="outlined" class="mb-6" v-if="transcriptStructure">
+          <v-card-title class="d-flex align-center">
+            <v-icon icon="mdi-dna" class="mr-2"></v-icon>
+            Interactive Genome Browser
+            <v-spacer></v-spacer>
+            <v-chip size="small" variant="tonal" color="primary">
+              Single Transcript View
+            </v-chip>
+          </v-card-title>
+          <v-divider></v-divider>
+          <v-card-text>
+            <ApaGenomeBrowser
+              :transcript-id="locusData.transcript.transcript_id"
+              :gene-name="locusData.gene.gene_name"
+              :chromosome="locusData.gene.chromosome"
+              :strand="locusData.gene.strand"
+              :exons="transcriptStructure.exons"
+              :cds="transcriptStructure.cds"
+              :apa-sites="locusData.apa_sites"
+              :samples="locusData.samples"
+            />
+            
+            <!-- External browser links -->
+            <div class="mt-4 d-flex flex-wrap ga-2">
+              <v-btn
+                :href="ucscBrowserLink"
+                target="_blank"
+                size="small"
+                variant="outlined"
+                prepend-icon="mdi-open-in-new"
+              >
+                Compare in UCSC
+              </v-btn>
+              <v-btn
+                :href="ensemblBrowserLink"
+                target="_blank"
+                size="small"
+                variant="outlined"
+                prepend-icon="mdi-open-in-new"
+              >
+                View in Ensembl
+              </v-btn>
+            </div>
+          </v-card-text>
+        </v-card>
+        
         <v-card variant="outlined" class="mb-6">
           <v-card-title class="d-flex align-center">
             <v-icon icon="mdi-table" class="mr-2"></v-icon>
@@ -92,6 +138,35 @@
                 
                 <template v-slot:item.site_position="{ item }">
                   <code>{{ item.site_position }}</code>
+                </template>
+                
+                <template v-slot:item.apa_type="{ item }">
+                  <v-chip 
+                    v-if="item.apa_type"
+                    size="small" 
+                    :color="getApaTypeColor(item.apa_type)"
+                    variant="tonal"
+                  >
+                    {{ item.apa_type }}
+                  </v-chip>
+                  <span v-else class="text-grey">—</span>
+                </template>
+                
+                <template v-slot:item.pas_motif="{ item }">
+                  <div v-if="item.pas_motif" class="d-flex align-center ga-1">
+                    <code class="pas-motif">{{ item.pas_motif }}</code>
+                    <v-chip 
+                      size="x-small" 
+                      :color="item.pas_type === 'canonical' ? 'success' : 'warning'"
+                      variant="flat"
+                    >
+                      {{ item.pas_type === 'canonical' ? '✓' : '~' }}
+                    </v-chip>
+                    <span class="text-caption text-grey" v-if="item.pas_position">
+                      {{ item.pas_position }}bp
+                    </span>
+                  </div>
+                  <span v-else class="text-grey">—</span>
                 </template>
                 
                 <template v-slot:item.sample_name="{ item }">
@@ -211,6 +286,8 @@ import {
   Title 
 } from 'chart.js'
 import { apiService } from '@/services/api'
+import UTRIsoformDiagram from '@/components/UTRIsoformDiagram.vue'
+import ApaGenomeBrowser from '@/components/ApaGenomeBrowser.vue'
 
 ChartJS.register(BarElement, CategoryScale, LinearScale, Tooltip, Legend, Title)
 
@@ -219,12 +296,15 @@ const route = useRoute()
 const loading = ref(true)
 const error = ref(null)
 const locusData = ref(null)
+const transcriptStructure = ref(null)
 const selectedSiteId = ref(null)
 const selectedSample = ref(null)
 
 const tableHeaders = [
   { title: 'Site ID', key: 'site_id', sortable: true },
   { title: 'Position', key: 'site_position', sortable: true },
+  { title: 'APA Type', key: 'apa_type', sortable: true },
+  { title: 'PAS Motif', key: 'pas_motif', sortable: true },
   { title: 'Sample', key: 'sample_name', sortable: true },
   { title: 'Relative Abundance', key: 'site_abundance', sortable: true },
   { title: '', key: 'actions', sortable: false, width: 100 }
@@ -359,6 +439,11 @@ const flattenedTableData = computed(() => {
         flattened.push({
           site_id: site.site_id,
           site_position: site.site_position,
+          apa_type: site.apa_type,
+          pas_motif: site.pas_motif,
+          pas_position: site.pas_position,
+          pas_type: site.pas_type,
+          pas_confidence: site.pas_confidence,
           sample_name: sd.sample_name,
           site_abundance: sd.site_abundance,
           site_count: sd.site_count
@@ -368,6 +453,11 @@ const flattenedTableData = computed(() => {
       flattened.push({
         site_id: site.site_id,
         site_position: site.site_position,
+        apa_type: site.apa_type,
+        pas_motif: site.pas_motif,
+        pas_position: site.pas_position,
+        pas_type: site.pas_type,
+        pas_confidence: site.pas_confidence,
         sample_name: '-',
         site_abundance: 0,
         site_count: 0
@@ -376,6 +466,50 @@ const flattenedTableData = computed(() => {
   })
   return flattened
 })
+
+const ucscBrowserLink = computed(() => {
+  if (!locusData.value) return ''
+  const gene = locusData.value.gene
+  const chromosome = gene.chromosome
+  const apaSites = locusData.value.apa_sites
+  if (apaSites.length === 0) return ''
+  
+  const positions = apaSites.map(s => s.site_position)
+  const minPos = Math.min(...positions) - 5000
+  const maxPos = Math.max(...positions) + 5000
+  
+  const assembly = 'hg38'
+  return `https://genome.ucsc.edu/cgi-bin/hgTracks?db=${assembly}&position=chr${chromosome}:${minPos}-${maxPos}`
+})
+
+const ensemblBrowserLink = computed(() => {
+  if (!locusData.value) return ''
+  const gene = locusData.value.gene
+  return `https://www.ensembl.org/Homo_sapiens/Gene/Summary?g=${gene.gene_id}`
+})
+
+const geneStructureData = computed(() => {
+  if (!locusData.value) return null
+  
+  return {
+    gene_name: locusData.value.gene.gene_name,
+    transcript_id: locusData.value.transcript.transcript_id,
+    exons: []
+  }
+})
+
+const getApaTypeColor = (apaType) => {
+  switch (apaType) {
+    case '3UTR-APA':
+      return 'success'
+    case 'Intronic-APA':
+      return 'warning'
+    case 'Exonic-APA':
+      return 'error'
+    default:
+      return 'default'
+  }
+}
 
 const selectAPASiteById = (siteId) => {
   selectedSiteId.value = siteId
@@ -417,11 +551,20 @@ const abundanceBarChartData = computed(() => {
 onMounted(async () => {
   const transcriptId = route.params.transcriptId
   
+  loading.value = true
+  error.value = null
+  
   try {
-    loading.value = true
-    locusData.value = await apiService.getLocusDetail(transcriptId)
+    // Fetch locus data and transcript structure in parallel
+    const [locusResponse, structureResponse] = await Promise.all([
+      apiService.getLocusDetail(transcriptId),
+      apiService.getTranscriptStructure(transcriptId)
+    ])
     
-    if (locusData.value.apa_sites.length > 0) {
+    locusData.value = locusResponse
+    transcriptStructure.value = structureResponse
+    
+    if (locusData.value.apa_sites && locusData.value.apa_sites.length > 0) {
       selectedSiteId.value = locusData.value.apa_sites[0].site_id
     }
     if (locusData.value.samples && locusData.value.samples.length > 0) {
@@ -455,6 +598,12 @@ code {
   padding: 2px 6px;
   border-radius: 4px;
   font-size: 0.9em;
+}
+
+.pas-motif {
+  font-weight: 600;
+  color: #0D7377;
+  letter-spacing: 0.5px;
 }
 
 .light-card-bg {

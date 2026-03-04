@@ -64,6 +64,14 @@ class APASiteBase(BaseModel):
     site_count: int = 0
     site_abundance: float = 0.0
     sample_data: Optional[str] = None
+    # Tier 1 enhancements
+    pas_motif: Optional[str] = None
+    pas_position: Optional[int] = None
+    pas_type: Optional[str] = None
+    pas_confidence: Optional[str] = None
+    apa_type: Optional[str] = None
+    apa_region: Optional[str] = None
+    apa_confidence: Optional[str] = None
 
 
 class APASite(APASiteBase):

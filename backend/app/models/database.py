@@ -1,5 +1,5 @@
 from sqlalchemy import create_engine, Column, Integer, String, Float, ForeignKey, Index, Text
-from sqlalchemy.orm import declarative_base, relationship, sessionmaker
+from sqlalchemy.orm import declarative_base, relationship, sessionmaker, deferred
 from app.config import settings
 
 Base = declarative_base()
@@ -67,6 +67,16 @@ class APASite(Base):
     site_count = Column(Integer, nullable=False, default=0)
     site_abundance = Column(Float, nullable=False, default=0.0)
     sample_data = Column(Text, nullable=True)
+    
+    # Tier 1 enhancements: PAS annotation and APA type classification
+    # Deferred loading to avoid errors if columns don't exist in DB yet
+    pas_motif = deferred(Column(String(10), nullable=True))  # Hexamer sequence (e.g., 'AATAAA')
+    pas_position = deferred(Column(Integer, nullable=True))  # Distance from cleavage site (e.g., -18)
+    pas_type = deferred(Column(String(20), nullable=True))  # 'canonical' or 'variant'
+    pas_confidence = deferred(Column(String(20), nullable=True))  # 'high', 'medium', 'low'
+    apa_type = deferred(Column(String(30), nullable=True))  # '3UTR-APA', 'Intronic-APA', 'Exonic-APA'
+    apa_region = deferred(Column(String(50), nullable=True))  # Detailed region description
+    apa_confidence = deferred(Column(String(20), nullable=True))  # Classification confidence
     
     transcript = relationship("Transcript", back_populates="apa_sites")
     species = relationship("Species", back_populates="apa_sites")

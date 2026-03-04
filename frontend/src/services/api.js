@@ -36,6 +36,11 @@ export const apiService = {
     return response.data
   },
   
+  async getTranscriptStructure(transcriptId) {
+    const response = await api.get(`/transcript/${transcriptId}/structure`)
+    return response.data
+  },
+  
   async getSpecies() {
     const response = await api.get('/species')
     return response.data
