@@ -152,13 +152,8 @@
               <!-- Key Insight - Separate Frame -->
               <div class="key-insight-section mt-6">
                 <v-alert type="info" variant="tonal" class="mb-0 pa-4">
-                  <div class="d-flex align-center">
-                    <v-icon icon="mdi-lightbulb" color="info" class="mr-3" size="large"></v-icon>
-                    <div>
-                      <strong>Key Insight:</strong> Both isoforms share the same coding sequence (CDS) 
-                      but differ in their 3' UTR length, affecting post-transcriptional regulation.
-                    </div>
-                  </div>
+                  <strong>Key Insight:</strong> Both isoforms share the same coding sequence (CDS) 
+                  but differ in their 3' UTR length, affecting post-transcriptional regulation.
                 </v-alert>
               </div>
             </v-card>
