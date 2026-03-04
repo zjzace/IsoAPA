@@ -51,60 +51,6 @@
       </v-container>
     </section>
     
-    <section class="stats-section py-12">
-      <v-container>
-        <h2 class="text-h4 text-center mb-8">Database Statistics</h2>
-        
-        <v-row justify="center">
-          <v-col cols="6" sm="4" md="2">
-            <v-card class="text-center pa-4 stat-card" variant="tonal">
-              <div class="text-h3 text-primary font-weight-bold">{{ stats.total_genes }}</div>
-              <div class="text-body-2 text-grey-darken-1">Genes</div>
-            </v-card>
-          </v-col>
-          <v-col cols="6" sm="4" md="2">
-            <v-card class="text-center pa-4 stat-card" variant="tonal">
-              <div class="text-h3 text-primary font-weight-bold">{{ stats.total_transcripts }}</div>
-              <div class="text-body-2 text-grey-darken-1">Transcripts</div>
-            </v-card>
-          </v-col>
-          <v-col cols="6" sm="4" md="2">
-            <v-card class="text-center pa-4 stat-card" variant="tonal">
-              <div class="text-h3 text-primary font-weight-bold">{{ stats.total_apa_sites }}</div>
-              <div class="text-body-2 text-grey-darken-1">APA Sites</div>
-            </v-card>
-          </v-col>
-          <v-col cols="6" sm="4" md="2">
-            <v-card class="text-center pa-4 stat-card" variant="tonal">
-              <div class="text-h3 text-primary font-weight-bold">{{ stats.total_cell_lines }}</div>
-              <div class="text-body-2 text-grey-darken-1">Samples</div>
-            </v-card>
-          </v-col>
-          <v-col cols="6" sm="4" md="2">
-            <v-card class="text-center pa-4 stat-card" variant="tonal">
-              <div class="text-h3 text-primary font-weight-bold">{{ stats.total_species }}</div>
-              <div class="text-body-2 text-grey-darken-1">Species</div>
-            </v-card>
-          </v-col>
-        </v-row>
-        
-        <v-row class="mt-8">
-          <v-col cols="12" md="6">
-            <v-card class="pa-4" variant="outlined">
-              <h3 class="text-h6 mb-4">APA Sites by Species</h3>
-              <Bar :data="speciesChartData" :options="chartOptions"></Bar>
-            </v-card>
-          </v-col>
-          <v-col cols="12" md="6">
-            <v-card class="pa-4" variant="outlined">
-              <h3 class="text-h6 mb-4">APA Sites by Sample</h3>
-              <Doughnut :data="sampleChartData" :options="chartOptions"></Doughnut>
-            </v-card>
-          </v-col>
-        </v-row>
-      </v-container>
-    </section>
-    
     <section class="info-section py-12 bg-grey-lighten-5">
       <v-container>
         <h2 class="text-h4 text-center mb-8">What is Isoform-Level APA?</h2>
@@ -112,39 +58,85 @@
         <v-row justify="center">
           <v-col cols="12" lg="10">
             <v-card class="pa-6" variant="outlined">
-              <p class="text-body-1 mb-4">
+              <p class="text-body-1 mb-6">
                 <strong>Alternative Polyadenylation (APA)</strong> is a post-transcriptional regulatory mechanism 
                 that generates multiple mRNA isoforms from a single gene by selecting different polyadenylation 
-                sites in the 3' untranslated region (UTR).
+                sites in the 3' untranslated region (UTR). This results in transcripts with different 3' end points.
               </p>
               
               <v-row align="center" class="my-6">
-                <v-col cols="12" md="6">
-                  <div class="apa-diagram pa-4 bg-primary-lighten-5 rounded">
-                    <div class="d-flex flex-column align-center">
-                      <div class="gene-block text-body-1 font-weight-bold mb-2">Gene</div>
-                      <div class="exon-container d-flex">
-                        <div class="exon">Exon 1</div>
-                        <div class="exon">Exon 2</div>
-                        <div class="exon">Exon 3</div>
-                        <div class="exon utr-short">UTR</div>
+                <v-col cols="12" md="7">
+                  <div class="apa-diagram pa-4 rounded-lg">
+                    <!-- Gene label -->
+                    <div class="text-caption text-grey mb-2">Gene Structure</div>
+                    
+                    <!-- Short Isoform -->
+                    <div class="isoform mb-4">
+                      <div class="isoform-label text-caption mb-1">
+                        <v-chip size="x-small" color="primary" class="mr-2">Proximal PAS</v-chip>
+                        <span>Short isoform (3' UTR shortening)</span>
                       </div>
-                      <div class="apa-sites mt-2">
-                        <v-chip size="small" color="primary">Proximal PAS</v-chip>
-                        <v-chip size="small" color="secondary" class="ml-2">Distal PAS</v-chip>
+                      <div class="transcript-row">
+                        <!-- Exon 1 -->
+                        <div class="exon-box exon-1">Exon 1</div>
+                        <!-- Intron line -->
+                        <div class="intron-line"></div>
+                        <!-- Exon 2 -->
+                        <div class="exon-box exon-2">Exon 2</div>
+                        <!-- Intron line -->
+                        <div class="intron-line"></div>
+                        <!-- Exon 3 with short UTR -->
+                        <div class="exon-box exon-3">
+                          Exon 3
+                          <div class="utr-region short-utr">
+                            <span class="pas-marker">▼</span>
+                          </div>
+                        </div>
                       </div>
-                      <div class="transcripts mt-4">
-                        <div class="transcript-label text-caption">Short isoform (3' UTR shortening)</div>
-                        <div class="transcript-bar short"></div>
+                    </div>
+                    
+                    <!-- Long Isoform -->
+                    <div class="isoform">
+                      <div class="isoform-label text-caption mb-1">
+                        <v-chip size="x-small" color="secondary" class="mr-2">Distal PAS</v-chip>
+                        <span>Long isoform (3' UTR lengthening)</span>
                       </div>
-                      <div class="transcripts mt-2">
-                        <div class="transcript-label text-caption">Long isoform (3' UTR lengthening)</div>
-                        <div class="transcript-bar long"></div>
+                      <div class="transcript-row">
+                        <!-- Exon 1 -->
+                        <div class="exon-box exon-1">Exon 1</div>
+                        <!-- Intron line -->
+                        <div class="intron-line"></div>
+                        <!-- Exon 2 -->
+                        <div class="exon-box exon-2">Exon 2</div>
+                        <!-- Intron line -->
+                        <div class="intron-line"></div>
+                        <!-- Exon 3 with extended UTR -->
+                        <div class="exon-box exon-3 long">
+                          Exon 3
+                          <div class="utr-region long-utr">
+                            <span class="utr-extended"></span>
+                            <span class="pas-marker">▼</span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <!-- Legend -->
+                    <div class="diagram-legend mt-4">
+                      <div class="d-flex align-center ga-4">
+                        <div class="d-flex align-center">
+                          <div class="legend-exon"></div>
+                          <span class="text-caption ml-1">Coding Exon</span>
+                        </div>
+                        <div class="d-flex align-center">
+                          <div class="legend-utr"></div>
+                          <span class="text-caption ml-1">3' UTR</span>
+                        </div>
                       </div>
                     </div>
                   </div>
                 </v-col>
-                <v-col cols="12" md="6">
+                <v-col cols="12" md="5">
                   <h4 class="text-h6 mb-3">Why APA Matters</h4>
                   <v-list density="compact">
                     <v-list-item prepend-icon="mdi-check-circle" class="px-0">
@@ -160,6 +152,11 @@
                       <v-list-item-title>Dysregulated in cancer and other diseases</v-list-item-title>
                     </v-list-item>
                   </v-list>
+                  
+                  <v-alert type="info" variant="tonal" class="mt-4">
+                    <strong>Key Insight:</strong> Both isoforms share the same coding sequence (CDS) 
+                    but differ in their 3' UTR length, affecting post-transcriptional regulation.
+                  </v-alert>
                 </v-col>
               </v-row>
             </v-card>
@@ -242,59 +239,16 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { Bar, Doughnut } from 'vue-chartjs'
-import { Chart as ChartJS, ArcElement, BarElement, CategoryScale, LinearScale, Tooltip, Legend } from 'chart.js'
 import { apiService } from '@/services/api'
-
-ChartJS.register(ArcElement, BarElement, CategoryScale, LinearScale, Tooltip, Legend)
 
 const router = useRouter()
 
 const searchQuery = ref('')
 const selectedField = ref('gene_name')
-const stats = ref({
-  total_genes: 0,
-  total_transcripts: 0,
-  total_apa_sites: 0,
-  total_cell_lines: 0,
-  total_species: 0,
-  apa_sites_by_species: [],
-  apa_sites_by_cell_line: []
-})
-
-const speciesChartData = computed(() => ({
-  labels: stats.value.apa_sites_by_species.map(s => s.name),
-  datasets: [{
-    label: 'APA Sites',
-    data: stats.value.apa_sites_by_species.map(s => s.count),
-    backgroundColor: ['#0D7377', '#14919B', '#323232', '#E94560']
-  }]
-}))
-
-const sampleChartData = computed(() => ({
-  labels: stats.value.apa_sites_by_cell_line.map(t => t.name),
-  datasets: [{
-    label: 'APA Sites',
-    data: stats.value.apa_sites_by_cell_line.map(t => t.count),
-    backgroundColor: [
-      '#0D7377', '#14919B', '#323232', '#E94560',
-      '#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4',
-      '#FFEAA7', '#DDA0DD'
-    ]
-  }]
-}))
-
-const chartOptions = {
-  responsive: true,
-  maintainAspectRatio: true,
-  plugins: {
-    legend: {
-      position: 'bottom'
-    }
-  }
-}
+const selectedGene = ref(null)
+const featuredGenes = ref([])
 
 const onSearchInput = (value) => {
   // Could add autocomplete here
@@ -321,10 +275,9 @@ const goToGene = (gene) => {
 
 onMounted(async () => {
   try {
-    stats.value = await apiService.getStats()
     featuredGenes.value = await apiService.getGenes(1, 10)
   } catch (error) {
-    console.error('Failed to load stats:', error)
+    console.error('Failed to load featured genes:', error)
   }
 })
 </script>
@@ -364,50 +317,133 @@ onMounted(async () => {
   border-radius: 16px !important;
 }
 
-.stat-card {
-  transition: transform 0.3s ease;
-}
-
-.stat-card:hover {
-  transform: translateY(-5px);
-}
-
+/* APA Diagram - Genome Browser Style */
 .apa-diagram {
-  min-height: 200px;
+  background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+  border: 1px solid rgba(0, 0, 0, 0.1);
 }
 
-.exon-container {
-  gap: 4px;
+.isoform {
+  position: relative;
 }
 
-.exon {
-  background: #0D7377;
+.isoform-label {
+  display: flex;
+  align-items: center;
+  min-height: 24px;
+}
+
+.transcript-row {
+  display: flex;
+  align-items: center;
+  position: relative;
+}
+
+.exon-box {
+  background: linear-gradient(180deg, #0D7377 0%, #14919B 100%);
   color: white;
-  padding: 8px 16px;
-  border-radius: 4px;
+  padding: 10px 20px;
+  border-radius: 6px;
   font-size: 12px;
+  font-weight: 600;
+  min-width: 80px;
+  text-align: center;
+  position: relative;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
+  z-index: 2;
 }
 
-.exon.utr-short {
-  background: #14919B;
+.exon-box.long {
+  background: linear-gradient(180deg, #E94560 0%, #FF6B6B 100%);
 }
 
-.transcripts {
-  width: 100%;
+.intron-line {
+  flex: 1;
+  height: 3px;
+  background: linear-gradient(90deg, #0D7377 0%, #14919B 100%);
+  position: relative;
+  min-width: 30px;
 }
 
-.transcript-bar {
-  height: 8px;
-  border-radius: 4px;
-  background: linear-gradient(to right, #0D7377, #14919B);
+.intron-line::before,
+.intron-line::after {
+  content: '▼';
+  position: absolute;
+  top: -8px;
+  font-size: 8px;
+  color: #0D7377;
 }
 
-.transcript-bar.short {
-  width: 60%;
+.intron-line::before {
+  left: 0;
 }
 
-.transcript-bar.long {
-  width: 100%;
+.intron-line::after {
+  right: 0;
+}
+
+.utr-region {
+  position: absolute;
+  bottom: -8px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+}
+
+.short-utr {
+  width: 30px;
+}
+
+.long-utr {
+  width: 120px;
+  display: flex;
+  align-items: center;
+}
+
+.utr-extended {
+  flex: 1;
+  height: 4px;
+  background: linear-gradient(90deg, #E94560 0%, #FF6B6B 100%);
+  border-radius: 2px;
+  margin-right: 4px;
+}
+
+.pas-marker {
+  color: #E94560;
+  font-size: 14px;
+  font-weight: bold;
+}
+
+.short-utr .pas-marker {
+  position: absolute;
+  bottom: -14px;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+.long-utr .pas-marker {
+  color: #E94560;
+}
+
+.diagram-legend {
+  border-top: 1px solid rgba(0, 0, 0, 0.1);
+  padding-top: 12px;
+}
+
+.legend-exon {
+  width: 20px;
+  height: 12px;
+  background: linear-gradient(180deg, #0D7377 0%, #14919B 100%);
+  border-radius: 2px;
+}
+
+.legend-utr {
+  width: 20px;
+  height: 4px;
+  background: #E94560;
+  border-radius: 2px;
 }
 
 .gene-card {
