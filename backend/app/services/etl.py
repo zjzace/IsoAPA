@@ -172,7 +172,12 @@ def ingest_data(data_dir: str = None):
                         transcript_db_id = transcript_map[transcript_id]
                         apa_site_key = f"{transcript_db_id}_{site_position}"
                         
-                        if apa_site_key not in apa_site_map:
+                        existing_site = db.query(APASite).filter(
+                            APASite.transcript_id == transcript_db_id,
+                            APASite.site_position == site_position
+                        ).first()
+                        
+                        if not existing_site:
                             apa_site = APASite(
                                 site_id=site_id,
                                 transcript_id=transcript_db_id,
@@ -189,7 +194,6 @@ def ingest_data(data_dir: str = None):
                             apa_site_map[apa_site_key] = apa_site.id
                             apa_site_count += 1
                         else:
-                            existing_site = db.query(APASite).filter(APASite.id == apa_site_map[apa_site_key]).first()
                             if existing_site and existing_site.sample_data:
                                 sample_data_list = json.loads(existing_site.sample_data)
                             else:
