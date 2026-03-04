@@ -65,6 +65,7 @@
               </p>
               
               <v-row class="my-6">
+                <!-- Left Panel: Transcript Structure -->
                 <v-col cols="12" md="7">
                   <div class="apa-diagram pa-5 rounded-lg">
                     <!-- Transcript label -->
@@ -77,17 +78,11 @@
                         <span>Short isoform (3' UTR shortening)</span>
                       </div>
                       <div class="transcript-row align-center">
-                        <!-- Exon 1 -->
                         <div class="exon-box">Exon 1</div>
-                        <!-- Intron line -->
                         <div class="intron-line"></div>
-                        <!-- Exon 2 -->
                         <div class="exon-box">Exon 2</div>
-                        <!-- Intron line -->
                         <div class="intron-line"></div>
-                        <!-- Exon 3 -->
                         <div class="exon-box">Exon 3</div>
-                        <!-- Short UTR -->
                         <div class="utr-box short"></div>
                         <div class="pas-marker">▼</div>
                       </div>
@@ -100,17 +95,11 @@
                         <span>Long isoform (3' UTR lengthening)</span>
                       </div>
                       <div class="transcript-row align-center">
-                        <!-- Exon 1 -->
                         <div class="exon-box">Exon 1</div>
-                        <!-- Intron line -->
                         <div class="intron-line"></div>
-                        <!-- Exon 2 -->
                         <div class="exon-box">Exon 2</div>
-                        <!-- Intron line -->
                         <div class="intron-line"></div>
-                        <!-- Exon 3 -->
                         <div class="exon-box">Exon 3</div>
-                        <!-- Long UTR -->
                         <div class="utr-box long"></div>
                         <div class="pas-marker">▼</div>
                       </div>
@@ -131,39 +120,47 @@
                     </div>
                   </div>
                 </v-col>
+                
+                <!-- Right Panel: Why APA Matters -->
                 <v-col cols="12" md="5">
-                  <div class="why-apa-section pa-4 rounded-lg h-100">
+                  <div class="why-apa-section pa-5 rounded-lg h-100">
                     <h4 class="text-h6 mb-4">Why APA Matters</h4>
                     
-                    <div class="why-item mb-3">
+                    <div class="why-item mb-4">
                       <v-icon icon="mdi-check-circle" color="primary" size="small" class="mr-2"></v-icon>
                       <span class="text-body-2">Regulates mRNA stability and translation efficiency</span>
                     </div>
                     
-                    <div class="why-item mb-3">
+                    <div class="why-item mb-4">
                       <v-icon icon="mdi-check-circle" color="primary" size="small" class="mr-2"></v-icon>
                       <span class="text-body-2">Impacts miRNA binding sites in 3' UTR</span>
                     </div>
                     
-                    <div class="why-item mb-3">
+                    <div class="why-item mb-4">
                       <v-icon icon="mdi-check-circle" color="primary" size="small" class="mr-2"></v-icon>
                       <span class="text-body-2">Influences protein localization signals</span>
                     </div>
                     
-                    <div class="why-item mb-4">
+                    <div class="why-item mb-0">
                       <v-icon icon="mdi-check-circle" color="primary" size="small" class="mr-2"></v-icon>
                       <span class="text-body-2">Dysregulated in cancer and other diseases</span>
                     </div>
-                    
-                    <v-divider class="mb-4"></v-divider>
-                    
-                    <v-alert type="info" variant="tonal" density="compact" class="mb-0">
-                      <strong>Key Insight:</strong> Both isoforms share the same coding sequence (CDS) 
-                      but differ in their 3' UTR length, affecting post-transcriptional regulation.
-                    </v-alert>
                   </div>
                 </v-col>
               </v-row>
+              
+              <!-- Key Insight - Separate Frame -->
+              <div class="key-insight-section mt-6">
+                <v-alert type="info" variant="tonal" class="mb-0 pa-4">
+                  <div class="d-flex align-center">
+                    <v-icon icon="mdi-lightbulb" color="info" class="mr-3" size="large"></v-icon>
+                    <div>
+                      <strong>Key Insight:</strong> Both isoforms share the same coding sequence (CDS) 
+                      but differ in their 3' UTR length, affecting post-transcriptional regulation.
+                    </div>
+                  </div>
+                </v-alert>
+              </div>
             </v-card>
           </v-col>
         </v-row>
@@ -347,10 +344,10 @@ onMounted(async () => {
 .exon-box {
   background: linear-gradient(180deg, #0D7377 0%, #14919B 100%);
   color: white;
-  padding: 6px 16px;
-  font-size: 11px;
+  padding: 8px 24px;
+  font-size: 12px;
   font-weight: 600;
-  min-width: 55px;
+  min-width: 70px;
   text-align: center;
   position: relative;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
@@ -362,8 +359,8 @@ onMounted(async () => {
   height: 2px;
   background: #0D7377;
   position: relative;
-  min-width: 25px;
-  max-width: 40px;
+  min-width: 35px;
+  max-width: 60px;
 }
 
 /* 3' UTR box - now thicker */
@@ -407,7 +404,11 @@ onMounted(async () => {
   background: #E94560;
 }
 
-/* Why APA Section */
+/* Key Insight Section */
+.key-insight-section {
+  margin-top: 24px;
+}
+
 .why-apa-section {
   background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
   border: 1px solid rgba(0, 0, 0, 0.1);
