@@ -64,31 +64,31 @@
                 sites in the 3' untranslated region (UTR). This results in transcripts with different 3' end points.
               </p>
               
-              <v-row align="center" class="my-6">
+              <v-row align="stretch" class="my-6">
                 <v-col cols="12" md="7">
-                  <div class="apa-diagram pa-4 rounded-lg">
-                    <!-- Gene label -->
-                    <div class="text-caption text-grey mb-2">Gene Structure</div>
+                  <div class="apa-diagram pa-4 rounded-lg h-100">
+                    <!-- Transcript label -->
+                    <div class="text-caption text-grey mb-2">Transcript Structure</div>
                     
                     <!-- Short Isoform -->
                     <div class="isoform mb-4">
-                      <div class="isoform-label text-caption mb-1">
+                      <div class="isoform-label text-caption mb-2">
                         <v-chip size="x-small" color="primary" class="mr-2">Proximal PAS</v-chip>
                         <span>Short isoform (3' UTR shortening)</span>
                       </div>
-                      <div class="transcript-row">
+                      <div class="transcript-row align-center">
                         <!-- Exon 1 -->
-                        <div class="exon-box exon-1">Exon 1</div>
+                        <div class="exon-box">Exon 1</div>
                         <!-- Intron line -->
                         <div class="intron-line"></div>
                         <!-- Exon 2 -->
-                        <div class="exon-box exon-2">Exon 2</div>
+                        <div class="exon-box">Exon 2</div>
                         <!-- Intron line -->
                         <div class="intron-line"></div>
-                        <!-- Exon 3 with short UTR -->
-                        <div class="exon-box exon-3">
-                          Exon 3
-                          <div class="utr-region short-utr">
+                        <!-- Exon 3 + Short UTR -->
+                        <div class="exon-with-utr">
+                          <div class="exon-box last-exon">Exon 3</div>
+                          <div class="utr-box short">
                             <span class="pas-marker">▼</span>
                           </div>
                         </div>
@@ -97,24 +97,24 @@
                     
                     <!-- Long Isoform -->
                     <div class="isoform">
-                      <div class="isoform-label text-caption mb-1">
-                        <v-chip size="x-small" color="secondary" class="mr-2">Distal PAS</v-chip>
+                      <div class="isoform-label text-caption mb-2">
+                        <v-chip size="x-small" color="error" class="mr-2">Distal PAS</v-chip>
                         <span>Long isoform (3' UTR lengthening)</span>
                       </div>
-                      <div class="transcript-row">
+                      <div class="transcript-row align-center">
                         <!-- Exon 1 -->
-                        <div class="exon-box exon-1">Exon 1</div>
+                        <div class="exon-box">Exon 1</div>
                         <!-- Intron line -->
                         <div class="intron-line"></div>
                         <!-- Exon 2 -->
-                        <div class="exon-box exon-2">Exon 2</div>
+                        <div class="exon-box">Exon 2</div>
                         <!-- Intron line -->
                         <div class="intron-line"></div>
-                        <!-- Exon 3 with extended UTR -->
-                        <div class="exon-box exon-3 long">
-                          Exon 3
-                          <div class="utr-region long-utr">
-                            <span class="utr-extended"></span>
+                        <!-- Exon 3 + Long UTR -->
+                        <div class="exon-with-utr">
+                          <div class="exon-box last-exon">Exon 3</div>
+                          <div class="utr-box long">
+                            <span class="utr-line"></span>
                             <span class="pas-marker">▼</span>
                           </div>
                         </div>
@@ -137,26 +137,28 @@
                   </div>
                 </v-col>
                 <v-col cols="12" md="5">
-                  <h4 class="text-h6 mb-3">Why APA Matters</h4>
-                  <v-list density="compact">
-                    <v-list-item prepend-icon="mdi-check-circle" class="px-0">
-                      <v-list-item-title>Regulates mRNA stability and translation efficiency</v-list-item-title>
-                    </v-list-item>
-                    <v-list-item prepend-icon="mdi-check-circle" class="px-0">
-                      <v-list-item-title>Impacts miRNA binding sites in 3' UTR</v-list-item-title>
-                    </v-list-item>
-                    <v-list-item prepend-icon="mdi-check-circle" class="px-0">
-                      <v-list-item-title>Influences protein localization signals</v-list-item-title>
-                    </v-list-item>
-                    <v-list-item prepend-icon="mdi-check-circle" class="px-0">
-                      <v-list-item-title>Dysregulated in cancer and other diseases</v-list-item-title>
-                    </v-list-item>
-                  </v-list>
-                  
-                  <v-alert type="info" variant="tonal" class="mt-4">
-                    <strong>Key Insight:</strong> Both isoforms share the same coding sequence (CDS) 
-                    but differ in their 3' UTR length, affecting post-transcriptional regulation.
-                  </v-alert>
+                  <div class="h-100 d-flex flex-column">
+                    <h4 class="text-h6 mb-3">Why APA Matters</h4>
+                    <v-list density="compact" class="flex-grow-0">
+                      <v-list-item prepend-icon="mdi-check-circle" class="px-0">
+                        <v-list-item-title>Regulates mRNA stability and translation efficiency</v-list-item-title>
+                      </v-list-item>
+                      <v-list-item prepend-icon="mdi-check-circle" class="px-0">
+                        <v-list-item-title>Impacts miRNA binding sites in 3' UTR</v-list-item-title>
+                      </v-list-item>
+                      <v-list-item prepend-icon="mdi-check-circle" class="px-0">
+                        <v-list-item-title>Influences protein localization signals</v-list-item-title>
+                      </v-list-item>
+                      <v-list-item prepend-icon="mdi-check-circle" class="px-0">
+                        <v-list-item-title>Dysregulated in cancer and other diseases</v-list-item-title>
+                      </v-list-item>
+                    </v-list>
+                    
+                    <v-alert type="info" variant="tonal" class="mt-auto">
+                      <strong>Key Insight:</strong> Both isoforms share the same coding sequence (CDS) 
+                      but differ in their 3' UTR length, affecting post-transcriptional regulation.
+                    </v-alert>
+                  </div>
                 </v-col>
               </v-row>
             </v-card>
@@ -342,19 +344,20 @@ onMounted(async () => {
 .exon-box {
   background: linear-gradient(180deg, #0D7377 0%, #14919B 100%);
   color: white;
-  padding: 10px 20px;
+  padding: 12px 20px;
   border-radius: 6px;
   font-size: 12px;
   font-weight: 600;
-  min-width: 80px;
+  min-width: 70px;
   text-align: center;
   position: relative;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
   z-index: 2;
 }
 
-.exon-box.long {
-  background: linear-gradient(180deg, #E94560 0%, #FF6B6B 100%);
+.exon-box.last-exon {
+  border-top-right-radius: 0;
+  border-bottom-right-radius: 0;
 }
 
 .intron-line {
@@ -382,49 +385,49 @@ onMounted(async () => {
   right: 0;
 }
 
-.utr-region {
-  position: absolute;
-  bottom: -8px;
-  left: 50%;
-  transform: translateX(-50%);
-  display: flex;
-  align-items: flex-start;
-  justify-content: center;
-}
-
-.short-utr {
-  width: 30px;
-}
-
-.long-utr {
-  width: 120px;
+/* Exon with UTR container */
+.exon-with-utr {
   display: flex;
   align-items: center;
 }
 
-.utr-extended {
+/* 3' UTR box - thin compared to exon */
+.utr-box {
+  height: 6px;
+  background: #E94560;
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.utr-box.short {
+  width: 40px;
+  border-radius: 0 3px 3px 0;
+}
+
+.utr-box.long {
+  width: 100px;
+  border-radius: 0 3px 3px 0;
+}
+
+.utr-line {
   flex: 1;
-  height: 4px;
+  height: 100%;
   background: linear-gradient(90deg, #E94560 0%, #FF6B6B 100%);
-  border-radius: 2px;
-  margin-right: 4px;
 }
 
 .pas-marker {
   color: #E94560;
-  font-size: 14px;
+  font-size: 12px;
   font-weight: bold;
-}
-
-.short-utr .pas-marker {
   position: absolute;
-  bottom: -14px;
-  left: 50%;
-  transform: translateX(-50%);
+  right: 4px;
+  top: 50%;
+  transform: translateY(-50%);
 }
 
-.long-utr .pas-marker {
-  color: #E94560;
+.short .pas-marker {
+  right: 2px;
 }
 
 .diagram-legend {
@@ -434,14 +437,14 @@ onMounted(async () => {
 
 .legend-exon {
   width: 20px;
-  height: 12px;
+  height: 14px;
   background: linear-gradient(180deg, #0D7377 0%, #14919B 100%);
   border-radius: 2px;
 }
 
 .legend-utr {
   width: 20px;
-  height: 4px;
+  height: 6px;
   background: #E94560;
   border-radius: 2px;
 }
