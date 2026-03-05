@@ -92,22 +92,7 @@
       </svg>
     </div>
 
-    <!-- Tooltip -->
-    <div
-      v-if="tooltip.visible"
-      ref="tooltipElement"
-      class="genome-tooltip"
-      :style="{
-        left: tooltip.x + 'px',
-        top: tooltip.y + 'px'
-      }"
-    >
-      <div class="tooltip-title">{{ tooltip.title }}</div>
-      <div v-for="item in tooltip.items" :key="item.label" class="tooltip-item">
-        <span class="tooltip-label">{{ item.label }}:</span>
-        <span class="tooltip-value">{{ item.value }}</span>
-      </div>
-    </div>
+    <!-- Tooltip is rendered via DOM directly to body (see script) -->
   </div>
 </template>
 
@@ -191,14 +176,81 @@ const transcriptGroup = ref(null)
 const sampleGroupRefs = ref([])
 const browserContainer = ref(null)
 
-// Tooltip state
-const tooltip = ref({
-  visible: false,
-  x: 0,
-  y: 0,
-  title: '',
-  items: []
-})
+// Tooltip — single DOM node appended to body, positioned with fixed
+let tooltipEl = null
+
+const ensureTooltipEl = () => {
+  if (!tooltipEl) {
+    tooltipEl = document.createElement('div')
+    tooltipEl.className = 'genome-tooltip-global'
+    tooltipEl.style.cssText = `
+      position: fixed;
+      display: none;
+      background: rgba(33,37,41,0.95);
+      color: #fff;
+      padding: 10px 13px;
+      border-radius: 6px;
+      font-size: 12px;
+      font-family: Roboto, sans-serif;
+      pointer-events: none;
+      z-index: 99999;
+      min-width: 190px;
+      max-width: 280px;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.35);
+      backdrop-filter: blur(4px);
+    `
+    document.body.appendChild(tooltipEl)
+  }
+  return tooltipEl
+}
+
+// Tooltip helpers
+const showTooltip = (event, title, items) => {
+  const el = ensureTooltipEl()
+
+  // Build inner HTML
+  const rows = items.map(i =>
+    `<div style="display:flex;justify-content:space-between;gap:14px;margin-top:4px;line-height:1.5">
+      <span style="color:#adb5bd;font-weight:500">${i.label}:</span>
+      <span style="font-weight:600;text-align:right;color:#f8f9fa">${i.value}</span>
+    </div>`
+  ).join('')
+
+  el.innerHTML = `
+    <div style="font-weight:700;font-size:13px;margin-bottom:6px;padding-bottom:5px;border-bottom:1px solid rgba(255,255,255,0.25)">${title}</div>
+    ${rows}
+  `
+  el.style.display = 'block'
+
+  // In D3 v7, mouse events are native MouseEvent objects passed directly.
+  // Use sourceEvent if available (zoom/drag), otherwise use event itself.
+  const nativeEvent = event.sourceEvent || event
+  const clientX = nativeEvent.clientX
+  const clientY = nativeEvent.clientY
+
+  // Position with fixed coords — place right of cursor, flip left/up if near edge
+  const OFFSET_X = 14
+  const OFFSET_Y = -10
+  const W = el.offsetWidth || 220
+  const H = el.offsetHeight || 120
+  const vw = window.innerWidth
+  const vh = window.innerHeight
+
+  let x = clientX + OFFSET_X
+  let y = clientY + OFFSET_Y
+
+  if (x + W > vw - 8) x = clientX - W - OFFSET_X
+  if (y + H > vh - 8) y = clientY - H - Math.abs(OFFSET_Y)
+  if (y < 4) y = 4
+  if (x < 4) x = 4
+
+  el.style.left = x + 'px'
+  el.style.top  = y + 'px'
+}
+
+const hideTooltip = () => {
+  if (tooltipEl) tooltipEl.style.display = 'none'
+}
 
 // Initialize scale
 const initScale = () => {
@@ -439,6 +491,13 @@ const renderTranscript = () => {
           { label: 'Length', value: `${(exon.end - exon.start).toLocaleString()} bp` }
         ])
       })
+      .on('mousemove', function(event) {
+        showTooltip(event, `Exon ${idx + 1}`, [
+          { label: 'Position', value: `${exon.start.toLocaleString()} - ${exon.end.toLocaleString()}` },
+          { label: 'Type', value: isCDS ? 'Coding Sequence (CDS)' : 'Untranslated Region (UTR)' },
+          { label: 'Length', value: `${(exon.end - exon.start).toLocaleString()} bp` }
+        ])
+      })
       .on('mouseleave', function() {
         d3.select(this)
           .attr('opacity', 1)
@@ -510,7 +569,7 @@ const renderSampleTracks = () => {
         .attr('transform', `translate(${x}, ${trackY})`)
         .style('cursor', 'pointer')
 
-      // Thin vertical line — height proportional to abundance
+      // Lollipop stem — height proportional to abundance
       marker.append('line')
         .attr('x1', 0)
         .attr('x2', 0)
@@ -520,11 +579,19 @@ const renderSampleTracks = () => {
         .attr('stroke-width', 1.5)
         .attr('stroke-linecap', 'round')
 
+      // Lollipop circle head
+      marker.append('circle')
+        .attr('cx', 0)
+        .attr('cy', -lineHeight)
+        .attr('r', 4)
+        .attr('fill', color)
+        .attr('stroke', '#fff')
+        .attr('stroke-width', 1)
+
       // Interaction
       marker.on('mouseenter', function(event) {
-        d3.select(this).select('line')
-          .attr('stroke-width', 3)
-          .attr('stroke-opacity', 0.8)
+        d3.select(this).select('line').attr('stroke-width', 3).attr('stroke-opacity', 0.8)
+        d3.select(this).select('circle').attr('r', 6)
         
         showTooltip(event, `APA Site @ ${site.site_position.toLocaleString()}`, [
           { label: 'Sample', value: sample },
@@ -535,33 +602,23 @@ const renderSampleTracks = () => {
           { label: 'PAS Type', value: site.pas_type || 'N/A' }
         ])
       })
+      .on('mousemove', function(event) {
+        showTooltip(event, `APA Site @ ${site.site_position.toLocaleString()}`, [
+          { label: 'Sample', value: sample },
+          { label: 'Abundance', value: abundance.toFixed(2) },
+          { label: 'Count', value: sampleData.site_count.toLocaleString() },
+          { label: 'PAS Motif', value: site.pas_motif || 'N/A' },
+          { label: 'PAS Position', value: site.pas_position ? `${site.pas_position}bp` : 'N/A' },
+          { label: 'PAS Type', value: site.pas_type || 'N/A' }
+        ])
+      })
       .on('mouseleave', function() {
-        d3.select(this).select('line')
-          .attr('stroke-width', 1.5)
-          .attr('stroke-opacity', 1)
+        d3.select(this).select('line').attr('stroke-width', 1.5).attr('stroke-opacity', 1)
+        d3.select(this).select('circle').attr('r', 4)
         hideTooltip()
       })
     })
   })
-}
-
-// Tooltip helpers
-const showTooltip = (event, title, items) => {
-  const containerRect = browserContainer.value.getBoundingClientRect()
-  const x = event.clientX - containerRect.left + 15
-  const y = event.clientY - containerRect.top - 10
-  
-  tooltip.value = {
-    visible: true,
-    x: Math.min(x, containerWidth.value - 220),  // Prevent overflow
-    y: Math.max(y, 10),
-    title,
-    items
-  }
-}
-
-const hideTooltip = () => {
-  tooltip.value.visible = false
 }
 
 // Zoom behavior
@@ -656,6 +713,10 @@ onBeforeUnmount(() => {
   if (resizeObserver.value) {
     resizeObserver.value.disconnect()
   }
+  if (tooltipEl) {
+    tooltipEl.remove()
+    tooltipEl = null
+  }
 })
 
 // Re-render on data changes
@@ -674,6 +735,7 @@ watch(() => [props.exons, props.apaSites, props.samples], () => {
   background: transparent;
   border-radius: 8px;
   padding: 0;
+  position: relative;
 }
 
 .browser-controls {
@@ -752,5 +814,9 @@ watch(() => [props.exons, props.apaSites, props.samples], () => {
 
 :deep(.apa-marker line) {
   transition: stroke-width 0.15s ease;
+}
+
+:deep(.apa-marker circle) {
+  transition: r 0.15s ease;
 }
 </style>

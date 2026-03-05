@@ -21,82 +21,82 @@
       </div>
       
       <div v-else-if="locusData">
-        <v-card class="mb-6" variant="outlined">
-          <v-card-title class="d-flex align-center">
-            <v-icon icon="mdi-dna" class="mr-2" color="primary"></v-icon>
-            {{ locusData.transcript.transcript_id }}
-          </v-card-title>
-          <v-card-text>
-            <v-row align="center">
-              <v-col cols="12" sm="6" md="3">
-                <div class="text-caption text-grey">Gene Symbol</div>
-                <div class="text-body-1 font-weight-medium">{{ locusData.gene.gene_name }}</div>
-              </v-col>
-              <v-col cols="12" sm="6" md="3">
-                <div class="text-caption text-grey">Gene ID</div>
+
+        <!-- ── Transcript header card ─────────────────────────────── -->
+        <div class="gene-header-card mb-6">
+          <div class="gene-header-title">
+            <v-icon icon="mdi-dna" size="22" class="mr-2" style="color: #0D7377; opacity: 0.85;"></v-icon>
+            <span class="gene-name-text">{{ locusData.transcript.transcript_id }}</span>
+          </div>
+          <div class="gene-meta-row">
+            <div class="gene-meta-item">
+              <span class="gene-meta-label">Gene Symbol</span>
+              <span class="gene-meta-value font-weight-medium">{{ locusData.gene.gene_name }}</span>
+            </div>
+            <div class="gene-meta-item">
+              <span class="gene-meta-label">Gene ID</span>
+              <span class="gene-meta-value">
                 <router-link
                   :to="{ name: 'GeneDetail', params: { geneId: locusData.gene.gene_id } }"
-                  class="text-primary font-weight-medium"
-                >
-                  {{ locusData.gene.gene_id }}
-                </router-link>
-              </v-col>
-              <v-col cols="12" sm="6" md="2">
-                <div class="text-caption text-grey">Chromosome</div>
-                <div class="text-body-1">
-                  <v-chip size="small">{{ locusData.gene.chromosome }}</v-chip>
-                </div>
-              </v-col>
-              <v-col cols="12" sm="6" md="2">
-                <div class="text-caption text-grey">Strand</div>
-                <div class="text-body-1">
-                  <v-chip size="small">{{ locusData.gene.strand }}</v-chip>
-                </div>
-              </v-col>
-              <v-col cols="12" sm="6" md="2">
-                <div class="text-caption text-grey">APA Sites</div>
-                <div class="text-body-1 font-weight-bold text-primary">
-                  {{ locusData.apa_sites.length }}
-                </div>
-              </v-col>
-            </v-row>
-          </v-card-text>
-        </v-card>
-        
-        <v-card variant="outlined" class="mb-6" v-if="transcriptStructure">
-          <v-card-title class="d-flex align-center">
-            <v-icon icon="mdi-dna" class="mr-2"></v-icon>
-            Interactive Genome Browser
-            <v-spacer></v-spacer>
-            <v-chip size="small" variant="tonal" color="primary">
+                  class="gene-id-link"
+                >{{ locusData.gene.gene_id }}</router-link>
+              </span>
+            </div>
+            <div class="gene-meta-item">
+              <span class="gene-meta-label">Chromosome</span>
+              <span class="gene-meta-value">
+                <v-chip size="small" variant="tonal" color="primary" class="mr-1">{{ locusData.gene.chromosome }}</v-chip>
+                <v-chip size="small" variant="tonal" color="secondary">{{ locusData.gene.strand }}</v-chip>
+              </span>
+            </div>
+            <div class="gene-meta-item">
+              <span class="gene-meta-label">APA Sites</span>
+              <span class="gene-meta-value gene-meta-accent">{{ locusData.apa_sites.length }}</span>
+            </div>
+            <div class="gene-meta-item" v-if="locusData.apa_sites[0]?.species">
+              <span class="gene-meta-label">Species</span>
+              <span class="gene-meta-value">
+                {{ locusData.apa_sites[0].species.name }}
+                <span style="font-style: italic; opacity: 0.65; font-size: 12px;">{{ locusData.apa_sites[0].species.latin_name }}</span>
+                <v-chip size="x-small" variant="tonal" color="secondary" class="ml-1">{{ locusData.apa_sites[0].species.assembly }}</v-chip>
+              </span>
+            </div>
+          </div>
+        </div>
+
+        <!-- ── Genome Browser ───────────────────────────── -->
+        <div class="section-card mb-6" v-if="transcriptStructure">
+          <div class="section-title">
+            <v-icon size="18" class="mr-2" style="color: #0D7377;">mdi-dna</v-icon>
+            Genome Browser
+            <v-chip size="small" variant="tonal" color="primary" class="ml-auto">
               Single Transcript View
             </v-chip>
-          </v-card-title>
-          <v-divider></v-divider>
-          <v-card-text>
-            <ApaGenomeBrowser
-              :transcript-id="locusData.transcript.transcript_id"
-              :gene-name="locusData.gene.gene_name"
-              :chromosome="locusData.gene.chromosome"
-              :strand="locusData.gene.strand"
-              :exons="transcriptStructure.exons"
-              :cds="transcriptStructure.cds"
-              :apa-sites="locusData.apa_sites"
-              :samples="locusData.samples"
-            />
-            
+          </div>
+          <div class="panel-box">
+            <div class="panel-body">
+              <ApaGenomeBrowser
+                :transcript-id="locusData.transcript.transcript_id"
+                :gene-name="locusData.gene.gene_name"
+                :chromosome="locusData.gene.chromosome"
+                :strand="locusData.gene.strand"
+                :exons="transcriptStructure.exons"
+                :cds="transcriptStructure.cds"
+                :apa-sites="locusData.apa_sites"
+                :samples="locusData.samples"
+              />
+            </div>
+          </div>
+        </div>
 
-          </v-card-text>
-        </v-card>
-        
-        <v-card variant="outlined" class="mb-6">
-          <v-card-title class="d-flex align-center">
-            <v-icon icon="mdi-table" class="mr-2"></v-icon>
+        <!-- ── APA Sites Details ─────────────────────────────────────── -->
+        <div class="section-card mb-6">
+          <div class="section-title">
+            <v-icon size="18" class="mr-2" style="color: #0D7377;">mdi-table</v-icon>
             APA Sites Details
-          </v-card-title>
-          <v-divider></v-divider>
-          <v-card-text class="pa-4">
-            <v-card variant="flat" class="rounded-lg overflow-hidden light-card-bg">
+          </div>
+          <div class="panel-box">
+            <div class="panel-body pa-0">
               <v-data-table
                 :headers="tableHeaders"
                 :items="flattenedTableData"
@@ -160,88 +160,25 @@
                   </v-btn>
                 </template>
               </v-data-table>
-            </v-card>
-          </v-card-text>
-        </v-card>
-        
-        <v-card variant="outlined">
-          <v-card-title class="d-flex align-center">
-            <v-icon icon="mdi-chart-bar" class="mr-2"></v-icon>
-            APA Site Analysis
-          </v-card-title>
-          <v-divider></v-divider>
-          <v-card-text>
-            <v-row>
-              <!-- Left Panel: Abundance by APA Site (for selected sample) -->
-              <v-col cols="12" md="6">
-                <v-card variant="flat" class="pa-4 light-card-bg rounded-lg">
-                  <div class="d-flex align-center justify-space-between mb-4">
-                    <div class="text-subtitle-1 font-weight-medium">APA Loci Distribution</div>
-                    <v-select
-                      v-model="selectedSample"
-                      :items="sampleOptions"
-                      label="Select Sample"
-                      density="compact"
-                      variant="outlined"
-                      hide-details
-                      style="min-width: 140px; max-width: 180px;"
-                    ></v-select>
-                  </div>
-                  <Bar 
-                    v-if="sampleSiteAbundanceData" 
-                    :data="sampleSiteAbundanceData" 
-                    :options="sampleSiteChartOptions"
-                  ></Bar>
-                  <div v-else class="text-center py-8 text-grey">No data available</div>
-                </v-card>
-              </v-col>
-              
-              <!-- Right Panel: Abundance by Sample (for selected site) -->
-              <v-col cols="12" md="6">
-                <v-card variant="flat" class="pa-4 light-card-bg rounded-lg">
-                  <div class="d-flex align-center justify-space-between mb-4">
-                    <div class="text-subtitle-1 font-weight-medium">Abundance by Sample</div>
-                    <v-select
-                      v-model="selectedSiteId"
-                      :items="siteIdOptions"
-                      label="Select APA Site"
-                      item-title="label"
-                      item-value="value"
-                      density="compact"
-                      variant="outlined"
-                      hide-details
-                      return-object
-                      style="min-width: 180px; max-width: 240px;"
-                      @update:model-value="onSiteSelected"
-                    ></v-select>
-                  </div>
-                  <Bar 
-                    v-if="abundanceBarChartData" 
-                    :data="abundanceBarChartData" 
-                    :options="barChartOptions"
-                  ></Bar>
-                  <div v-else class="text-center py-8 text-grey">No data available</div>
-                </v-card>
-              </v-col>
-            </v-row>
-          </v-card-text>
-        </v-card>
+            </div>
+          </div>
+        </div>
 
         <!-- ── Abundance Heatmap ─────────────────────────────────────────── -->
-        <v-card variant="outlined" class="mt-6" v-if="heatmapData.sites.length > 0">
-          <v-card-title class="d-flex align-center">
-            <v-icon icon="mdi-grid" class="mr-2"></v-icon>
+        <div class="section-card mb-6" v-if="heatmapData.sites.length > 0">
+          <div class="section-title">
+            <v-icon size="18" class="mr-2" style="color: #0D7377;">mdi-grid</v-icon>
             Per-site Abundance Heatmap
             <v-tooltip location="bottom" max-width="320">
               <template #activator="{ props }">
-                <v-icon v-bind="props" icon="mdi-information-outline" size="small" class="ml-2 text-grey"></v-icon>
+                <v-icon v-bind="props" icon="mdi-information-outline" size="small" class="ml-2" style="color: rgba(0,0,0,0.38);"></v-icon>
               </template>
               Colour intensity shows relative abundance (0–100%) of each APA site in each sample.
-              Darker = higher usage. White = site not detected in that sample.
+              Darker = higher usage. Hatched = site not detected in that sample.
             </v-tooltip>
-          </v-card-title>
-          <v-divider></v-divider>
-          <v-card-text class="pa-6">
+          </div>
+          <div class="panel-box">
+            <div class="panel-body pa-6">
             <div class="heatmap-wrap">
               <!-- Column headers (samples) -->
               <div class="heatmap-grid" :style="heatmapGridStyle">
@@ -281,8 +218,13 @@
                       <div>
                         <strong>{{ site.id }}</strong><br/>
                         Sample: {{ sample }}<br/>
-                        Abundance: {{ heatmapLabel(site.id, sample) }}<br/>
-                        Read count: {{ heatmapCount(site.id, sample) }}
+                        <template v-if="heatmapCount(site.id, sample) > 0">
+                          Abundance: {{ heatmapLabel(site.id, sample) }}<br/>
+                          Read count: {{ heatmapCount(site.id, sample) }}
+                        </template>
+                        <template v-else>
+                          <em style="opacity:0.7;">Not detected in this sample</em>
+                        </template>
                       </div>
                     </v-tooltip>
                   </div>
@@ -294,31 +236,31 @@
                 <span class="text-caption text-grey">0%</span>
                 <div class="heatmap-legend-bar"></div>
                 <span class="text-caption text-grey">100%</span>
-                <span class="text-caption text-grey ml-4">
-                  <v-icon size="x-small">mdi-square-outline</v-icon> Not detected
+                <span class="text-caption text-grey ml-4" style="display:flex; align-items:center; gap:4px;">
+                  <span style="display:inline-block; width:12px; height:12px; border-radius:2px; background: repeating-linear-gradient(45deg, rgba(0,0,0,0.04) 0px, rgba(0,0,0,0.04) 3px, rgba(0,0,0,0.1) 3px, rgba(0,0,0,0.1) 6px); border:1px solid rgba(0,0,0,0.15);"></span>
+                  Not detected
                 </span>
               </div>
             </div>
-          </v-card-text>
-        </v-card>
+            </div>
+          </div>
+        </div>
 
         <!-- ── 3′ UTR Length Consequence ────────────────────────────────── -->
-        <v-card variant="outlined" class="mt-6" v-if="utrLengthData.length > 0">
-          <v-card-title class="d-flex align-center">
-            <v-icon icon="mdi-arrow-expand-horizontal" class="mr-2"></v-icon>
+        <div class="section-card mb-6" v-if="utrLengthData.length > 0">
+          <div class="section-title">
+            <v-icon size="18" class="mr-2" style="color: #0D7377;">mdi-arrow-expand-horizontal</v-icon>
             3′ UTR Length Consequence
             <v-tooltip location="bottom" max-width="340">
               <template #activator="{ props }">
-                <v-icon v-bind="props" icon="mdi-information-outline" size="small" class="ml-2 text-grey"></v-icon>
+                <v-icon v-bind="props" icon="mdi-information-outline" size="small" class="ml-2" style="color: rgba(0,0,0,0.38);"></v-icon>
               </template>
               Each bar shows the distance from the last CDS base to the APA site, representing
               the resulting 3′ UTR length. Shorter isoforms (proximal sites) tend to escape
               miRNA and RBP regulation encoded in the distal 3′ UTR.
             </v-tooltip>
-          </v-card-title>
-          <v-divider></v-divider>
-          <v-card-text class="pa-6">
-            <v-row align="start">
+          </div>
+          <v-row align="start">
               <!-- Bar chart -->
               <v-col cols="12" md="7">
                 <div class="utr-chart">
@@ -492,9 +434,8 @@
                 </div>
               </v-col>
             </v-row>
-          </v-card-text>
-        </v-card>
-      </div>
+          </div>
+        </div>
     </v-container>
   </div>
 </template>
@@ -774,10 +715,12 @@ const heatmapData = computed(() => {
 
 const heatmapGridStyle = computed(() => {
   const n = heatmapData.value.samples.length
+  // Use fixed-width columns so few-sample layouts don't stretch awkwardly.
+  // Each sample column is clamped between 80 px and 140 px.
   return {
     display: 'grid',
-    gridTemplateColumns: `200px repeat(${n}, 1fr)`,
-    gap: '3px'
+    gridTemplateColumns: `200px repeat(${n}, minmax(80px, 140px))`,
+    gap: '4px'
   }
 })
 
@@ -786,7 +729,10 @@ const HEATMAP_COLOR = [13, 115, 119]   // RGB of primary teal #0D7377
 const heatmapCellStyle = (siteId, sample) => {
   const entry = heatmapLookup.value[siteId]?.[sample]
   if (!entry) {
-    return { background: 'rgba(0,0,0,0.04)', border: '1px solid rgba(0,0,0,0.08)' }
+    return {
+      background: 'repeating-linear-gradient(45deg, rgba(0,0,0,0.03) 0px, rgba(0,0,0,0.03) 4px, rgba(0,0,0,0.06) 4px, rgba(0,0,0,0.06) 8px)',
+      border: '1px solid rgba(0,0,0,0.08)'
+    }
   }
   const alpha = Math.max(0.08, entry.abundance)
   const [r, g, b] = HEATMAP_COLOR
@@ -804,7 +750,7 @@ const heatmapTextColor = (siteId, sample) => {
 
 const heatmapLabel = (siteId, sample) => {
   const entry = heatmapLookup.value[siteId]?.[sample]
-  if (!entry) return ''
+  if (!entry) return '—'
   return (entry.abundance * 100).toFixed(0) + '%'
 }
 
@@ -961,6 +907,151 @@ code {
   font-size: 0.9em;
 }
 
+/* ── Gene/Transcript header card ─────────────────────────────────── */
+.gene-header-card {
+  background: #fff;
+  border: 1px solid rgba(0, 0, 0, 0.10);
+  border-radius: 12px;
+  padding: 20px 24px;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.05);
+}
+
+.gene-header-title {
+  display: flex;
+  align-items: center;
+  margin-bottom: 14px;
+}
+
+.gene-name-text {
+  font-size: 1.45rem;
+  font-weight: 700;
+  color: rgba(0,0,0,0.87);
+  letter-spacing: -0.01em;
+}
+
+.gene-meta-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 28px;
+}
+
+.gene-meta-item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.gene-meta-label {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: rgba(0,0,0,0.42);
+}
+
+.gene-meta-value {
+  font-size: 14px;
+  font-weight: 500;
+  color: rgba(0,0,0,0.80);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.gene-meta-accent {
+  font-size: 16px;
+  font-weight: 700;
+  color: #0D7377;
+}
+
+.gene-id-link {
+  font-weight: 600;
+  color: #0D7377;
+  text-decoration: none;
+}
+
+.gene-id-link:hover {
+  color: #14919B;
+  text-decoration: underline;
+}
+
+/* ── Section card ─────────────────────────────────────────────────── */
+.section-card {
+  background: #fff;
+  border: 1px solid rgba(0, 0, 0, 0.10);
+  border-radius: 12px;
+  padding: 24px;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.05);
+}
+
+.section-title {
+  display: flex;
+  align-items: center;
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: rgba(0,0,0,0.80);
+  margin-bottom: 20px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid rgba(0,0,0,0.07);
+}
+
+/* ── Panel box ────────────────────────────────────────────────────── */
+.panel-box {
+  border: 1px solid rgba(13, 115, 119, 0.15);
+  border-radius: 10px;
+  overflow: hidden;
+  background: #fafcfc;
+}
+
+.panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 18px;
+  background: rgba(13, 115, 119, 0.06);
+  border-bottom: 1px solid rgba(13, 115, 119, 0.12);
+  flex-wrap: wrap;
+}
+
+.panel-header-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.panel-icon-wrap {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  flex-shrink: 0;
+}
+
+.panel-icon-teal {
+  background: #0D7377;
+}
+
+.panel-title-text {
+  font-size: 0.92rem;
+  font-weight: 600;
+  color: rgba(0, 0, 0, 0.82);
+  line-height: 1.3;
+}
+
+.panel-subtitle-text {
+  font-size: 0.75rem;
+  color: rgba(0, 0, 0, 0.46);
+  margin-top: 2px;
+  max-width: 480px;
+}
+
+.panel-body {
+  padding: 16px;
+}
+
 .pas-motif {
   font-weight: 600;
   color: #0D7377;
@@ -1018,15 +1109,24 @@ code {
 }
 
 .heatmap-grid {
-  min-width: 400px;
+  min-width: 300px;
+  max-width: max-content;  /* don't stretch beyond content when few samples */
 }
 
 .heatmap-col-header {
   text-align: center;
-  padding: 4px 2px 8px;
+  padding: 4px 4px 10px;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  /* Rotate long names 45° for readability */
+  writing-mode: vertical-lr;
+  text-orientation: mixed;
+  transform: rotate(180deg);
+  max-height: 120px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .heatmap-row-label {
@@ -1047,7 +1147,7 @@ code {
 
 .heatmap-cell {
   border-radius: 4px;
-  min-height: 44px;
+  min-height: 56px;
   cursor: default;
   transition: transform 0.1s, box-shadow 0.1s;
 }
@@ -1062,7 +1162,7 @@ code {
 .heatmap-cell-inner {
   width: 100%;
   height: 100%;
-  min-height: 44px;
+  min-height: 56px;
   display: flex;
   align-items: center;
   justify-content: center;

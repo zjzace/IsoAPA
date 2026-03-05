@@ -570,7 +570,7 @@ def download_apa_sites(
     species: Optional[str] = None,
     sample: Optional[str] = None,
     gene_name: Optional[str] = None,
-    format: str = Query("csv", regex="^(csv|tsv|txt)$"),
+    format: str = Query("csv", pattern="^(csv|tsv|txt)$"),
     db: Session = Depends(get_db)
 ):
     """Download APA sites data in various formats."""
@@ -630,7 +630,7 @@ def download_apa_sites(
 @router.get("/download/genes")
 def download_genes(
     species: Optional[str] = None,
-    format: str = Query("csv", regex="^(csv|tsv|txt)$"),
+    format: str = Query("csv", pattern="^(csv|tsv|txt)$"),
     db: Session = Depends(get_db)
 ):
     """Download genes data."""
@@ -684,7 +684,7 @@ def download_genes(
 @router.get("/download/transcripts")
 def download_transcripts(
     species: Optional[str] = None,
-    format: str = Query("csv", regex="^(csv|tsv|txt)$"),
+    format: str = Query("csv", pattern="^(csv|tsv|txt)$"),
     db: Session = Depends(get_db)
 ):
     """Download transcripts data."""

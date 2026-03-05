@@ -1,11 +1,37 @@
 """
 Poly(A) Signal (PAS) Annotation Service
 
-Scans genomic sequence upstream of APA cleavage sites to identify
-canonical and variant poly(A) signal hexamers (e.g., AATAAA, ATTAAA).
+Annotation priority (stop at first hit):
+  1. Hexamer PAS motifs       — upstream  -40 to -1 nt
+  2. Upstream auxiliary 4-mers— upstream  -40 to -1 nt  (only if no hexamer found)
+  3. Downstream auxiliary 4-mers— downstream +1 to +40 nt (only if no upstream hit)
+
+Search windows (relative to cleavage site):
+  Hexamer / upstream 4-mers : -40 to -1
+    The hexamer sits 10–35 nt upstream; ending at -1 (not -10) catches sites
+    positioned close to the cleavage point. Starting upstream at -40 covers
+    the full observed range (Beaudoing et al. 2000).
+  Downstream 4-mers         : +1 to +40
+    DSEs appear immediately after the cleavage site; starting at +1 is correct.
+
+Hexamer catalogue (18 motifs):
+  Canonical (2) : AATAAA, ATTAAA
+  Variant  (16) : AGTAAA, TATAAA, CATAAA, GATAAA, AATATA, AATACA, AATAGA,
+                  ACTAAA, AAGAAA, AATGAA, TTTAAA, AAAACA, GGGGCT,
+                  AAAAAG, AAAAAA
+
+Upstream 4-mer auxiliary motifs:
+                  TGTA, TATA, ATAT, TTTT
+
+Downstream 4-mer auxiliary motifs (DSEs):
+                  TGTG, GTGT, TTTT, GGGG
+
+References:
+  Beaudoing et al. 2000 (Genome Research) — hexamer catalogue & window
+  Tian & Manley 2017 (Nature Reviews Genetics) — auxiliary upstream/downstream elements
 """
 
-from typing import Optional, Tuple, Dict
+from typing import Optional, Dict, List
 import logging
 from pathlib import Path
 
@@ -13,216 +39,383 @@ logger = logging.getLogger(__name__)
 
 
 class PASAnnotator:
-    """Annotates APA sites with poly(A) signal hexamers"""
-    
-    # Canonical PAS hexamers (strongest signals)
-    CANONICAL_HEXAMERS = ['AATAAA', 'ATTAAA']
-    
-    # Variant PAS hexamers (weaker but functional)
-    VARIANT_HEXAMERS = [
+    """Annotates APA sites with poly(A) signal hexamers and auxiliary motifs."""
+
+    # ------------------------------------------------------------------ #
+    # Hexamer catalogue                                                    #
+    # ------------------------------------------------------------------ #
+
+    # Strongest signals — searched first
+    CANONICAL_HEXAMERS: List[str] = ['AATAAA', 'ATTAAA']
+
+    # Weaker but functional single-nucleotide variants + others
+    VARIANT_HEXAMERS: List[str] = [
         'AGTAAA', 'TATAAA', 'CATAAA', 'GATAAA',
         'AATATA', 'AATACA', 'AATAGA', 'ACTAAA',
         'AAGAAA', 'AATGAA', 'TTTAAA', 'AAAACA',
-        'GGGGCT'  # Non-canonical but observed
+        'GGGGCT',   # non-canonical but observed
+        'AAAAAG',   # from Beaudoing et al. [41]
+        'AAAAAA',   # A-rich, from Beaudoing et al. [41]
     ]
-    
-    def __init__(self, fasta_path: str):
+
+    # ------------------------------------------------------------------ #
+    # Auxiliary 4-mer motifs                                               #
+    # ------------------------------------------------------------------ #
+
+    # Found in the region UPSTREAM of the cleavage site (-40 to -10 nt)
+    UPSTREAM_4MER: List[str] = ['TGTA', 'TATA', 'ATAT', 'TTTT']
+
+    # Found in the region DOWNSTREAM of the cleavage site (+1 to +40 nt)
+    DOWNSTREAM_4MER: List[str] = ['TGTG', 'GTGT', 'TTTT', 'GGGG']
+
+    # ------------------------------------------------------------------ #
+    # Search windows (relative to cleavage site, 1-based)                 #
+    # Hexamer sits 10-35 nt upstream; end at -1 (not -10) to catch        #
+    # edge cases close to the cleavage point.                              #
+    # ------------------------------------------------------------------ #
+    HEXAMER_UPSTREAM_START: int = -40
+    HEXAMER_UPSTREAM_END: int   =  -1
+    AUX_UPSTREAM_START: int     = -40
+    AUX_UPSTREAM_END: int       =  -1
+    AUX_DOWNSTREAM_START: int   =  +1
+    AUX_DOWNSTREAM_END: int     = +40
+
+    # ------------------------------------------------------------------ #
+
+    def __init__(self, fasta_path: str) -> None:
         """
-        Initialize PAS annotator with reference genome
-        
         Args:
-            fasta_path: Path to genome FASTA file
+            fasta_path: Path to reference genome FASTA file.
         """
         self.fasta_path = Path(fasta_path)
-        self._sequences = {}  # Cache for loaded chromosomes
-        
+        self._sequences: Dict[str, str] = {}   # chromosome sequence cache
+
         if not self.fasta_path.exists():
             logger.warning(f"FASTA file not found: {fasta_path}")
-    
+
+    # ------------------------------------------------------------------ #
+    # Internal helpers                                                     #
+    # ------------------------------------------------------------------ #
+
     def _load_chromosome(self, chrom: str) -> Optional[str]:
-        """
-        Load chromosome sequence from FASTA file
-        
-        Args:
-            chrom: Chromosome name (e.g., '1', 'X', 'chr1')
-        
-        Returns:
-            Chromosome sequence as string, or None if not found
-        """
+        """Load (and cache) a chromosome sequence from the FASTA file."""
         if chrom in self._sequences:
             return self._sequences[chrom]
-        
+
         if not self.fasta_path.exists():
             return None
-        
+
         try:
-            sequence = []
-            target_chrom = chrom.replace('chr', '')  # Normalize chromosome name
-            current_chrom = None
-            
-            with open(self.fasta_path, 'r') as f:
-                for line in f:
+            sequence: List[str] = []
+            target = chrom.replace('chr', '')
+            current: Optional[str] = None
+
+            with open(self.fasta_path, 'r') as fh:
+                for line in fh:
                     line = line.strip()
                     if line.startswith('>'):
-                        # Header line
-                        if sequence and current_chrom == target_chrom:
-                            # Found and finished loading target chromosome
+                        if sequence and current == target:
                             break
-                        
-                        # Parse chromosome name from header
-                        # Format: >1 dna:chromosome chromosome:GRCh38:1:1:248956422:1
-                        header_parts = line[1:].split()
-                        current_chrom = header_parts[0]
-                        
-                        if current_chrom == target_chrom:
+                        # Header format: >1 dna:chromosome chromosome:GRCh38:1:…
+                        current = line[1:].split()[0]
+                        if current == target:
                             sequence = []
-                    elif current_chrom == target_chrom:
+                    elif current == target:
                         sequence.append(line.upper())
-            
+
             if sequence:
                 seq_str = ''.join(sequence)
                 self._sequences[chrom] = seq_str
                 logger.info(f"Loaded chromosome {chrom}: {len(seq_str):,} bp")
                 return seq_str
-            
+
             logger.warning(f"Chromosome {chrom} not found in FASTA")
             return None
-            
-        except Exception as e:
-            logger.error(f"Error loading chromosome {chrom}: {e}")
+
+        except Exception as exc:
+            logger.error(f"Error loading chromosome {chrom}: {exc}")
             return None
-    
-    def _reverse_complement(self, seq: str) -> str:
-        """Return reverse complement of DNA sequence"""
-        complement = {'A': 'T', 'T': 'A', 'C': 'G', 'G': 'C', 'N': 'N'}
-        return ''.join(complement.get(base, 'N') for base in reversed(seq))
-    
+
+    @staticmethod
+    def _reverse_complement(seq: str) -> str:
+        """Return the reverse complement of a DNA sequence."""
+        table = str.maketrans('ACGTN', 'TGCAN')
+        return seq.translate(table)[::-1]
+
+    def _extract_window(
+        self,
+        seq: str,
+        pos_0: int,
+        rel_start: int,
+        rel_end: int,
+        strand: str,
+    ) -> str:
+        """
+        Extract a subsequence window relative to a cleavage site.
+
+        For '+' strand  : window = seq[pos_0 + rel_start : pos_0 + rel_end]
+        For '-' strand  : mirror coordinates, then reverse-complement.
+
+        Args:
+            seq      : Full chromosome sequence (0-based).
+            pos_0    : Cleavage site position (0-based).
+            rel_start: Window start relative to cleavage site (may be negative).
+            rel_end  : Window end relative to cleavage site (may be negative).
+            strand   : '+' or '-'.
+
+        Returns:
+            Extracted sequence (forward-strand orientation).
+        """
+        if strand == '+':
+            start = max(0, pos_0 + rel_start)
+            end   = max(0, pos_0 + rel_end)
+            return seq[start:end]
+        else:
+            # On '-' strand, "upstream" means higher genomic coordinates
+            # Mirror: upstream (-40..-10) → pos_0 + 10 .. pos_0 + 40
+            start = max(0, pos_0 - rel_end)
+            end   = min(len(seq), pos_0 - rel_start)
+            return self._reverse_complement(seq[start:end])
+
+    def _search_motifs(
+        self,
+        window_seq: str,
+        motifs: List[str],
+    ) -> List[Dict]:
+        """
+        Find ALL occurrences of each motif in window_seq.
+
+        Returns a list of dicts with keys: motif, offset (0-based within window).
+        """
+        hits = []
+        for motif in motifs:
+            start = 0
+            while True:
+                idx = window_seq.find(motif, start)
+                if idx == -1:
+                    break
+                hits.append({'motif': motif, 'offset': idx})
+                start = idx + 1
+        return hits
+
+    # ------------------------------------------------------------------ #
+    # Public API                                                           #
+    # ------------------------------------------------------------------ #
+
     def find_pas_hexamer(
         self,
         chrom: str,
         position: int,
         strand: str,
-        search_start: int = -50,
-        search_end: int = -10
-    ) -> Dict[str, any]:
+        search_start: int = -40,
+        search_end: int   = -1,
+    ) -> Dict:
         """
-        Find poly(A) signal hexamer upstream of cleavage site
-        
+        Find the highest-priority PAS hexamer upstream of a cleavage site.
+
         Args:
-            chrom: Chromosome (e.g., '7', 'chr7')
-            position: Cleavage site position (1-based)
-            strand: '+' or '-'
-            search_start: Start of search window relative to cleavage site (default: -50bp)
-            search_end: End of search window relative to cleavage site (default: -10bp)
-        
+            chrom       : Chromosome (e.g. '7', 'chr7').
+            position    : Cleavage site (1-based).
+            strand      : '+' or '-'.
+            search_start: Upstream window start relative to site (default -40).
+            search_end  : Upstream window end relative to site (default -10).
+
         Returns:
-            Dictionary with:
-                - motif: Hexamer sequence (or None)
-                - position: Distance from cleavage site (or None)
-                - motif_type: 'canonical', 'variant', or None
-                - confidence: 'high', 'medium', 'low', or None
+            Dict with keys: motif, position (distance), motif_type, confidence.
         """
-        # Normalize chromosome name
         chrom = chrom.replace('chr', '')
-        
-        # Load chromosome sequence
-        seq = self._load_chromosome(chrom)
+        seq   = self._load_chromosome(chrom)
+        empty = {'motif': None, 'position': None, 'motif_type': None, 'confidence': None}
+
         if not seq:
-            return {
-                'motif': None,
-                'position': None,
-                'motif_type': None,
-                'confidence': None
-            }
-        
+            return empty
+
         try:
-            # Convert to 0-based indexing
-            pos_0 = position - 1
-            
-            # Define search window
-            if strand == '+':
-                # For forward strand, search upstream (lower coordinates)
-                window_start = max(0, pos_0 + search_start)
-                window_end = max(0, pos_0 + search_end)
-                search_seq = seq[window_start:window_end]
-            else:
-                # For reverse strand, search upstream (higher coordinates)
-                # Need to reverse complement
-                window_start = pos_0 - search_end
-                window_end = pos_0 - search_start
-                window_start = max(0, window_start)
-                window_end = min(len(seq), window_end)
-                search_seq = self._reverse_complement(seq[window_start:window_end])
-            
-            if len(search_seq) < 6:
-                return {
-                    'motif': None,
-                    'position': None,
-                    'motif_type': None,
-                    'confidence': None
-                }
-            
-            # Search for canonical hexamers first (highest priority)
+            pos_0      = position - 1
+            window_seq = self._extract_window(seq, pos_0, search_start, search_end, strand)
+
+            if len(window_seq) < 6:
+                return empty
+
             for hexamer in self.CANONICAL_HEXAMERS:
-                idx = search_seq.find(hexamer)
+                idx = window_seq.find(hexamer)
                 if idx != -1:
-                    # Calculate distance from cleavage site
-                    distance = search_start + idx
                     return {
-                        'motif': hexamer,
-                        'position': distance,
+                        'motif'     : hexamer,
+                        'position'  : search_start + idx,
                         'motif_type': 'canonical',
-                        'confidence': 'high'
+                        'confidence': 'high',
                     }
-            
-            # Search for variant hexamers
+
             for hexamer in self.VARIANT_HEXAMERS:
-                idx = search_seq.find(hexamer)
+                idx = window_seq.find(hexamer)
                 if idx != -1:
-                    distance = search_start + idx
                     return {
-                        'motif': hexamer,
-                        'position': distance,
+                        'motif'     : hexamer,
+                        'position'  : search_start + idx,
                         'motif_type': 'variant',
-                        'confidence': 'medium'
+                        'confidence': 'medium',
                     }
-            
-            # No hexamer found
+
+            return {'motif': None, 'position': None, 'motif_type': None, 'confidence': 'low'}
+
+        except Exception as exc:
+            logger.error(f"Error finding PAS hexamer for {chrom}:{position}:{strand} — {exc}")
+            return empty
+
+    def find_auxiliary_motifs(
+        self,
+        chrom: str,
+        position: int,
+        strand: str,
+    ) -> Dict:
+        """
+        Find auxiliary 4-mer motifs in the upstream and downstream regions.
+
+        Args:
+            chrom   : Chromosome.
+            position: Cleavage site (1-based).
+            strand  : '+' or '-'.
+
+        Returns:
+            Dict with keys:
+                upstream_motifs  : list of {motif, offset} found upstream
+                downstream_motifs: list of {motif, offset} found downstream
+        """
+        chrom = chrom.replace('chr', '')
+        seq   = self._load_chromosome(chrom)
+
+        if not seq:
+            return {'upstream_motifs': [], 'downstream_motifs': []}
+
+        try:
+            pos_0 = position - 1
+
+            up_window   = self._extract_window(
+                seq, pos_0, self.AUX_UPSTREAM_START, self.AUX_UPSTREAM_END, strand)
+            down_window = self._extract_window(
+                seq, pos_0, self.AUX_DOWNSTREAM_START, self.AUX_DOWNSTREAM_END, strand)
+
             return {
-                'motif': None,
-                'position': None,
-                'motif_type': None,
-                'confidence': 'low'
+                'upstream_motifs'  : self._search_motifs(up_window,   self.UPSTREAM_4MER),
+                'downstream_motifs': self._search_motifs(down_window, self.DOWNSTREAM_4MER),
             }
-            
-        except Exception as e:
-            logger.error(f"Error finding PAS for {chrom}:{position}:{strand} - {e}")
+
+        except Exception as exc:
+            logger.error(f"Error finding auxiliary motifs for {chrom}:{position}:{strand} — {exc}")
+            return {'upstream_motifs': [], 'downstream_motifs': []}
+
+    def annotate_site(
+        self,
+        chrom: str,
+        position: int,
+        strand: str,
+    ) -> Dict:
+        """
+        Full annotation for a single APA site using priority-based search:
+          1. Hexamer found          → return immediately, skip aux motifs
+          2. No hexamer, upstream found  → return upstream hits, skip downstream
+          3. No hexamer or upstream → return downstream hits
+          4. Nothing found          → return all empty
+
+        Returns:
+            {
+                hexamer           : {motif, position, motif_type, confidence},
+                upstream_motifs   : [{motif, offset}, ...],
+                downstream_motifs : [{motif, offset}, ...],
+                search_level      : 'hexamer' | 'upstream' | 'downstream' | 'none'
+            }
+        """
+        empty_result = {
+            'hexamer'          : {'motif': None, 'position': None, 'motif_type': None, 'confidence': None},
+            'upstream_motifs'  : [],
+            'downstream_motifs': [],
+            'search_level'     : 'none',
+        }
+
+        chrom_norm = chrom.replace('chr', '')
+        seq = self._load_chromosome(chrom_norm)
+        if not seq:
+            return empty_result
+
+        pos_0 = position - 1
+
+        # --- Level 1: hexamer ---
+        hexamer = self.find_pas_hexamer(chrom, position, strand)
+        if hexamer['motif'] is not None:
             return {
-                'motif': None,
-                'position': None,
-                'motif_type': None,
-                'confidence': None
+                'hexamer'          : hexamer,
+                'upstream_motifs'  : [],
+                'downstream_motifs': [],
+                'search_level'     : 'hexamer',
             }
-    
+
+        # --- Level 2: upstream 4-mers ---
+        up_window = self._extract_window(
+            seq, pos_0, self.AUX_UPSTREAM_START, self.AUX_UPSTREAM_END, strand)
+        upstream_hits = self._search_motifs(up_window, self.UPSTREAM_4MER)
+        if upstream_hits:
+            return {
+                'hexamer'          : hexamer,
+                'upstream_motifs'  : upstream_hits,
+                'downstream_motifs': [],
+                'search_level'     : 'upstream',
+            }
+
+        # --- Level 3: downstream 4-mers ---
+        down_window = self._extract_window(
+            seq, pos_0, self.AUX_DOWNSTREAM_START, self.AUX_DOWNSTREAM_END, strand)
+        downstream_hits = self._search_motifs(down_window, self.DOWNSTREAM_4MER)
+        if downstream_hits:
+            return {
+                'hexamer'          : hexamer,
+                'upstream_motifs'  : [],
+                'downstream_motifs': downstream_hits,
+                'search_level'     : 'downstream',
+            }
+
+        return empty_result
+
     def annotate_batch(
         self,
-        sites: list[Dict[str, any]]
-    ) -> list[Dict[str, any]]:
+        sites: List[Dict],
+    ) -> List[Dict]:
         """
-        Annotate multiple APA sites with PAS hexamers
-        
+        Annotate multiple APA sites (backward-compatible with old API).
+
         Args:
-            sites: List of dicts with keys: chrom, position, strand
-        
+            sites: List of dicts with keys: chrom, position, strand.
+
         Returns:
-            List of annotation dicts (same as find_pas_hexamer)
+            List of hexamer annotation dicts (same shape as find_pas_hexamer).
         """
-        results = []
-        for site in sites:
-            annotation = self.find_pas_hexamer(
-                chrom=site['chrom'],
-                position=site['position'],
-                strand=site['strand']
+        return [
+            self.find_pas_hexamer(
+                chrom    = s['chrom'],
+                position = s['position'],
+                strand   = s['strand'],
             )
-            results.append(annotation)
-        return results
+            for s in sites
+        ]
+
+    def annotate_batch_full(
+        self,
+        sites: List[Dict],
+    ) -> List[Dict]:
+        """
+        Full annotation for a batch of APA sites (hexamer + auxiliary motifs).
+
+        Args:
+            sites: List of dicts with keys: chrom, position, strand.
+
+        Returns:
+            List of full annotation dicts (same shape as annotate_site).
+        """
+        return [
+            self.annotate_site(
+                chrom    = s['chrom'],
+                position = s['position'],
+                strand   = s['strand'],
+            )
+            for s in sites
+        ]

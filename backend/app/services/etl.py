@@ -10,7 +10,7 @@ from app.services.apa_classifier import APATypeClassifier
 
 SPECIES_MAP = {
     'homo_sapiens': {'name': 'Human', 'latin_name': 'Homo sapiens', 'assembly': 'GRCh38'},
-    'mus_musculus': {'name': 'Mouse', 'latin_name': 'Mus musculus', 'assembly': 'GRCm38'},
+    'mus_musculus': {'name': 'Mouse', 'latin_name': 'Mus musculus', 'assembly': 'GRCm39'},
     'rattus_norvegicus': {'name': 'Rat', 'latin_name': 'Rattus norvegicus', 'assembly': 'rn6'},
     'danio_rerio': {'name': 'Zebrafish', 'latin_name': 'Danio rerio', 'assembly': 'GRCz11'},
 }

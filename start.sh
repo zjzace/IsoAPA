@@ -45,9 +45,10 @@ md5_cmd() {
 # Hash all APA data files (TSV/TXT) – excludes large reference binaries
 get_data_hash() {
     find "$DATA_DIR" -type f \( -name "*.txt" -o -name "*.tsv" \) \
-        ! -path "*/reference/*" \
-        -exec md5_cmd {} \; 2>/dev/null \
-        | sort | md5_cmd /dev/stdin 2>/dev/null \
+        ! -path "*/reference/*" -print0 2>/dev/null \
+        | sort -z \
+        | xargs -0 md5sum 2>/dev/null \
+        | md5sum | awk '{print $1}' \
         || echo "none"
 }
 
