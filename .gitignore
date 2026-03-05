@@ -42,6 +42,7 @@ wheels/
 # Database
 *.sqlite3
 *.db
+backend/.data_hash
 
 # Data (sample data)
 data/
