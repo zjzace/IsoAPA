@@ -50,7 +50,7 @@
               </span>
             </div>
             <div class="gene-meta-item">
-              <span class="gene-meta-label">APA Sites</span>
+              <span class="gene-meta-label">PA Sites</span>
               <span class="gene-meta-value gene-meta-accent">{{ locusData.apa_sites.length }}</span>
             </div>
             <div class="gene-meta-item" v-if="locusData.apa_sites[0]?.species">
@@ -93,7 +93,16 @@
         <div class="section-card mb-6">
           <div class="section-title">
             <v-icon size="18" class="mr-2" style="color: #0D7377;">mdi-table</v-icon>
-            APA Sites Details
+            PA Sites Details
+            <div class="pas-legend ml-4">
+              <span v-for="(meta, key) in PAS_TYPE_META" :key="key"
+                class="pas-legend-item"
+                :style="{ background: meta.bg, border: '1px solid ' + meta.border, color: meta.text }"
+              >
+                <span class="pas-chip-dot" :style="{ background: meta.border }"></span>
+                {{ meta.label }}
+              </span>
+            </div>
           </div>
           <div class="panel-box">
             <div class="panel-body pa-0">
@@ -102,38 +111,49 @@
                 :items="flattenedTableData"
                 :items-per-page="10"
                 class="elegant-table"
+                item-value="site_id"
+                v-model:expanded="seqOpen"
               >
                 <template v-slot:item.site_id="{ item }">
                   <code>{{ item.site_id }}</code>
                 </template>
-                
+
                 <template v-slot:item.site_position="{ item }">
                   <code>{{ item.site_position }}</code>
                 </template>
-                
+
                 <template v-slot:item.pas_motif="{ item }">
                   <div v-if="item.pas_motif" class="d-flex align-center ga-1">
-                    <code class="pas-motif">{{ item.pas_motif }}</code>
-                    <v-chip 
-                      size="x-small" 
-                      :color="item.pas_type === 'canonical' ? 'success' : 'warning'"
-                      variant="flat"
+                    <span
+                      class="pas-chip"
+                      :style="{
+                        background: pasTypeMeta(item.pas_type).bg,
+                        border: '1px solid ' + pasTypeMeta(item.pas_type).border,
+                        color: pasTypeMeta(item.pas_type).text,
+                      }"
                     >
-                      {{ item.pas_type === 'canonical' ? '✓' : '~' }}
-                    </v-chip>
+                      <span class="pas-chip-dot" :style="{ background: pasTypeMeta(item.pas_type).border }"></span>
+                      {{ item.pas_motif }}
+                    </span>
+                    <span class="pas-type-label" :style="{ color: pasTypeMeta(item.pas_type).text }">
+                      {{ pasTypeMeta(item.pas_type).label }}
+                    </span>
                     <span class="text-caption text-grey" v-if="item.pas_position">
                       {{ item.pas_position }}bp
                     </span>
                   </div>
-                  <span v-else class="text-grey">—</span>
+                  <span v-else class="pas-chip pas-chip--none">
+                    <span class="pas-chip-dot" style="background:#BDBDBD"></span>
+                    None
+                  </span>
                 </template>
-                
+
                 <template v-slot:item.sample_name="{ item }">
                   <v-chip size="small" variant="tonal" color="primary">
                     {{ item.sample_name }}
                   </v-chip>
                 </template>
-                
+
                 <template v-slot:item.site_abundance="{ item }">
                   <div class="d-flex align-center ga-2">
                     <v-progress-linear
@@ -148,17 +168,85 @@
                     </span>
                   </div>
                 </template>
-                
+
                 <template v-slot:item.actions="{ item }">
-                  <v-btn 
-                    size="small" 
-                    variant="tonal"
-                    color="primary"
-                    @click="selectAPASiteById(item.site_id)"
+                  <v-btn
+                    size="small"
+                    :variant="seqOpen.includes(item.site_id) ? 'flat' : 'tonal'"
+                    :color="seqOpen.includes(item.site_id) ? 'primary' : 'primary'"
+                    @click.stop="toggleSeqPanel(item.site_id)"
+                    class="seq-toggle-btn"
                   >
-                    View
+                    <v-icon start size="14">mdi-dna</v-icon>
+                    {{ seqOpen.includes(item.site_id) ? 'Hide Seq' : 'Sequence' }}
                   </v-btn>
                 </template>
+
+                <!-- ── Expanded row: inline sequence panel ── -->
+                <template v-slot:expanded-row="{ item }">
+                  <tr class="seq-expanded-row">
+                    <td :colspan="tableHeaders.length" class="pa-0">
+                      <div class="seq-context-panel seq-context-panel--inline">
+
+                        <!-- Loading -->
+                        <div v-if="seqData[item.site_id]?.loading" class="seq-panel-body d-flex align-center" style="min-height:72px">
+                          <v-progress-circular indeterminate size="22" color="primary" />
+                          <span class="ml-3 text-body-2 text-medium-emphasis">Fetching sequence…</span>
+                        </div>
+
+                        <!-- Error -->
+                        <div v-else-if="seqData[item.site_id]?.error" class="seq-panel-body">
+                          <v-alert type="error" variant="tonal" density="compact">{{ seqData[item.site_id].error }}</v-alert>
+                        </div>
+
+                        <!-- Sequence viewer -->
+                        <div v-else-if="seqData[item.site_id]?.data" class="seq-panel-body">
+                          <!-- Meta chips row — strand, coords, window, PAS motif, PA site ID -->
+                          <div class="seq-meta-row">
+                            <span class="seq-meta-chip seq-meta-strand">
+                              {{ seqData[item.site_id].data.strand === '+' ? '(+) positive strand' : '(−) negative strand' }}
+                            </span>
+                            <span class="seq-meta-chip">
+                              chr{{ seqData[item.site_id].data.chromosome }}:{{
+                                (seqData[item.site_id].data.site_position - seqData[item.site_id].data.flank).toLocaleString()
+                              }}–{{
+                                (seqData[item.site_id].data.site_position + seqData[item.site_id].data.flank).toLocaleString()
+                              }}
+                            </span>
+                            <span class="seq-meta-chip seq-meta-window">±{{ seqData[item.site_id].data.flank }} bp window</span>
+                            <template v-if="seqData[item.site_id].data.pas_motif">
+                              <span
+                                class="seq-meta-chip seq-meta-pas"
+                                :style="{ background: pasTypeMeta(seqData[item.site_id].data.pas_type).bg, border: '1px solid ' + pasTypeMeta(seqData[item.site_id].data.pas_type).border, color: pasTypeMeta(seqData[item.site_id].data.pas_type).text }"
+                              >
+                                {{ seqData[item.site_id].data.pas_motif }} · {{ pasTypeMeta(seqData[item.site_id].data.pas_type).label }}
+                                <span v-if="seqData[item.site_id].data.pas_position"> · {{ seqData[item.site_id].data.pas_position }}bp</span>
+                              </span>
+                            </template>
+                             <!-- PA site chip — same row, label only -->
+                             <span class="seq-meta-chip seq-meta-pasite">
+                               <v-icon size="11" style="color:#D45D79;">mdi-map-marker</v-icon>
+                               PA Site
+                             </span>
+                          </div>
+
+                          <!-- Sequence display — no outer border, divider on top -->
+                          <div class="seq-display">
+                            <span
+                              v-for="(nt, idx) in seqData[item.site_id].data.sequence.split('')"
+                              :key="idx"
+                              :class="seqNtClass(nt, idx, seqData[item.site_id].data)"
+                              :style="seqNtStyle(nt, idx, seqData[item.site_id].data)"
+                              :title="idx === seqData[item.site_id].data.cleavage_index ? 'Cleavage site' : ''"
+                            >{{ nt }}</span>
+                          </div>
+                        </div>
+
+                      </div>
+                    </td>
+                  </tr>
+                </template>
+
               </v-data-table>
             </div>
           </div>
@@ -173,7 +261,7 @@
               <template #activator="{ props }">
                 <v-icon v-bind="props" icon="mdi-information-outline" size="small" class="ml-2" style="color: rgba(0,0,0,0.38);"></v-icon>
               </template>
-              Colour intensity shows relative abundance (0–100%) of each APA site in each sample.
+              Colour intensity shows relative abundance (0–100%) of each PA site in each sample.
               Darker = higher usage. Hatched = site not detected in that sample.
             </v-tooltip>
           </div>
@@ -251,11 +339,20 @@
           <div class="section-title">
             <v-icon size="18" class="mr-2" style="color: #0D7377;">mdi-arrow-expand-horizontal</v-icon>
             3′ UTR Length Consequence
+            <div class="pas-legend ml-4">
+              <span v-for="(meta, key) in PAS_TYPE_META" :key="key"
+                class="pas-legend-item"
+                :style="{ background: meta.bg, border: '1px solid ' + meta.border, color: meta.text }"
+              >
+                <span class="pas-chip-dot" :style="{ background: meta.border }"></span>
+                {{ meta.label }}
+              </span>
+            </div>
             <v-tooltip location="bottom" max-width="340">
               <template #activator="{ props }">
                 <v-icon v-bind="props" icon="mdi-information-outline" size="small" class="ml-2" style="color: rgba(0,0,0,0.38);"></v-icon>
               </template>
-              Each bar shows the distance from the last CDS base to the APA site, representing
+              Each bar shows the distance from the last CDS base to the PA site, representing
               the resulting 3′ UTR length. Shorter isoforms (proximal sites) tend to escape
               miRNA and RBP regulation encoded in the distal 3′ UTR.
             </v-tooltip>
@@ -274,9 +371,17 @@
                         Site {{ i + 1 }}
                         <span class="text-grey ml-1">({{ item.position.toLocaleString() }})</span>
                       </span>
-                      <v-chip size="x-small" :color="item.pasType === 'canonical' ? 'success' : 'warning'" variant="flat" class="ml-2">
+                      <span
+                        class="pas-chip ml-2"
+                        :style="{
+                          background: pasTypeMeta(item.pasType).bg,
+                          border: '1px solid ' + pasTypeMeta(item.pasType).border,
+                          color: pasTypeMeta(item.pasType).text,
+                        }"
+                      >
+                        <span class="pas-chip-dot" :style="{ background: pasTypeMeta(item.pasType).border }"></span>
                         {{ item.pasMotif || '—' }}
-                      </v-chip>
+                      </span>
                       <v-tooltip location="top" text="Download 3′ UTR sequence (.fa)">
                         <template #activator="{ props }">
                           <v-btn
@@ -471,6 +576,58 @@ const rbpData = ref([])
 const rbpLoading = ref(false)
 const rbpTab = ref(0)
 
+// ── Sequence context panel ─────────────────────────────────────────────────
+// seqOpen: array of site_ids whose sequence panel is expanded (v-model:expanded expects array)
+// seqData: Map of site_id → { loading, data, error }
+const seqOpen = ref([])
+const seqData = ref({})
+
+const toggleSeqPanel = async (siteId) => {
+  const idx = seqOpen.value.indexOf(siteId)
+  if (idx !== -1) {
+    seqOpen.value = seqOpen.value.filter(id => id !== siteId)
+    return
+  }
+  seqOpen.value = [...seqOpen.value, siteId]
+
+  // Fetch if not already loaded
+  if (!seqData.value[siteId]) {
+    seqData.value = { ...seqData.value, [siteId]: { loading: true, data: null, error: null } }
+    try {
+      const transcriptId = locusData.value.transcript.transcript_id
+      const result = await apiService.getSiteSequence(transcriptId, siteId)
+      seqData.value = { ...seqData.value, [siteId]: { loading: false, data: result, error: null } }
+    } catch (e) {
+      seqData.value = { ...seqData.value, [siteId]: { loading: false, data: null, error: 'Failed to load sequence' } }
+    }
+  }
+}
+
+// Nucleotide colouring + cleavage/PAS highlighting
+const seqNtClass = (nt, idx, data) => {
+  if (idx === data.cleavage_index) return 'seq-nt seq-nt--cleavage'
+  if (data.pas_motif && data.pas_position !== null && data.pas_position !== undefined) {
+    const motifStart = data.cleavage_index + data.pas_position
+    const motifEnd   = motifStart + data.pas_motif.length
+    if (idx >= motifStart && idx < motifEnd) return 'seq-nt seq-nt--pas'
+  }
+  return 'seq-nt'
+}
+
+// Inline style for PAS motif — uses exact pasTypeMeta colours so it always matches the chip
+const seqNtStyle = (nt, idx, data) => {
+  if (idx === data.cleavage_index) return {}
+  if (data.pas_motif && data.pas_position !== null && data.pas_position !== undefined) {
+    const motifStart = data.cleavage_index + data.pas_position
+    const motifEnd   = motifStart + data.pas_motif.length
+    if (idx >= motifStart && idx < motifEnd) {
+      const meta = pasTypeMeta(data.pas_type)
+      return { background: meta.bg, color: meta.text }
+    }
+  }
+  return {}
+}
+
 const rbpCategories = [
   { name: 'Stability',        color: 'error'   },
   { name: 'Decay',            color: 'warning' },
@@ -513,7 +670,7 @@ const sampleSiteChartOptions = {
       }
     },
     x: {
-      title: { display: true, text: 'APA Site' },
+      title: { display: true, text: 'PA Site' },
       ticks: {
         maxRotation: 45,
         minRotation: 45
@@ -802,6 +959,18 @@ const utrLengthData = computed(() => {
 const UTR_BAR_COLORS = ['#0D7377', '#14919B', '#2196F3', '#7B1FA2', '#E53935', '#FB8C00', '#43A047', '#00ACC1']
 const utrBarColor = (i) => UTR_BAR_COLORS[i % UTR_BAR_COLORS.length]
 
+// ── PAS motif type colours ──────────────────────────────────────────────────
+// canonical  : deep teal   (#0D7377) — the two gold-standard hexamers
+// variant    : dusty amber (#B08C5A) — weaker single-nt variants
+// none       : muted grey  (#9E9E9E) — no motif detected
+const PAS_TYPE_META = {
+  canonical : { label: 'Canonical',  bg: 'rgba(22,163,74,0.12)',   border: '#16A34A', text: '#15803D' },
+  variant   : { label: 'Variant',    bg: 'rgba(37,99,235,0.12)',   border: '#2563EB', text: '#1D4ED8' },
+  other     : { label: 'Other',      bg: 'rgba(147,51,234,0.12)',  border: '#9333EA', text: '#7E22CE' },
+  none      : { label: 'None',       bg: 'rgba(0,0,0,0.05)',       border: '#9CA3AF', text: '#6B7280' },
+}
+const pasTypeMeta = (type) => PAS_TYPE_META[type] ?? PAS_TYPE_META.none
+
 const abundanceBarChartData = computed(() => {
   if (!locusData.value || !selectedSiteId.value) return null
   
@@ -1058,49 +1227,132 @@ code {
   letter-spacing: 0.5px;
 }
 
+/* ── PAS motif type chips ─────────────────────────────────────────── */
+.pas-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 2px 8px 2px 6px;
+  border-radius: 20px;
+  font-size: 11.5px;
+  font-weight: 600;
+  font-family: 'Roboto Mono', 'Courier New', monospace;
+  letter-spacing: 0.3px;
+  white-space: nowrap;
+  line-height: 1.6;
+}
+
+.pas-chip--none {
+  background: rgba(0, 0, 0, 0.05);
+  border: 1px solid #BDBDBD;
+  color: #757575;
+  font-family: 'Roboto', sans-serif;
+  font-style: italic;
+}
+
+.pas-chip-dot {
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.pas-type-label {
+  font-size: 11px;
+  font-family: 'Roboto', sans-serif;
+  font-weight: 500;
+  opacity: 0.85;
+}
+
+/* ── PAS legend strip ─────────────────────────────────────────────── */
+.pas-legend {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  font-size: 11px;
+  font-weight: 400;
+}
+
+.pas-legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px 2px 6px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-family: 'Roboto', sans-serif;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.elegant-table :deep(code) {
+  background: rgba(13, 115, 119, 0.08);
+  color: #0D7377;
+  padding: 2px 7px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-family: 'Roboto Mono', 'Courier New', monospace;
+}
+
 .light-card-bg {
   background: rgba(var(--v-theme-surface), 0.5) !important;
   border: 1px solid rgba(var(--v-theme-on-surface), 0.08);
 }
 
 .elegant-table {
-  background: transparent !important;
+  background: #fafcfc !important;
+  font-family: 'Roboto', sans-serif;
+  font-size: 13px;
 }
 
 .elegant-table :deep(.v-data-table__th) {
-  background: transparent !important;
-  font-weight: 600;
-  border-bottom: 1px solid rgba(var(--v-theme-on-surface), 0.12);
+  background: rgba(13, 115, 119, 0.04) !important;
+  font-size: 12px !important;
+  font-weight: 600 !important;
+  letter-spacing: 0.4px;
+  text-transform: uppercase;
+  color: rgba(0, 0, 0, 0.60) !important;
+  border-bottom: 1px solid rgba(13, 115, 119, 0.10) !important;
+  white-space: nowrap;
+  font-family: 'Roboto', sans-serif;
 }
 
 .elegant-table :deep(.v-data-table__td) {
-  padding: 12px 16px;
-  background: transparent !important;
+  padding: 11px 16px;
+  background: #fafcfc !important;
+  color: rgba(0, 0, 0, 0.82);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.055) !important;
+  font-family: 'Roboto', sans-serif;
+  font-size: 13px;
 }
 
-.elegant-table :deep(.v-data-table__tr:hover) {
-  background: rgba(var(--v-theme-primary), 0.08) !important;
+.elegant-table :deep(.v-data-table__tr:hover .v-data-table__td) {
+  background: rgba(13, 115, 119, 0.04) !important;
 }
 
 .elegant-table :deep(.v-data-table-footer) {
-  background: transparent !important;
-  border-top: 1px solid rgba(var(--v-theme-on-surface), 0.12);
+  background: #fafcfc !important;
+  border-top: 1px solid rgba(13, 115, 119, 0.10) !important;
+  font-size: 12px;
+  color: rgba(0, 0, 0, 0.60);
 }
 
 .elegant-table :deep(.v-data-table) {
-  background: transparent !important;
+  background: #fafcfc !important;
 }
 
 .elegant-table :deep(table) {
-  background: transparent !important;
+  background: #fafcfc !important;
 }
 
 .elegant-table :deep(tbody) {
-  background: transparent !important;
+  background: #fafcfc !important;
 }
 
 .elegant-table :deep(thead) {
-  background: transparent !important;
+  background: rgba(13, 115, 119, 0.04) !important;
 }
 
 /* ── Heatmap ── */
@@ -1246,5 +1498,135 @@ code {
   border-radius: 2px;
   transform: translateX(-50%);
   opacity: 0.85;
+}
+
+/* ── Sequence toggle button ──────────────────────────────────────── */
+.seq-toggle-btn { font-size: 12px; }
+
+/* ── Sequence context panel — inline expanded row ────────────────── */
+.seq-expanded-row td {
+  background: rgba(13, 115, 119, 0.03) !important;
+}
+
+.seq-context-panel--inline {
+  margin: 0;
+  border: none;
+  border-radius: 0;
+  border-top: 2px solid rgba(13, 115, 119, 0.18);
+  background: rgba(13, 115, 119, 0.02);
+}
+
+.seq-context-panel {
+  margin-top: 8px;
+  border: 1px solid rgba(13, 115, 119, 0.2);
+  border-radius: 8px;
+  overflow: hidden;
+  background: #f8fcfc;
+}
+
+.seq-panel-header {
+  display: flex;
+  align-items: center;
+  padding: 10px 16px;
+  background: rgba(13, 115, 119, 0.07);
+  border-bottom: 1px solid rgba(13, 115, 119, 0.12);
+  gap: 8px;
+}
+
+.seq-panel-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: rgba(0, 0, 0, 0.80);
+}
+
+.seq-panel-siteid {
+  font-size: 12px;
+  background: rgba(0, 0, 0, 0.06);
+  padding: 2px 7px;
+  border-radius: 4px;
+  color: rgba(0, 0, 0, 0.65);
+}
+
+.seq-panel-body {
+  padding: 14px 16px;
+}
+
+/* ── Sequence metadata chips ─────────────────────────────────────── */
+.seq-meta-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.seq-meta-chip {
+  display: inline-flex;
+  align-items: center;
+  line-height: 1;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 4px 9px;
+  border-radius: 12px;
+  background: rgba(0, 0, 0, 0.06);
+  color: rgba(0, 0, 0, 0.65);
+  border: 1px solid rgba(0, 0, 0, 0.10);
+}
+
+.seq-meta-strand {
+  background: rgba(13, 115, 119, 0.10);
+  color: #0D7377;
+  border-color: rgba(13, 115, 119, 0.25);
+}
+
+.seq-meta-window {
+  background: rgba(0, 0, 0, 0.04);
+}
+
+/* ── PA Site label above sequence ────────────────────────────────── */
+.seq-meta-pasite {
+  background: rgba(212, 93, 121, 0.08);
+  border-color: rgba(212, 93, 121, 0.25);
+  color: rgba(0, 0, 0, 0.55);
+  gap: 4px;
+}
+
+.seq-pasite-code {
+  font-family: 'Roboto Mono', 'Courier New', monospace;
+  font-size: 11px;
+  color: #D45D79;
+  margin-left: 3px;
+  background: none;
+}
+
+/* ── Sequence display ────────────────────────────────────────────── */
+.seq-display {
+  font-family: 'Roboto Mono', 'Courier New', monospace;
+  font-size: 13px;
+  line-height: 1.9;
+  letter-spacing: 0.05em;
+  word-break: break-all;
+  border-top: 1px solid rgba(0, 0, 0, 0.08);
+  padding: 10px 0 2px 0;
+  margin-top: 8px;
+}
+
+.seq-nt {
+  display: inline;
+  color: rgba(0, 0, 0, 0.82);
+}
+
+/* PAS motif — colours applied via inline style from pasTypeMeta */
+.seq-nt--pas {
+  border-radius: 2px;
+  font-weight: 700;
+}
+
+/* Cleavage site marker */
+.seq-nt--cleavage {
+  background: #D45D79;
+  color: #fff;
+  border-radius: 3px;
+  padding: 0 1px;
+  font-weight: 700;
 }
 </style>

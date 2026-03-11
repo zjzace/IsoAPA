@@ -261,16 +261,31 @@ def ingest_data(data_dir: str = None):
                 transcript = apa_site.transcript
                 gene = transcript.gene
                 
-                # Annotate PAS hexamer
-                pas_result = pas_annotator.find_pas_hexamer(
+                pas_full = pas_annotator.annotate_site(
                     chrom=gene.chromosome,
                     position=apa_site.site_position,
                     strand=gene.strand
                 )
-                apa_site.pas_motif = pas_result['motif']
-                apa_site.pas_position = pas_result['position']
-                apa_site.pas_type = pas_result['motif_type']
-                apa_site.pas_confidence = pas_result['confidence']
+                search_level = pas_full.get('search_level', 'none')
+
+                if search_level == 'hexamer':
+                    h = pas_full['hexamer']
+                    apa_site.pas_motif      = h['motif']
+                    apa_site.pas_position   = h['position']
+                    apa_site.pas_type       = h['motif_type']
+                    apa_site.pas_confidence = h['confidence']
+                elif search_level in ('upstream', 'downstream'):
+                    hits = pas_full['upstream_motifs'] or pas_full['downstream_motifs']
+                    first = hits[0] if hits else {}
+                    apa_site.pas_motif      = first.get('motif')
+                    apa_site.pas_position   = first.get('offset')
+                    apa_site.pas_type       = 'other'
+                    apa_site.pas_confidence = 'low'
+                else:
+                    apa_site.pas_motif      = None
+                    apa_site.pas_position   = None
+                    apa_site.pas_type       = None
+                    apa_site.pas_confidence = None
                 
                 # Classify APA type
                 apa_result = apa_classifier.classify_apa_site(

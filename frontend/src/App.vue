@@ -66,7 +66,7 @@
         </v-row>
         <v-divider class="my-4"></v-divider>
         <p class="text-center text-caption text-grey-darken-1">
-          &copy; 2024 ApaAtlas. All rights reserved.
+          &copy; 2026 ApaAtlas. All rights reserved.
         </p>
       </v-container>
     </v-footer>
@@ -86,8 +86,15 @@ const toggleTheme = () => {
 </script>
 
 <style>
-html {
+html, body, #app {
+  font-family: 'Roboto', sans-serif !important;
   overflow-y: auto !important;
+}
+* {
+  font-family: 'Roboto', sans-serif;
+}
+:root {
+  --v-font-family: 'Roboto', sans-serif;
 }
 a {
   color: inherit;

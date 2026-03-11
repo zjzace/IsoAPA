@@ -97,7 +97,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onBeforeUnmount, watch, nextTick } from 'vue'
+import { ref, computed, reactive, onMounted, onBeforeUnmount, watch, nextTick } from 'vue'
 import * as d3 from 'd3'
 
 const props = defineProps({
@@ -112,17 +112,39 @@ const props = defineProps({
   trackHeight: { type: Number, default: 40 }
 })
 
-// Layout constants
-const margin = { top: 40, right: 16, bottom: 15, left: 150 }
+// Measure text width using an offscreen canvas
+const measureTextWidth = (text, fontSize = 13, fontWeight = '600') => {
+  const canvas = document.createElement('canvas')
+  const ctx = canvas.getContext('2d')
+  ctx.font = `${fontWeight} ${fontSize}px Roboto, sans-serif`
+  return ctx.measureText(text).width
+}
+
+// Compute dynamic left margin based on all label texts
+const dynamicMarginLeft = computed(() => {
+  const labels = [
+    'Chromosome ' + props.chromosome,
+    props.transcriptId,
+    ...props.samples
+  ]
+  const maxW = Math.max(...labels.map(l => measureTextWidth(l)))
+  // 16px left padding + maxW + 20px right padding before separator
+  return Math.ceil(maxW) + 36
+})
+
+// Layout — margin.left is reactive
+const margin = reactive({ top: 40, right: 16, bottom: 15, left: 150 })
 const rulerHeight = 40
 const trackPadding = 10
-const labelWidth = 138
+
+// labelWidth is the usable label area (margin.left minus separator gap)
+const labelWidth = computed(() => margin.left - 12)
 
 // Dynamic width: fill container
 const containerWidth = ref(1100)
 
 // APA color (single fixed color)
-const APA_COLOR = '#14919B'
+const APA_COLOR = '#D45D79'
 
 // Computed layout
 const trackOffsets = computed(() => {
@@ -259,25 +281,25 @@ const initScale = () => {
     .range([margin.left, containerWidth.value - margin.right])
 }
 
-// Smart coordinate formatting — adaptive precision based on visible range
+// IGV-style coordinate formatting — unit chosen by visible range, not value magnitude
 const formatCoordinate = (value) => {
   const domain = xScale.value ? xScale.value.domain() : genomicExtent.value
   const range = domain[1] - domain[0]
-  
-  if (value >= 1000000) {
-    // Determine decimal places needed to distinguish ticks
-    // range < 10kb → need 4 decimals (127.5917M), < 100kb → 3, < 1M → 2, else 1
-    let decimals
-    if (range < 10000) decimals = 4
-    else if (range < 100000) decimals = 3
-    else if (range < 1000000) decimals = 2
-    else decimals = 1
-    return (value / 1000000).toFixed(decimals) + 'M'
-  } else if (value >= 1000) {
-    let decimals = range < 1000 ? 2 : 1
-    return (value / 1000).toFixed(decimals) + 'K'
+
+  if (range >= 1_000_000) {
+    // Mb — 1 decimal is enough when range spans multiple Mb
+    return (value / 1_000_000).toFixed(1) + ' Mb'
+  } else if (range >= 10_000) {
+    // Kb — show 1 decimal; tighten to 2 decimals when range < 100 Kb for precision
+    const dec = range < 100_000 ? 2 : 1
+    return (value / 1_000).toFixed(dec) + ' Kb'
+  } else if (range >= 1_000) {
+    // Kb with 3 decimals (range is a few Kb — need sub-Kb distinction)
+    return (value / 1_000).toFixed(3) + ' Kb'
+  } else {
+    // bp — plain integer with locale separator
+    return Math.round(value).toLocaleString() + ' bp'
   }
-  return value.toLocaleString()
 }
 
 // Render coordinate ruler with smart label placement
@@ -297,16 +319,38 @@ const renderRuler = () => {
     .attr('stroke', 'rgba(0, 0, 0, 0.12)')
     .attr('stroke-width', 1)
 
-  // Smart tick calculation based on zoom level
+  // ── Tick value generation ────────────────────────────────────────────────────
+  // Estimate the pixel width of a formatted label (Roboto 12px ~6.5px per char)
   const domain = xScale.value.domain()
-  const range = domain[1] - domain[0]
-  
-  // Pixel-based tick spacing: ~100px between ticks for consistent readability
+  const visibleRange = domain[1] - domain[0]
   const trackWidth = containerWidth.value - margin.left - margin.right
-  const tickCount = Math.max(3, Math.min(8, Math.floor(trackWidth / 100)))
+
+  // Sample label width using a representative value near the centre of the domain
+  const sampleLabel = formatCoordinate((domain[0] + domain[1]) / 2)
+  const labelPx = sampleLabel.length * 7.5   // ~7.5px per char for Roboto 500 12px
+  const minSpacingPx = labelPx + 20           // label width + 20px breathing room
+
+  // How many ticks fit?
+  const maxTicks = Math.max(2, Math.floor(trackWidth / minSpacingPx))
+
+  // Pick a "nice" genomic step that is a round number (1/2/5 × 10^n)
+  const rawStep = visibleRange / maxTicks
+  const magnitude = Math.pow(10, Math.floor(Math.log10(rawStep)))
+  const factor = rawStep / magnitude
+  const niceStep = factor < 1.5 ? magnitude
+    : factor < 3.5 ? 2 * magnitude
+    : factor < 7.5 ? 5 * magnitude
+    : 10 * magnitude
+
+  // Generate tick values aligned to niceStep multiples
+  const start = Math.ceil(domain[0] / niceStep) * niceStep
+  const tickValues = []
+  for (let v = start; v <= domain[1]; v += niceStep) {
+    tickValues.push(v)
+  }
 
   const axis = d3.axisTop(xScale.value)
-    .ticks(tickCount)
+    .tickValues(tickValues)
     .tickFormat(formatCoordinate)
     .tickSize(8)
 
@@ -339,7 +383,7 @@ const renderLabels = () => {
 
   // Chromosome label (in left margin, aligned with ruler)
   g.append('text')
-    .attr('x', labelWidth / 2)
+    .attr('x', labelWidth.value / 2)
     .attr('y', trackOffsets.value.ruler + rulerHeight / 2)
     .attr('dy', '0.35em')
     .attr('text-anchor', 'middle')
@@ -351,9 +395,10 @@ const renderLabels = () => {
 
   // Transcript label
   g.append('text')
-    .attr('x', 10)
+    .attr('x', labelWidth.value / 2)
     .attr('y', trackOffsets.value.transcript + props.trackHeight / 2)
     .attr('dy', '0.35em')
+    .attr('text-anchor', 'middle')
     .style('font-family', 'Roboto, sans-serif')
     .style('font-size', '13px')
     .style('font-weight', '600')
@@ -365,13 +410,13 @@ const renderLabels = () => {
     g.append('rect')
       .attr('x', 8)
       .attr('y', trackOffsets.value.samples[idx] + props.trackHeight / 2 - 12)
-      .attr('width', labelWidth - 16)
+      .attr('width', labelWidth.value - 16)
       .attr('height', 24)
       .attr('fill', idx % 2 === 0 ? 'rgba(13, 115, 119, 0.06)' : 'rgba(13, 115, 119, 0.1)')
       .attr('rx', 4)
 
     g.append('text')
-      .attr('x', labelWidth / 2)
+      .attr('x', labelWidth.value / 2)
       .attr('y', trackOffsets.value.samples[idx] + props.trackHeight / 2)
       .attr('dy', '0.35em')
       .attr('text-anchor', 'middle')
@@ -559,7 +604,7 @@ const renderSampleTracks = () => {
       if (!sampleData || sampleData.site_abundance === 0) return
 
       const x = xScale.value(site.site_position)
-      const color = '#14919B'
+      const color = '#D45D79'
       const abundance = sampleData.site_abundance
       const lineHeight = Math.max(2, abundance * maxMarkerHeight)  // Min 2px visible
 
@@ -593,7 +638,7 @@ const renderSampleTracks = () => {
         d3.select(this).select('line').attr('stroke-width', 3).attr('stroke-opacity', 0.8)
         d3.select(this).select('circle').attr('r', 6)
         
-        showTooltip(event, `APA Site @ ${site.site_position.toLocaleString()}`, [
+        showTooltip(event, `PA Site @ ${site.site_position.toLocaleString()}`, [
           { label: 'Sample', value: sample },
           { label: 'Abundance', value: abundance.toFixed(2) },
           { label: 'Count', value: sampleData.site_count.toLocaleString() },
@@ -603,7 +648,7 @@ const renderSampleTracks = () => {
         ])
       })
       .on('mousemove', function(event) {
-        showTooltip(event, `APA Site @ ${site.site_position.toLocaleString()}`, [
+        showTooltip(event, `PA Site @ ${site.site_position.toLocaleString()}`, [
           { label: 'Sample', value: sample },
           { label: 'Abundance', value: abundance.toFixed(2) },
           { label: 'Count', value: sampleData.site_count.toLocaleString() },
@@ -727,6 +772,16 @@ watch(() => [props.exons, props.apaSites, props.samples], () => {
     }
   })
 }, { deep: true })
+
+// Sync margin.left whenever dynamic label width changes, then re-render
+watch(dynamicMarginLeft, (newLeft) => {
+  margin.left = newLeft
+  nextTick(() => {
+    if (props.exons && props.exons.length > 0) {
+      render()
+    }
+  })
+}, { immediate: true })
 </script>
 
 <style scoped>

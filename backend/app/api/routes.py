@@ -1129,3 +1129,88 @@ def get_rbp_motifs(transcript_id: str, db: Session = Depends(get_db)):
         })
 
     return result
+
+
+# ---------------------------------------------------------------------------
+# ±50 bp sequence context around a PA site cleavage position
+# ---------------------------------------------------------------------------
+
+@router.get("/transcript/{transcript_id}/site-sequence/{site_id}")
+def get_site_sequence_context(
+    transcript_id: str,
+    site_id: str,
+    flank: int = 50,
+    db: Session = Depends(get_db)
+):
+    """
+    Return a ±flank bp window centred on the PA cleavage site from the local FASTA.
+    Response JSON:
+      {
+        "site_id": "...",
+        "site_position": 12345678,
+        "chromosome": "7",
+        "strand": "+",
+        "flank": 50,
+        "sequence": "ACGT...",        // (flank*2+1) bases, 5'→3' on gene strand
+        "cleavage_index": 50,         // 0-based index of the cleavage nt in sequence
+        "pas_motif": "AATAAA",        // may be null
+        "pas_position": -21,          // may be null
+        "pas_type": "canonical"       // may be null
+      }
+    """
+    transcript = db.query(Transcript).filter(
+        Transcript.transcript_id == transcript_id
+    ).first()
+    if not transcript:
+        raise HTTPException(status_code=404, detail="Transcript not found")
+
+    gene = db.query(Gene).filter(Gene.id == transcript.gene_id).first()
+    if not gene:
+        raise HTTPException(status_code=404, detail="Gene not found")
+
+    apa_site = db.query(APASite).filter(
+        APASite.transcript_id == transcript.id,
+        APASite.site_id == site_id
+    ).first()
+    if not apa_site:
+        raise HTTPException(status_code=404, detail="APA site not found")
+
+    species_obj = db.query(Species).filter(Species.id == apa_site.species_id).first()
+    if not species_obj:
+        raise HTTPException(status_code=404, detail="Species not found")
+
+    fasta_path = get_species_ref_path(str(species_obj.name), 'fasta')
+    if not fasta_path:
+        raise HTTPException(status_code=404, detail="FASTA not available for this species")
+
+    site_pos  = int(apa_site.site_position)   # 1-based genomic
+    strand    = str(gene.strand)
+    chrom     = str(gene.chromosome)
+
+    # Fetch flank*2+1 bases centred on site_pos (0-based half-open for _fetch_fasta_seq)
+    g_start_0 = site_pos - flank - 1          # 0-based inclusive start
+    g_end_0   = site_pos + flank               # 0-based exclusive end
+
+    seq = _fetch_fasta_seq(fasta_path, chrom, g_start_0, g_end_0)
+    if not seq:
+        raise HTTPException(status_code=500, detail="Could not retrieve sequence from FASTA")
+
+    # Reverse-complement for minus-strand genes so sequence reads 5'→3'
+    if strand == '-':
+        seq = _rev_comp(seq)
+
+    # The cleavage site is always at the centre of the returned window
+    cleavage_index = len(seq) // 2
+
+    return {
+        "site_id":        site_id,
+        "site_position":  site_pos,
+        "chromosome":     chrom,
+        "strand":         strand,
+        "flank":          flank,
+        "sequence":       seq,
+        "cleavage_index": cleavage_index,
+        "pas_motif":      apa_site.pas_motif,
+        "pas_position":   apa_site.pas_position,
+        "pas_type":       apa_site.pas_type,
+    }

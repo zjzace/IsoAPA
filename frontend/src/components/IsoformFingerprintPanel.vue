@@ -9,7 +9,7 @@
           </span>
           <div>
             <div class="panel-title">Isoform–APA Fingerprint</div>
-            <div class="panel-subtitle">Which APA sites are shared across isoforms vs. exclusive to one?</div>
+            <div class="panel-subtitle">Which PA sites are shared across isoforms vs. exclusive to one?</div>
           </div>
         </div>
         <div class="legend-row">
@@ -38,7 +38,7 @@
     <!-- No APA sites or single transcript -->
     <div v-if="allSites.length === 0" class="empty-state">
       <v-icon size="40" color="grey-lighten-1">mdi-table-off</v-icon>
-      <div class="text-grey mt-2 text-body-2">No APA site data available</div>
+      <div class="text-grey mt-2 text-body-2">No PA site data available</div>
     </div>
 
     <template v-else>
@@ -49,7 +49,7 @@
             <!-- Transcript header row -->
             <thead>
               <tr>
-                <th class="site-label-header">APA Site</th>
+                <th class="site-label-header">PA Site</th>
                 <th
                   v-for="tx in transcripts"
                   :key="tx.transcript_id"
@@ -315,16 +315,18 @@ function interpolateGreen(t) {
 }
 
 .panel-title {
-  font-size: 0.95rem;
+  font-size: 13px;
   font-weight: 600;
   color: rgba(0, 0, 0, 0.87);
   line-height: 1.3;
+  font-family: 'Roboto', sans-serif;
 }
 
 .panel-subtitle {
-  font-size: 0.78rem;
-  color: rgba(0, 0, 0, 0.5);
+  font-size: 12px;
+  color: rgba(0, 0, 0, 0.65);
   margin-top: 2px;
+  font-family: 'Roboto', sans-serif;
 }
 
 /* ── Legend ─────────────────────────────────────────────────────────────── */
@@ -339,8 +341,9 @@ function interpolateGreen(t) {
   display: flex;
   align-items: center;
   gap: 5px;
-  font-size: 0.75rem;
-  color: rgba(0,0,0,0.6);
+  font-size: 12px;
+  color: rgba(0,0,0,0.65);
+  font-family: 'Roboto', sans-serif;
 }
 
 .legend-dot {
@@ -374,7 +377,8 @@ function interpolateGreen(t) {
   border-collapse: separate;
   border-spacing: 0;
   min-width: 100%;
-  font-size: 0.82rem;
+  font-size: 13px;
+  font-family: 'Roboto', sans-serif;
 }
 
 /* Column header: rotated transcript IDs */
@@ -396,7 +400,7 @@ function interpolateGreen(t) {
 }
 
 .tx-link {
-  font-size: 0.75rem;
+  font-size: 12px;
   color: rgb(var(--v-theme-primary));
   text-decoration: none;
   writing-mode: vertical-rl;
@@ -407,6 +411,7 @@ function interpolateGreen(t) {
   align-items: center;
   justify-content: flex-end;
   letter-spacing: 0.01em;
+  font-weight: 500;
 }
 .tx-link:hover { text-decoration: underline; }
 
@@ -416,10 +421,11 @@ function interpolateGreen(t) {
   vertical-align: bottom;
   border-bottom: 2px solid var(--border);
   font-weight: 600;
-  font-size: 0.78rem;
-  color: rgba(0,0,0,0.6);
+  font-size: 12px;
+  color: rgba(0,0,0,0.70);
   white-space: nowrap;
   min-width: 140px;
+  font-family: 'Roboto', sans-serif;
 }
 
 .badge-header {
@@ -428,9 +434,10 @@ function interpolateGreen(t) {
   vertical-align: bottom;
   border-bottom: 2px solid var(--border);
   font-weight: 600;
-  font-size: 0.78rem;
-  color: rgba(0,0,0,0.6);
+  font-size: 12px;
+  color: rgba(0,0,0,0.70);
   white-space: nowrap;
+  font-family: 'Roboto', sans-serif;
 }
 
 /* Matrix rows */
@@ -472,11 +479,12 @@ function interpolateGreen(t) {
 
 .site-chr {
   font-family: 'JetBrains Mono', 'Fira Code', 'Courier New', monospace;
-  font-size: 0.78rem;
-  color: rgba(0,0,0,0.75);
-  background: rgba(0,0,0,0.04);
-  padding: 1px 6px;
+  font-size: 12px;
+  color: rgba(0,0,0,0.87);
+  background: rgba(0,0,0,0.05);
+  padding: 2px 7px;
   border-radius: 4px;
+  font-weight: 500;
 }
 
 .sample-chips {
@@ -487,12 +495,13 @@ function interpolateGreen(t) {
 }
 
 .sample-pill {
-  font-size: 0.65rem;
+  font-size: 11px;
   background: rgba(25, 118, 210, 0.1);
   color: rgb(25, 118, 210);
-  padding: 1px 5px;
+  padding: 2px 6px;
   border-radius: 10px;
   font-weight: 500;
+  font-family: 'Roboto', sans-serif;
 }
 
 /* Matrix data cells */
@@ -521,11 +530,12 @@ function interpolateGreen(t) {
 }
 
 .cell-pct {
-  font-size: 0.68rem;
+  font-size: 11px;
   font-weight: 700;
   color: white;
-  text-shadow: 0 1px 2px rgba(0,0,0,0.35);
+  text-shadow: 0 1px 2px rgba(0,0,0,0.4);
   pointer-events: none;
+  font-family: 'Roboto', sans-serif;
 }
 
 /* Classification badges */
@@ -540,9 +550,10 @@ function interpolateGreen(t) {
   align-items: center;
   padding: 3px 9px;
   border-radius: 12px;
-  font-size: 0.72rem;
+  font-size: 12px;
   font-weight: 600;
   letter-spacing: 0.01em;
+  font-family: 'Roboto', sans-serif;
 }
 
 .badge-shared {
@@ -581,14 +592,16 @@ function interpolateGreen(t) {
   font-weight: 700;
   line-height: 1.2;
   color: rgba(0,0,0,0.85);
+  font-family: 'Roboto', sans-serif;
 }
 
 .stat-label {
-  font-size: 0.7rem;
-  color: rgba(0,0,0,0.5);
+  font-size: 11px;
+  color: rgba(0,0,0,0.6);
   text-transform: uppercase;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.05em;
   margin-top: 2px;
+  font-family: 'Roboto', sans-serif;
 }
 
 .summary-divider {

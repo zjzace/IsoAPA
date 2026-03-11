@@ -74,13 +74,13 @@
         </v-col>
         <v-col cols="auto">
           <div class="stat-card stat-shared">
-            <div class="stat-value" style="color: #2e7d32;">{{ stats.sharedSites }}</div>
+            <div class="stat-value" style="color: #7B5EA7;">{{ stats.sharedSites }}</div>
             <div class="stat-label">Shared</div>
           </div>
         </v-col>
         <v-col cols="auto">
           <div class="stat-card stat-private">
-            <div class="stat-value" style="color: #e65100;">{{ stats.privateSites }}</div>
+            <div class="stat-value" style="color: #C0715A;">{{ stats.privateSites }}</div>
             <div class="stat-label">Private</div>
           </div>
         </v-col>
@@ -102,7 +102,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onBeforeUnmount, watch, nextTick } from 'vue'
+import { ref, computed, reactive, onMounted, onBeforeUnmount, watch, nextTick } from 'vue'
 import * as d3 from 'd3'
 
 // Tooltip — single DOM node appended to body, positioned with fixed coords
@@ -138,18 +138,37 @@ const props = defineProps({
   transcriptStructures: { type: Object, required: true }
 })
 
-// ── Layout constants (matching ApaGenomeBrowser.vue exactly) ────────────────
-const margin = { top: 40, right: 16, bottom: 15, left: 150 }
+// ── Measure text width via offscreen canvas ──────────────────────────────────
+const measureTextWidth = (text, fontSize = 13, fontWeight = '600') => {
+  const canvas = document.createElement('canvas')
+  const ctx = canvas.getContext('2d')
+  ctx.font = `${fontWeight} ${fontSize}px Roboto, sans-serif`
+  return ctx.measureText(text).width
+}
+
+// ── Dynamic left margin: widest label + padding ───────────────────────────────
+const dynamicMarginLeft = computed(() => {
+  const labels = [
+    'Chromosome ' + (props.geneData?.chromosome ?? ''),
+    ...transcripts.value.map(tx => tx.transcript_id),
+    'PA Sites'
+  ]
+  const maxW = Math.max(...labels.map(l => measureTextWidth(l)))
+  return Math.ceil(maxW) + 36  // 16px left + 20px right padding before separator
+})
+
+// ── Layout — margin.left is reactive ─────────────────────────────────────────
+const margin = reactive({ top: 40, right: 16, bottom: 15, left: 150 })
 const rulerHeight = 40
 const trackPadding = 10
-const labelWidth = 138
+const labelWidth = computed(() => margin.left - 12)
 const exonTrackHeight = 40
 const apaTrackHeight = 40
 const isoformGap = 12
 
 // ── Colors ───────────────────────────────────────────────────────────────────
-const SHARED_COLOR = '#2e7d32'
-const PRIVATE_COLOR = '#e65100'
+const SHARED_COLOR = '#7B5EA7'
+const PRIVATE_COLOR = '#C0715A'
 const CDS_COLOR = '#0D7377'
 const UTR_COLOR = '#14919B'
 const INTRON_COLOR = '#B0B8C1'
@@ -235,21 +254,22 @@ const stats = computed(() => {
 })
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
+// IGV-style coordinate formatting — unit chosen by visible range, not value magnitude
 const formatCoordinate = (value) => {
   if (!xScale.value) return String(value)
   const domain = xScale.value.domain()
   const range = domain[1] - domain[0]
-  if (value >= 1000000) {
-    let dec
-    if (range < 10000) dec = 4
-    else if (range < 100000) dec = 3
-    else if (range < 1000000) dec = 2
-    else dec = 1
-    return (value / 1000000).toFixed(dec) + 'M'
-  } else if (value >= 1000) {
-    return (value / 1000).toFixed(range < 1000 ? 2 : 1) + 'K'
+
+  if (range >= 1_000_000) {
+    return (value / 1_000_000).toFixed(1) + ' Mb'
+  } else if (range >= 10_000) {
+    const dec = range < 100_000 ? 2 : 1
+    return (value / 1_000).toFixed(dec) + ' Kb'
+  } else if (range >= 1_000) {
+    return (value / 1_000).toFixed(3) + ' Kb'
+  } else {
+    return Math.round(value).toLocaleString() + ' bp'
   }
-  return value.toLocaleString()
 }
 
 const showTooltip = (event, title, items) => {
@@ -309,11 +329,32 @@ const renderRuler = () => {
     .attr('fill', '#FAFBFC')
     .attr('stroke', 'rgba(0,0,0,0.12)').attr('stroke-width', 1)
 
+  const domain = xScale.value.domain()
+  const visibleRange = domain[1] - domain[0]
   const trackWidth = containerWidth.value - margin.left - margin.right
-  const tickCount = Math.max(3, Math.min(8, Math.floor(trackWidth / 100)))
+
+  const sampleLabel = formatCoordinate((domain[0] + domain[1]) / 2)
+  const labelPx = sampleLabel.length * 7.5
+  const minSpacingPx = labelPx + 20
+
+  const maxTicks = Math.max(2, Math.floor(trackWidth / minSpacingPx))
+
+  const rawStep = visibleRange / maxTicks
+  const magnitude = Math.pow(10, Math.floor(Math.log10(rawStep)))
+  const factor = rawStep / magnitude
+  const niceStep = factor < 1.5 ? magnitude
+    : factor < 3.5 ? 2 * magnitude
+    : factor < 7.5 ? 5 * magnitude
+    : 10 * magnitude
+
+  const start = Math.ceil(domain[0] / niceStep) * niceStep
+  const tickValues = []
+  for (let v = start; v <= domain[1]; v += niceStep) {
+    tickValues.push(v)
+  }
 
   const axis = d3.axisTop(xScale.value)
-    .ticks(tickCount)
+    .tickValues(tickValues)
     .tickFormat(formatCoordinate)
     .tickSize(8)
 
@@ -338,7 +379,7 @@ const renderLabels = () => {
 
   // Chromosome label
   g.append('text')
-    .attr('x', labelWidth / 2)
+    .attr('x', labelWidth.value / 2)
     .attr('y', trackOffsets.value.ruler + rulerHeight / 2)
     .attr('dy', '0.35em')
     .attr('text-anchor', 'middle')
@@ -353,8 +394,8 @@ const renderLabels = () => {
     const offsets = trackOffsets.value.isoforms[i]
 
     // Exon track label — full transcript ID, centered in left column
-    const txLabel = g.append('text')
-      .attr('x', labelWidth / 2)
+    g.append('text')
+      .attr('x', labelWidth.value / 2)
       .attr('y', offsets.exon + exonTrackHeight / 2)
       .attr('dy', '0.35em')
       .attr('text-anchor', 'middle')
@@ -364,15 +405,9 @@ const renderLabels = () => {
       .style('fill', CDS_COLOR)
       .text(tx.transcript_id)
 
-    // Clip to labelWidth - 14px
-    const maxW = labelWidth - 14
-    if (txLabel.node().getComputedTextLength && txLabel.node().getComputedTextLength() > maxW) {
-      txLabel.attr('textLength', maxW).attr('lengthAdjust', 'spacingAndGlyphs')
-    }
-
     // APA track label — centered in left column
     g.append('text')
-      .attr('x', labelWidth / 2)
+      .attr('x', labelWidth.value / 2)
       .attr('y', offsets.apa + apaTrackHeight / 2)
       .attr('dy', '0.35em')
       .attr('text-anchor', 'middle')
@@ -380,7 +415,7 @@ const renderLabels = () => {
       .style('font-size', '11px')
       .style('font-weight', '500')
       .style('fill', 'rgba(0,0,0,0.54)')
-      .text('APA Sites')
+      .text('PA Sites')
   })
 
   // Vertical separator
@@ -567,7 +602,7 @@ const renderApaTrack = (txIndex) => {
         sampleDetails.forEach(sd => {
           tooltipItems.push({ label: sd.sample_name, value: (sd.site_abundance * 100).toFixed(1) + '%' })
         })
-        showTooltip(event, `APA Site @ ${site.site_position.toLocaleString()}`, tooltipItems)
+        showTooltip(event, `PA Site @ ${site.site_position.toLocaleString()}`, tooltipItems)
       })
       .on('mousemove', function(event) {
         const tooltipItems = [
@@ -579,7 +614,7 @@ const renderApaTrack = (txIndex) => {
         sampleDetails.forEach(sd => {
           tooltipItems.push({ label: sd.sample_name, value: (sd.site_abundance * 100).toFixed(1) + '%' })
         })
-        showTooltip(event, `APA Site @ ${site.site_position.toLocaleString()}`, tooltipItems)
+        showTooltip(event, `PA Site @ ${site.site_position.toLocaleString()}`, tooltipItems)
       })
       .on('mouseleave', function() {
         d3.select(marker.node()).select('line').attr('stroke-width', 1.5)
@@ -682,6 +717,12 @@ watch(
   () => { nextTick(() => { if (transcripts.value.length > 0) render() }) },
   { deep: true }
 )
+
+// Sync margin.left whenever dynamic label width changes, then re-render
+watch(dynamicMarginLeft, (newLeft) => {
+  margin.left = newLeft
+  nextTick(() => { if (transcripts.value.length > 0) render() })
+}, { immediate: true })
 </script>
 
 <style scoped>
@@ -768,8 +809,8 @@ watch(
   min-width: 90px;
 }
 
-.stat-shared { background: rgba(46, 125, 50, 0.05); border-color: rgba(46, 125, 50, 0.2); }
-.stat-private { background: rgba(230, 81, 0, 0.05); border-color: rgba(230, 81, 0, 0.2); }
+.stat-shared { background: rgba(123, 94, 167, 0.05); border-color: rgba(123, 94, 167, 0.2); }
+.stat-private { background: rgba(192, 113, 90, 0.05); border-color: rgba(192, 113, 90, 0.2); }
 
 .stat-value {
   font-size: 22px;

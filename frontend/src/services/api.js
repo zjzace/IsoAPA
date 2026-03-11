@@ -93,6 +93,14 @@ export const apiService = {
   async getRbpMotifs(transcriptId) {
     const response = await api.get(`/transcript/${transcriptId}/rbp-motifs`)
     return response.data
+  },
+
+  async getSiteSequence(transcriptId, siteId, flank = 50) {
+    const response = await api.get(
+      `/transcript/${transcriptId}/site-sequence/${encodeURIComponent(siteId)}`,
+      { params: { flank } }
+    )
+    return response.data
   }
 }
 

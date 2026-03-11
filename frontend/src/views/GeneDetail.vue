@@ -30,10 +30,6 @@
           </div>
           <div class="gene-meta-row">
             <div class="gene-meta-item">
-              <span class="gene-meta-label">Gene ID</span>
-              <span class="gene-meta-value">{{ geneData.gene_id }}</span>
-            </div>
-            <div class="gene-meta-item">
               <span class="gene-meta-label">Chromosome</span>
               <span class="gene-meta-value">
                 <v-chip size="small" variant="tonal" color="primary" class="mr-1">{{ geneData.chromosome }}</v-chip>
@@ -45,7 +41,7 @@
               <span class="gene-meta-value gene-meta-accent">{{ geneData.transcripts.length }}</span>
             </div>
             <div class="gene-meta-item">
-              <span class="gene-meta-label">Total APA Sites</span>
+              <span class="gene-meta-label">Total PA Sites</span>
               <span class="gene-meta-value gene-meta-accent">{{ totalAPASites }}</span>
             </div>
             <div class="gene-meta-item" v-if="speciesInfo">
@@ -59,13 +55,130 @@
           </div>
         </div>
 
+        <!-- ── Gene Summary (MyGene.info) ───────────────────────── -->
+        <div class="section-card mb-6">
+          <div class="section-title">
+            <v-icon size="18" class="mr-2" style="color: #0D7377;">mdi-text-box-outline</v-icon>
+            Gene Summary
+          </div>
+
+          <div class="panel-box">
+            <!-- Panel header -->
+            <div class="panel-header">
+              <div class="panel-header-left">
+                <span class="panel-icon-wrap panel-icon-teal">
+                  <v-icon size="18" color="white">mdi-dna</v-icon>
+                </span>
+                <div>
+                  <div class="panel-title-text">{{ geneSummaryData?.symbol || geneData.gene_name }}</div>
+                  <div class="panel-subtitle-text">
+                    {{ geneSummaryData?.fullName || 'Gene information from NCBI / MyGene.info' }}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Panel body -->
+            <div class="panel-body">
+
+              <!-- Loading -->
+              <div v-if="geneSummaryLoading" class="d-flex align-center py-4">
+                <v-progress-circular indeterminate color="primary" size="22" width="2" class="mr-3"></v-progress-circular>
+                <span class="text-caption text-medium-emphasis">Fetching gene information…</span>
+              </div>
+
+              <!-- Error -->
+              <v-alert v-else-if="geneSummaryError" type="warning" variant="tonal" density="compact" class="text-caption">
+                Gene summary not available for this gene.
+              </v-alert>
+
+              <!-- No hit -->
+              <div v-else-if="!geneSummaryData" class="text-caption text-medium-emphasis py-2">
+                No gene summary found.
+              </div>
+
+              <!-- Data — NCBI-style definition list -->
+              <template v-else>
+                <dl class="gs-deflist">
+
+                  <!-- Also known as -->
+                  <div v-if="geneSummaryData.aliases?.length" class="gs-row">
+                    <dt class="gs-dt">Also known as</dt>
+                    <dd class="gs-dd">{{ geneSummaryData.aliases.join('; ') }}</dd>
+                  </div>
+
+                  <!-- Gene type -->
+                  <div v-if="geneSummaryData.geneType" class="gs-row">
+                    <dt class="gs-dt">Gene type</dt>
+                    <dd class="gs-dd">{{ geneSummaryData.geneType.replace(/-/g, ' ') }}</dd>
+                  </div>
+
+                   <!-- See related — smart Ensembl / RefSeq / UniProt / NCBI links -->
+                   <div class="gs-row">
+                     <dt class="gs-dt">See related</dt>
+                      <dd class="gs-dd gs-related-dd">
+                        <span v-if="geneSummaryData.ensemblGene || geneData.gene_id?.startsWith('ENS')" class="gs-id-entry">
+                          <span class="gs-id-source">Ensembl</span>
+                          <a :href="`https://www.ensembl.org/id/${geneSummaryData.ensemblGene || geneData.gene_id}`" target="_blank" class="gs-id-code gs-id-href">{{ geneSummaryData.ensemblGene || geneData.gene_id }}</a>
+                        </span>
+                        <span v-if="geneSummaryData.refseqMrna" class="gs-id-entry">
+                          <span class="gs-id-source">RefSeq</span>
+                          <a :href="`https://www.ncbi.nlm.nih.gov/nuccore/${geneSummaryData.refseqMrna}`" target="_blank" class="gs-id-code gs-id-href">{{ geneSummaryData.refseqMrna }}</a>
+                        </span>
+                        <span v-if="geneSummaryData.uniprot" class="gs-id-entry">
+                          <span class="gs-id-source">UniProtKB</span>
+                          <a :href="`https://www.uniprot.org/uniprot/${geneSummaryData.uniprot}`" target="_blank" class="gs-id-code gs-id-href">{{ geneSummaryData.uniprot }}</a>
+                        </span>
+                        <span v-if="geneSummaryData.entrezgene" class="gs-id-entry">
+                          <span class="gs-id-source">NCBI Gene</span>
+                          <a :href="`https://www.ncbi.nlm.nih.gov/gene/${geneSummaryData.entrezgene}`" target="_blank" class="gs-id-code gs-id-href">{{ geneSummaryData.entrezgene }}</a>
+                        </span>
+                      </dd>
+                   </div>
+
+                  <!-- Summary text -->
+                  <div class="gs-row">
+                    <dt class="gs-dt">Summary</dt>
+                    <dd class="gs-dd">
+                      <p v-if="geneSummaryData.summary" class="gs-summary-text">{{ geneSummaryData.summary }}</p>
+                      <p v-else class="gs-summary-text gs-summary-empty">No functional summary available from NCBI Gene.</p>
+                    </dd>
+                  </div>
+
+                  <!-- KEGG Pathways — bottom -->
+                  <div v-if="geneSummaryData.pathways?.length" class="gs-row">
+                    <dt class="gs-dt">KEGG Pathways</dt>
+                    <dd class="gs-dd">
+                      <div class="gs-chip-row">
+                        <span
+                          v-for="pw in (showAllPathways ? geneSummaryData.pathways : geneSummaryData.pathways.slice(0, 10))"
+                          :key="pw.id"
+                          class="gs-chip gs-chip-pathway"
+                        >{{ pw.name }}</span>
+                        <button
+                          v-if="geneSummaryData.pathways.length > 10"
+                          class="gs-chip gs-chip-more"
+                          @click="showAllPathways = !showAllPathways"
+                        >
+                          {{ showAllPathways ? '− show less' : `+${geneSummaryData.pathways.length - 10} more` }}
+                        </button>
+                      </div>
+                    </dd>
+                  </div>
+
+                </dl>
+              </template>
+            </div>
+          </div>
+        </div>
+
         <!-- ── Transcripts and APA Sites ────────────────────────── -->
         <div class="section-card">
 
           <!-- Section title -->
           <div class="section-title">
             <v-icon size="18" class="mr-2" style="color: #0D7377;">mdi-source-branch</v-icon>
-            Transcripts and APA Sites
+            Transcripts and PA Sites
           </div>
 
           <!-- ── Panel 1: Transcript Details ──────────────────── -->
@@ -77,7 +190,7 @@
                 </span>
                 <div>
                   <div class="panel-title-text">Transcript Details</div>
-                  <div class="panel-subtitle-text">APA sites and sample coverage per transcript isoform</div>
+                  <div class="panel-subtitle-text">PA sites and sample coverage per transcript isoform</div>
                 </div>
                 <v-chip size="x-small" color="primary" variant="tonal" class="ml-2">
                   {{ geneData.transcripts.length }}
@@ -102,9 +215,9 @@
                 <thead>
                   <tr>
                     <th class="tx-th" style="width: 34%;">Transcript ID</th>
-                    <th class="tx-th" style="width: 10%; text-align: center;">APA Sites</th>
+                    <th class="tx-th" style="width: 10%; text-align: center;">PA Sites</th>
                     <th class="tx-th" style="width: 24%;">Samples</th>
-                    <th class="tx-th" style="width: 32%;">APA Site Details</th>
+                    <th class="tx-th" style="width: 32%;">PA Site Details</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -203,7 +316,7 @@
                 </span>
                 <div>
                   <div class="panel-title-text">Isoform–APA Fingerprint</div>
-                  <div class="panel-subtitle-text">Genome-aligned APA sites per isoform, coloured by Shared / Private classification</div>
+                  <div class="panel-subtitle-text">Genome-aligned PA sites per isoform, coloured by Shared / Private classification</div>
                 </div>
               </div>
             </div>
@@ -220,11 +333,6 @@
             </div>
           </div>
 
-          <!-- ── Panel 3: Splicing–APA Coupling ────────────────── -->
-          <div class="panel-box">
-            <SplicingApaCouplingPanel :geneData="geneData" />
-          </div>
-
         </div>
       </div>
     </v-container>
@@ -236,7 +344,6 @@ import { ref, computed, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import { apiService } from '@/services/api'
 import MultiIsoformBrowser from '@/components/MultiIsoformBrowser.vue'
-import SplicingApaCouplingPanel from '@/components/SplicingApaCouplingPanel.vue'
 
 const route = useRoute()
 
@@ -248,6 +355,60 @@ const transcriptStructures = ref({})
 const tableSearch = ref('')
 const expandedRows = ref(new Set())
 const speciesInfo = ref(null)
+
+// ── Gene summary (MyGene.info) ─────────────────────────────────────────────
+const geneSummaryLoading = ref(false)
+const geneSummaryError = ref(null)
+const geneSummaryData = ref(null)
+const showAllPathways = ref(false)
+
+const fetchGeneSummary = async (ensemblGeneId) => {
+  geneSummaryLoading.value = true
+  geneSummaryError.value = null
+  try {
+    const url = `https://mygene.info/v3/query?q=ensembl.gene:${ensemblGeneId}&fields=name,summary,pathway.kegg,uniprot,entrezgene,HGNC,symbol,alias,type_of_gene,refseq,ensembl&species=human,mouse&size=1`
+    const res = await fetch(url)
+    if (!res.ok) throw new Error(`HTTP ${res.status}`)
+    const json = await res.json()
+    const hit = json?.hits?.[0]
+    if (!hit) {
+      geneSummaryData.value = null
+      return
+    }
+    const uniprotRaw = hit.uniprot?.['Swiss-Prot']
+    const uniprot = Array.isArray(uniprotRaw) ? uniprotRaw[0] : uniprotRaw ?? null
+    const pathways = hit.pathway?.kegg
+      ? (Array.isArray(hit.pathway.kegg) ? hit.pathway.kegg : [hit.pathway.kegg])
+      : []
+    // Aliases — normalise to array
+    const aliasRaw = hit.alias
+    const aliases = Array.isArray(aliasRaw) ? aliasRaw : (aliasRaw ? [aliasRaw] : [])
+    // RefSeq: pick first NM_ mRNA accession (curated mRNA)
+    const rnaList = hit.refseq?.rna ?? []
+    const rnaArr  = Array.isArray(rnaList) ? rnaList : [rnaList]
+    const refseqMrna = rnaArr.find(r => r.startsWith('NM_')) ?? rnaArr[0] ?? null
+    // Ensembl gene ID from hit (may differ from query if mouse gene resolved differently)
+    const ensemblGene = hit.ensembl?.gene ?? null
+    geneSummaryData.value = {
+      symbol:      hit.symbol      ?? null,
+      fullName:    hit.name        ?? null,
+      aliases,
+      geneType:    hit.type_of_gene ?? null,
+      summary:     hit.summary     ?? null,
+      pathways,
+      entrezgene:  hit.entrezgene  ?? null,
+      uniprot,
+      hgnc:        hit.HGNC        ?? null,
+      refseqMrna,
+      ensemblGene,
+    }
+  } catch (err) {
+    console.warn('Gene summary fetch failed:', err)
+    geneSummaryError.value = 'fetch_failed'
+  } finally {
+    geneSummaryLoading.value = false
+  }
+}
 
 const toggleRow = (txId) => {
   const s = new Set(expandedRows.value)
@@ -276,6 +437,9 @@ onMounted(async () => {
   try {
     loading.value = true
     geneData.value = await apiService.getGeneDetail(geneId)
+
+    // Fire gene summary fetch (non-blocking)
+    fetchGeneSummary(geneId)
 
     // Fetch species info from first transcript's locus detail (non-fatal)
     if (geneData.value?.transcripts?.length) {
@@ -450,17 +614,19 @@ code {
 }
 
 .panel-title-text {
-  font-size: 0.92rem;
+  font-size: 13px;
   font-weight: 600;
-  color: rgba(0, 0, 0, 0.82);
+  color: rgba(0, 0, 0, 0.87);
   line-height: 1.3;
+  font-family: 'Roboto', sans-serif;
 }
 
 .panel-subtitle-text {
-  font-size: 0.75rem;
-  color: rgba(0, 0, 0, 0.46);
+  font-size: 12px;
+  color: rgba(0, 0, 0, 0.60);
   margin-top: 2px;
   max-width: 480px;
+  font-family: 'Roboto', sans-serif;
 }
 
 /* Panel body padding for browser/coupling */
@@ -494,14 +660,15 @@ code {
 .tx-th {
   padding: 9px 16px;
   text-align: left;
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 600;
   letter-spacing: 0.4px;
   text-transform: uppercase;
-  color: rgba(0, 0, 0, 0.50);
+  color: rgba(0, 0, 0, 0.60);
   background: rgba(13, 115, 119, 0.04);
   border-bottom: 1px solid rgba(13, 115, 119, 0.10);
   white-space: nowrap;
+  font-family: 'Roboto', sans-serif;
 }
 
 .tx-row {
@@ -614,5 +781,139 @@ code {
   text-align: center;
   color: rgba(0, 0, 0, 0.38);
   font-size: 13px;
+}
+
+/* ── Gene Summary definition list ───────────────────────────────── */
+.gs-deflist {
+  margin: 0;
+  padding: 0;
+  display: table;
+  width: 100%;
+  border-spacing: 0;
+  border: 1px solid rgba(13, 115, 119, 0.10);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.gs-row {
+  display: table-row;
+}
+
+.gs-row:not(:last-child) .gs-dt,
+.gs-row:not(:last-child) .gs-dd {
+  border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+.gs-dt {
+  display: table-cell;
+  width: 160px;
+  min-width: 130px;
+  padding: 10px 14px 10px 16px;
+  font-size: 13px;
+  font-weight: 600;
+  color: rgba(0, 0, 0, 0.62);
+  vertical-align: top;
+  white-space: nowrap;
+  background: rgba(13, 115, 119, 0.04);
+  border-right: 1px solid rgba(13, 115, 119, 0.10);
+}
+
+.gs-dd {
+  display: table-cell;
+  padding: 10px 16px;
+  font-size: 13px;
+  color: rgba(0, 0, 0, 0.80);
+  vertical-align: middle;
+  line-height: 1.55;
+}
+
+.gs-summary-text {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.75;
+  color: rgba(0, 0, 0, 0.72);
+}
+
+.gs-summary-empty {
+  color: rgba(0, 0, 0, 0.38);
+  font-style: italic;
+}
+
+/* "See related" inline links */
+.gs-related-dd {
+  display: table-cell;
+  padding: 10px 16px;
+  vertical-align: middle;
+}
+
+.gs-id-entry {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 4px;
+  margin-right: 20px;
+  white-space: nowrap;
+  vertical-align: middle;
+}
+
+.gs-id-source {
+  font-size: 11px;
+  font-weight: 500;
+  color: rgba(0, 0, 0, 0.38);
+  background: rgba(0, 0, 0, 0.05);
+  border-radius: 3px;
+  padding: 1px 5px;
+  line-height: 1.4;
+}
+
+.gs-id-code {
+  color: #0D7377;
+  font-family: 'Roboto Mono', 'Courier New', monospace;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.gs-id-href {
+  text-decoration: none;
+}
+
+.gs-id-href:hover {
+  text-decoration: underline;
+  color: #0a5c60;
+}
+
+/* KEGG pathway chips */
+.gs-chip-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.gs-chip {
+  font-size: 11px;
+  font-weight: 500;
+  padding: 3px 9px;
+  border-radius: 12px;
+  border: 1px solid transparent;
+}
+
+.gs-chip-pathway {
+  background: rgba(13, 115, 119, 0.08);
+  color: #0D7377;
+  border-color: rgba(13, 115, 119, 0.20);
+}
+
+.gs-chip-more {
+  background: rgba(0, 0, 0, 0.05);
+  color: rgba(0, 0, 0, 0.55);
+  border-color: rgba(0, 0, 0, 0.15);
+  cursor: pointer;
+  font-family: inherit;
+  transition: background 0.15s, color 0.15s;
+}
+
+.gs-chip-more:hover {
+  background: rgba(13, 115, 119, 0.12);
+  color: #0D7377;
+  border-color: rgba(13, 115, 119, 0.30);
 }
 </style>
