@@ -367,7 +367,7 @@ const measureTextWidth = (text, fontSize = 13, fontWeight = '600') => {
 // Compute dynamic left margin based on all label texts
 const dynamicMarginLeft = computed(() => {
   const labels = [
-    'Chromosome ' + props.chromosome,
+    'Chromosome',   // header line (wider of the two)
     props.transcriptId,
     ...activeSamples.value
   ]
@@ -522,8 +522,19 @@ const hideTooltip = () => {
 
 // Initialize scale
 const initScale = () => {
+  // Base scale maps the content region (exons + APA sites + 5% pad) directly to the
+  // track pixel range. This means k=1 always equals "full-content fit", which makes
+  // scaleExtent([1, 100]) and translateExtent behave correctly without any fitK gymnastics.
+  const allPositions = [
+    ...props.exons.map(e => [e.start, e.end]).flat(),
+    ...props.apaSites.map(s => s.site_position)
+  ]
+  const cMin = allPositions.length ? Math.min(...allPositions) : 0
+  const cMax = allPositions.length ? Math.max(...allPositions) : 1000
+  const span = cMax - cMin
+  const pad = span * 0.05
   xScale.value = d3.scaleLinear()
-    .domain(genomicExtent.value)
+    .domain([cMin - pad, cMax + pad])
     .range([margin.left, containerWidth.value - margin.right])
 }
 
@@ -627,17 +638,28 @@ const renderLabels = () => {
   const g = d3.select(labelsGroup.value)
   g.selectAll('*').remove()
 
-  // Chromosome label (in left margin, aligned with ruler)
-  g.append('text')
+  // Chromosome label (in left margin, aligned with ruler) — two lines, centered
+  const chrText = g.append('text')
     .attr('x', labelWidth.value / 2)
-    .attr('y', trackOffsets.value.ruler + rulerHeight / 2)
-    .attr('dy', '0.35em')
+    .attr('y', trackOffsets.value.ruler + rulerHeight / 2 - 7)
     .attr('text-anchor', 'middle')
     .style('font-family', 'Roboto, sans-serif')
+
+  chrText.append('tspan')
+    .attr('x', labelWidth.value / 2)
+    .attr('dy', '0')
+    .style('font-size', '11px')
+    .style('font-weight', '500')
+    .style('fill', 'rgba(0, 0, 0, 0.45)')
+    .text('Chromosome')
+
+  chrText.append('tspan')
+    .attr('x', labelWidth.value / 2)
+    .attr('dy', '16')
     .style('font-size', '13px')
-    .style('font-weight', '600')
-    .style('fill', 'rgba(0, 0, 0, 0.87)')
-    .text('Chromosome ' + props.chromosome)
+    .style('font-weight', '700')
+    .style('fill', '#0D7377')
+    .text(props.chromosome)
 
   // Transcript label
   g.append('text')
@@ -913,31 +935,37 @@ const renderSampleTracks = () => {
 }
 
 // Zoom behavior
-const setupZoom = () => {
-  const baseScale = xScale.value.copy()  // Snapshot of the initial unzoomed scale
+// Because initScale() maps content (+ 5% pad) directly to the track, k=1 always means
+// "full-content fit". scaleExtent([1, 100]) naturally enforces this as the zoom floor.
+// translateExtent is set so the content cannot be panned off-screen:
+//   at any zoom level the content endpoints are constrained to the track edges.
+let _frozenBaseScale = null
 
-  // Track pixel width for clamping pan
+const setupZoom = () => {
+  const baseScale = xScale.value.copy()  // Snapshot of base (k=1) scale — never mutated
+  _frozenBaseScale = baseScale
+
   const trackLeft = margin.left
   const trackRight = containerWidth.value - margin.right
-  const trackW = trackRight - trackLeft
 
+  // translateExtent: content pixel bounds in base-scale space equal the track edges.
+  // D3's constrain function ensures these bounds are respected at all zoom levels,
+  // so the user can never pan the transcript completely off-screen.
   zoomBehavior.value = d3.zoom()
     .scaleExtent([1, 100])
-    // translateExtent controls how far you can pan. We use a generous extent
-    // equal to the full SVG width so panning is never blocked at identity.
-    // The [0,0] to [containerWidth, totalHeight] window keeps content reachable.
-    .translateExtent([[0, 0], [containerWidth.value, totalHeight.value]])
+    .translateExtent([[trackLeft, -Infinity], [trackRight, Infinity]])
     .extent([[trackLeft, 0], [trackRight, totalHeight.value]])
     .on('zoom', (event) => {
       currentTransform.value = event.transform
-      // Rescale from the original base — guarantees zoom-out always reaches identity
       xScale.value = event.transform.rescaleX(baseScale)
       redrawTracks()
     })
 
   d3.select(svgElement.value).call(zoomBehavior.value)
-  // Safety net: hide tooltip whenever mouse leaves the SVG entirely
   d3.select(svgElement.value).on('mouseleave.tooltip', hideTooltip)
+
+  // k=1 identity transform is the fit view — apply immediately (no transition on first load)
+  d3.select(svgElement.value).call(zoomBehavior.value.transform, d3.zoomIdentity)
 }
 
 // Zoom controls
@@ -956,6 +984,8 @@ const zoomOut = () => {
 }
 
 const resetZoom = () => {
+  if (!zoomBehavior.value) return
+  // k=1 identity transform is exactly the fit view (initScale maps content to track at k=1)
   d3.select(svgElement.value)
     .transition()
     .duration(500)

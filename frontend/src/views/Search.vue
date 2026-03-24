@@ -99,9 +99,9 @@
           <template v-slot:item.transcript_id="{ item }">
             <router-link 
               :to="{ name: 'LocusDetail', params: { transcriptId: item.transcript_id } }"
-              class="text-decoration-none"
+              class="text-primary font-weight-medium text-decoration-underline"
             >
-              <code>{{ item.transcript_id }}</code>
+              {{ item.transcript_id }}
             </router-link>
           </template>
           
@@ -143,14 +143,6 @@
           </template>
           
           <template v-slot:item.actions="{ item }">
-            <v-btn 
-              icon 
-              size="small" 
-              variant="text"
-              @click="viewDetail(item)"
-            >
-              <v-icon>mdi-arrow-right</v-icon>
-            </v-btn>
           </template>
         </v-data-table>
       </v-card>
@@ -199,7 +191,6 @@ const headers = [
   { title: 'APA Sites', key: 'apa_site_count', sortable: true },
   { title: 'Samples', key: 'samples', sortable: false },
   { title: 'Species', key: 'species', sortable: true },
-  { title: '', key: 'actions', sortable: false, width: 50 }
 ]
 
 const speciesColors = {

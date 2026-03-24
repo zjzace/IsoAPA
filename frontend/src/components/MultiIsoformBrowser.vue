@@ -148,8 +148,10 @@ const measureTextWidth = (text, fontSize = 13, fontWeight = '600') => {
 
 // ── Dynamic left margin: widest label + padding ───────────────────────────────
 const dynamicMarginLeft = computed(() => {
+  // With two-line chromosome label the two lines are measured separately
   const labels = [
-    'Chromosome ' + (props.geneData?.chromosome ?? ''),
+    'Chromosome',
+    props.geneData?.chromosome ?? '',
     ...transcripts.value.map(tx => tx.transcript_id),
     'PA Sites'
   ]
@@ -377,17 +379,28 @@ const renderLabels = () => {
   const g = d3.select(labelsGroup.value)
   g.selectAll('*').remove()
 
-  // Chromosome label
-  g.append('text')
+  // Chromosome label — two lines, horizontally centered: "Chromosome" (muted) above ID (teal)
+  const chrText = g.append('text')
     .attr('x', labelWidth.value / 2)
-    .attr('y', trackOffsets.value.ruler + rulerHeight / 2)
-    .attr('dy', '0.35em')
+    .attr('y', trackOffsets.value.ruler + rulerHeight / 2 - 7)
     .attr('text-anchor', 'middle')
     .style('font-family', 'Roboto, sans-serif')
+
+  chrText.append('tspan')
+    .attr('x', labelWidth.value / 2)
+    .attr('dy', '0')
+    .style('font-size', '11px')
+    .style('font-weight', '500')
+    .style('fill', 'rgba(0,0,0,0.45)')
+    .text('Chromosome')
+
+  chrText.append('tspan')
+    .attr('x', labelWidth.value / 2)
+    .attr('dy', '16')
     .style('font-size', '13px')
-    .style('font-weight', '600')
-    .style('fill', 'rgba(0,0,0,0.87)')
-    .text('Chromosome ' + (props.geneData?.chromosome ?? ''))
+    .style('font-weight', '700')
+    .style('fill', '#0D7377')
+    .text(props.geneData?.chromosome ?? '')
 
   // Per-isoform labels
   transcripts.value.forEach((tx, i) => {
@@ -646,27 +659,53 @@ const renderTracks = () => {
 
 // ── Scale init ────────────────────────────────────────────────────────────────
 const initScale = () => {
+  // Map content bounds (all exon + APA positions + 5% pad) directly to the track.
+  // k=1 always equals "full-content fit", so scaleExtent([1,100]) and translateExtent
+  // work correctly without any fitK gymnastics — same approach as ApaGenomeBrowser.
+  const positions = []
+  for (const tx of transcripts.value) {
+    const struct = props.transcriptStructures[tx.transcript_id]
+    if (struct?.exons) {
+      for (const e of struct.exons) { positions.push(e.start, e.end) }
+    }
+    for (const site of tx.apa_sites ?? []) {
+      positions.push(site.site_position)
+    }
+  }
+  const cMin = positions.length ? Math.min(...positions) : 0
+  const cMax = positions.length ? Math.max(...positions) : 1000
+  const span = cMax - cMin
+  const pad = span * 0.05
   xScale.value = d3.scaleLinear()
-    .domain(genomicExtent.value)
+    .domain([cMin - pad, cMax + pad])
     .range([margin.left, containerWidth.value - margin.right])
 }
 
 // ── Zoom ──────────────────────────────────────────────────────────────────────
-const setupZoom = () => {
-  const baseScale = xScale.value.copy()
+let _frozenBaseScale = null
 
+const setupZoom = () => {
+  const baseScale = xScale.value.copy()  // Snapshot of base (k=1) scale — never mutated
+  _frozenBaseScale = baseScale
+
+  const trackLeft = margin.left
+  const trackRight = containerWidth.value - margin.right
+
+  // translateExtent locks content endpoints to track edges — user can never pan
+  // the transcript off-screen. Combined with scaleExtent([1,100]), zooming out to
+  // minimum always restores the full-fit view regardless of current pan position.
   zoomBehavior.value = d3.zoom()
     .scaleExtent([1, 100])
-    .translateExtent([
-      [margin.left, 0],
-      [containerWidth.value - margin.right, totalHeight.value]
-    ])
+    .translateExtent([[trackLeft, -Infinity], [trackRight, Infinity]])
+    .extent([[trackLeft, 0], [trackRight, totalHeight.value]])
     .on('zoom', (event) => {
       xScale.value = event.transform.rescaleX(baseScale)
       renderTracks()
     })
 
   d3.select(svgElement.value).call(zoomBehavior.value)
+  // k=1 identity transform is the fit view
+  d3.select(svgElement.value).call(zoomBehavior.value.transform, d3.zoomIdentity)
 }
 
 const zoomIn = () => {

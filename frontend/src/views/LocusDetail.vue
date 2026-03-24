@@ -31,7 +31,12 @@
           <div class="gene-meta-row">
             <div class="gene-meta-item">
               <span class="gene-meta-label">Gene Symbol</span>
-              <span class="gene-meta-value font-weight-medium">{{ locusData.gene.gene_name }}</span>
+              <span class="gene-meta-value font-weight-medium">
+                <router-link
+                  :to="{ name: 'GeneDetail', params: { geneId: locusData.gene.gene_id } }"
+                  class="gene-id-link"
+                >{{ locusData.gene.gene_name }}</router-link>
+              </span>
             </div>
             <div class="gene-meta-item">
               <span class="gene-meta-label">Gene ID</span>
@@ -44,10 +49,11 @@
             </div>
             <div class="gene-meta-item">
               <span class="gene-meta-label">Chromosome</span>
-              <span class="gene-meta-value">
-                <v-chip size="small" variant="tonal" color="primary" class="mr-1">{{ locusData.gene.chromosome }}</v-chip>
-                <v-chip size="small" variant="tonal" color="secondary">{{ locusData.gene.strand }}</v-chip>
-              </span>
+              <v-chip size="small" variant="tonal" color="primary">{{ locusData.gene.chromosome }}</v-chip>
+            </div>
+            <div class="gene-meta-item">
+              <span class="gene-meta-label">Strand</span>
+              <v-chip size="small" variant="tonal" color="secondary">{{ locusData.gene.strand }}</v-chip>
             </div>
             <div class="gene-meta-item">
               <span class="gene-meta-label">PA Sites</span>
@@ -59,7 +65,7 @@
                 <v-chip size="small" variant="tonal" color="teal">{{ locusData.transcript.transcript_biotype }}</v-chip>
               </span>
             </div>
-            <div class="gene-meta-item" v-if="locusData.apa_sites[0]?.species">
+            <div class="gene-meta-item" style="align-items: flex-start;" v-if="locusData.apa_sites[0]?.species">
               <span class="gene-meta-label">Species</span>
               <span class="gene-meta-value">
                 {{ locusData.apa_sites[0].species.name }}
@@ -1115,8 +1121,11 @@ code {
 .gene-meta-item {
   display: flex;
   flex-direction: column;
+  align-items: center;
   gap: 2px;
 }
+
+
 
 .gene-meta-label {
   font-size: 11px;

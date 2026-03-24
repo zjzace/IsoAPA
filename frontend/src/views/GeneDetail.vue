@@ -29,12 +29,13 @@
             <span class="gene-name-text">{{ geneData.gene_name }}</span>
           </div>
           <div class="gene-meta-row">
-            <div class="gene-meta-item">
+            <div class="gene-meta-item gene-meta-item--centered">
               <span class="gene-meta-label">Chromosome</span>
-              <span class="gene-meta-value">
-                <v-chip size="small" variant="tonal" color="primary" class="mr-1">{{ geneData.chromosome }}</v-chip>
-                <v-chip size="small" variant="tonal" color="secondary">{{ geneData.strand }}</v-chip>
-              </span>
+              <v-chip size="small" variant="tonal" color="primary">{{ geneData.chromosome }}</v-chip>
+            </div>
+            <div class="gene-meta-item gene-meta-item--centered">
+              <span class="gene-meta-label">Strand</span>
+              <v-chip size="small" variant="tonal" color="secondary">{{ geneData.strand }}</v-chip>
             </div>
             <div class="gene-meta-item">
               <span class="gene-meta-label">Total Transcripts</span>
@@ -362,11 +363,11 @@ const geneSummaryError = ref(null)
 const geneSummaryData = ref(null)
 const showAllPathways = ref(false)
 
-const fetchGeneSummary = async (ensemblGeneId) => {
+const fetchGeneSummary = async (geneSymbol) => {
   geneSummaryLoading.value = true
   geneSummaryError.value = null
   try {
-    const url = `https://mygene.info/v3/query?q=ensembl.gene:${ensemblGeneId}&fields=name,summary,pathway.kegg,uniprot,entrezgene,HGNC,symbol,alias,type_of_gene,refseq,ensembl&species=human,mouse&size=1`
+    const url = `https://mygene.info/v3/query?q=symbol:${encodeURIComponent(geneSymbol)}&fields=name,summary,pathway.kegg,uniprot,entrezgene,HGNC,symbol,alias,type_of_gene,refseq,ensembl&species=human&size=1`
     const res = await fetch(url)
     if (!res.ok) throw new Error(`HTTP ${res.status}`)
     const json = await res.json()
@@ -439,7 +440,7 @@ onMounted(async () => {
     geneData.value = await apiService.getGeneDetail(geneId)
 
     // Fire gene summary fetch (non-blocking)
-    fetchGeneSummary(geneId)
+    fetchGeneSummary(geneData.value.gene_name)
 
     // Fetch species info from first transcript's locus detail (non-fatal)
     if (geneData.value?.transcripts?.length) {
@@ -527,6 +528,10 @@ code {
   display: flex;
   flex-direction: column;
   gap: 2px;
+}
+
+.gene-meta-item--centered {
+  align-items: center;
 }
 
 .gene-meta-label {
