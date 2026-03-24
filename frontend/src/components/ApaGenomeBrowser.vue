@@ -17,6 +17,149 @@
         <v-icon size="x-small" class="mr-1">mdi-gesture-pinch</v-icon>
         Scroll to zoom • Drag to pan
       </span>
+
+      <!-- Sample selectors — pushed to right -->
+      <div class="sample-selectors ml-auto">
+        <!-- Tissue selector -->
+        <v-menu
+          v-model="tissueMenuOpen"
+          :close-on-content-click="false"
+          max-height="360"
+          :width="tissueMenuWidth"
+          @update:model-value="onTissueMenuToggle"
+        >
+          <template #activator="{ props: menuProps }">
+            <div
+              v-bind="menuProps"
+              ref="tissueBtnRef"
+              class="fancy-selector-btn mr-2"
+              :class="{
+                'fancy-selector-btn--active': selectedTissueNames.length > 0,
+                'fancy-selector-btn--open': tissueMenuOpen
+              }"
+            >
+              <!-- Search mode: menu is open -->
+              <template v-if="tissueMenuOpen">
+                <v-icon size="14" class="fancy-btn-icon-search">mdi-magnify</v-icon>
+                <input
+                  ref="tissueInputRef"
+                  v-model="tissueSearch"
+                  class="fancy-btn-search-input"
+                  placeholder="Search tissues..."
+                  @click.stop
+                  @keydown.escape="tissueMenuOpen = false"
+                />
+              </template>
+              <!-- Default mode -->
+              <template v-else>
+                <span class="fancy-btn-icon">
+                  <v-icon size="15">mdi-dna</v-icon>
+                </span>
+                <span class="fancy-btn-label">Tissue</span>
+                <span
+                  v-if="tissueList.length > 0"
+                  class="fancy-btn-badge"
+                  :class="{ 'fancy-btn-badge--active': selectedTissueNames.length > 0 }"
+                >{{ selectedTissueNames.length }}/{{ tissueList.length }}</span>
+                <v-icon size="13" class="fancy-btn-chevron">mdi-chevron-down</v-icon>
+              </template>
+            </div>
+          </template>
+          <v-card class="selector-dropdown-card">
+            <v-card-text class="pa-1">
+              <div v-if="filteredTissueList.length === 0" class="text-caption text-grey pa-2">No tissues found</div>
+              <v-list density="compact" class="selector-list">
+                <v-list-item
+                  v-for="sample in filteredTissueList"
+                  :key="sample.name"
+                  class="selector-list-item"
+                  @click="toggleSample(sample.name)"
+                >
+                  <template #prepend>
+                    <v-checkbox-btn
+                      :model-value="selectedSampleNames.includes(sample.name)"
+                      density="compact"
+                      color="primary"
+                      @click.stop="toggleSample(sample.name)"
+                    />
+                  </template>
+                  <v-list-item-title class="text-body-2">{{ sample.name }}</v-list-item-title>
+                </v-list-item>
+              </v-list>
+            </v-card-text>
+          </v-card>
+        </v-menu>
+
+        <!-- Cell culture selector -->
+        <v-menu
+          v-model="cellMenuOpen"
+          :close-on-content-click="false"
+          max-height="360"
+          :width="cellMenuWidth"
+          @update:model-value="onCellMenuToggle"
+        >
+          <template #activator="{ props: menuProps }">
+            <div
+              v-bind="menuProps"
+              ref="cellBtnRef"
+              class="fancy-selector-btn"
+              :class="{
+                'fancy-selector-btn--active': selectedCellNames.length > 0,
+                'fancy-selector-btn--open': cellMenuOpen
+              }"
+            >
+              <!-- Search mode: menu is open -->
+              <template v-if="cellMenuOpen">
+                <v-icon size="14" class="fancy-btn-icon-search">mdi-magnify</v-icon>
+                <input
+                  ref="cellInputRef"
+                  v-model="cellSearch"
+                  class="fancy-btn-search-input"
+                  placeholder="Search cell cultures..."
+                  @click.stop
+                  @keydown.escape="cellMenuOpen = false"
+                />
+              </template>
+              <!-- Default mode -->
+              <template v-else>
+                <span class="fancy-btn-icon">
+                  <v-icon size="15">mdi-flask</v-icon>
+                </span>
+                <span class="fancy-btn-label">Cell Culture</span>
+                <span
+                  v-if="cellCultureList.length > 0"
+                  class="fancy-btn-badge"
+                  :class="{ 'fancy-btn-badge--active': selectedCellNames.length > 0 }"
+                >{{ selectedCellNames.length }}/{{ cellCultureList.length }}</span>
+                <v-icon size="13" class="fancy-btn-chevron">mdi-chevron-down</v-icon>
+              </template>
+            </div>
+          </template>
+          <v-card class="selector-dropdown-card">
+            <v-card-text class="pa-1">
+              <div v-if="filteredCellList.length === 0" class="text-caption text-grey pa-2">No cell cultures found</div>
+              <v-list density="compact" class="selector-list">
+                <v-list-item
+                  v-for="sample in filteredCellList"
+                  :key="sample.name"
+                  class="selector-list-item"
+                  @click="toggleSample(sample.name)"
+                >
+                  <template #prepend>
+                    <v-checkbox-btn
+                      :model-value="selectedSampleNames.includes(sample.name)"
+                      density="compact"
+                      color="primary"
+                      @click.stop="toggleSample(sample.name)"
+                    />
+                  </template>
+                  <v-list-item-title class="text-body-2">{{ sample.name }}</v-list-item-title>
+                </v-list-item>
+              </v-list>
+            </v-card-text>
+          </v-card>
+        </v-menu>
+      </div>
     </div>
 
     <!-- SVG Browser -->
@@ -80,7 +223,7 @@
 
           <!-- Sample tracks -->
           <g
-            v-for="(sample, idx) in samples"
+            v-for="(sample, idx) in activeSamples"
             :key="sample"
             :ref="el => { if (el) sampleGroupRefs[idx] = el }"
             class="sample-track"
@@ -108,9 +251,110 @@ const props = defineProps({
   exons: { type: Array, required: true },  // [{ start, end }]
   cds: { type: Array, default: () => [] },
   apaSites: { type: Array, required: true },  // From locus API
-  samples: { type: Array, required: true },
+  allSamplesInfo: { type: Array, required: true },  // [{ name, sample_type }]
   trackHeight: { type: Number, default: 40 }
 })
+
+// ── Sample selection state ─────────────────────────────────────────────────────
+
+// Derived lists by type
+const tissueList = computed(() =>
+  (props.allSamplesInfo || [])
+    .filter(s => s.sample_type === 'tissue')
+    .sort((a, b) => a.name.localeCompare(b.name))
+)
+const cellCultureList = computed(() =>
+  (props.allSamplesInfo || [])
+    .filter(s => s.sample_type !== 'tissue')
+    .sort((a, b) => a.name.localeCompare(b.name))
+)
+
+// Selected sample names (string array — what the browser renders)
+const selectedSampleNames = ref([])
+
+// Initialize / reset when allSamplesInfo changes
+watch(() => props.allSamplesInfo, (newVal) => {
+  if (!newVal?.length) {
+    selectedSampleNames.value = []
+    return
+  }
+  const tissue = newVal.filter(s => s.sample_type === 'tissue').map(s => s.name).sort()
+  const cell = newVal.filter(s => s.sample_type !== 'tissue').map(s => s.name).sort()
+  // Show tissue tracks only if any exist; otherwise show cell culture tracks only.
+  // Never mix types on initial load — up to 5 of whichever group is present.
+  const defaultGroup = tissue.length > 0 ? tissue : cell
+  selectedSampleNames.value = defaultGroup.slice(0, 5)
+}, { immediate: true })
+
+// Computed active samples — used everywhere instead of props.samples
+const activeSamples = computed(() => selectedSampleNames.value)
+
+// Helper computed: which tissue/cell names are currently selected
+const selectedTissueNames = computed(() =>
+  selectedSampleNames.value.filter(n => tissueList.value.some(s => s.name === n))
+)
+const selectedCellNames = computed(() =>
+  selectedSampleNames.value.filter(n => cellCultureList.value.some(s => s.name === n))
+)
+
+// Menu open/close state
+const tissueMenuOpen = ref(false)
+const cellMenuOpen = ref(false)
+
+// Button DOM refs (for measuring width to size dropdown)
+const tissueBtnRef = ref(null)
+const cellBtnRef = ref(null)
+const tissueInputRef = ref(null)
+const cellInputRef = ref(null)
+const tissueMenuWidth = ref('auto')
+const cellMenuWidth = ref('auto')
+
+// When menu opens: snapshot button width and autofocus the inline input
+const onTissueMenuToggle = async (open) => {
+  if (open) {
+    if (tissueBtnRef.value) {
+      tissueMenuWidth.value = tissueBtnRef.value.offsetWidth + 'px'
+    }
+    await nextTick()
+    tissueInputRef.value?.focus()
+  } else {
+    tissueSearch.value = ''
+  }
+}
+const onCellMenuToggle = async (open) => {
+  if (open) {
+    if (cellBtnRef.value) {
+      cellMenuWidth.value = cellBtnRef.value.offsetWidth + 'px'
+    }
+    await nextTick()
+    cellInputRef.value?.focus()
+  } else {
+    cellSearch.value = ''
+  }
+}
+
+// Fuzzy search state
+const tissueSearch = ref('')
+const cellSearch = ref('')
+
+// Fuzzy filter helpers
+const fuzzyFilter = (list, query) => {
+  if (!query) return list
+  const q = query.toLowerCase()
+  return list.filter(s => s.name.toLowerCase().includes(q))
+}
+const filteredTissueList = computed(() => fuzzyFilter(tissueList.value, tissueSearch.value))
+const filteredCellList = computed(() => fuzzyFilter(cellCultureList.value, cellSearch.value))
+
+// Toggle a sample on/off
+const toggleSample = (name) => {
+  const idx = selectedSampleNames.value.indexOf(name)
+  if (idx === -1) {
+    selectedSampleNames.value = [...selectedSampleNames.value, name]
+  } else {
+    selectedSampleNames.value = selectedSampleNames.value.filter(n => n !== name)
+  }
+}
 
 // Measure text width using an offscreen canvas
 const measureTextWidth = (text, fontSize = 13, fontWeight = '600') => {
@@ -125,7 +369,7 @@ const dynamicMarginLeft = computed(() => {
   const labels = [
     'Chromosome ' + props.chromosome,
     props.transcriptId,
-    ...props.samples
+    ...activeSamples.value
   ]
   const maxW = Math.max(...labels.map(l => measureTextWidth(l)))
   // 16px left padding + maxW + 20px right padding before separator
@@ -155,7 +399,7 @@ const trackOffsets = computed(() => {
   }
   
   const transcriptBottom = offsets.transcript + props.trackHeight
-  props.samples.forEach((_, idx) => {
+  activeSamples.value.forEach((_, idx) => {
     offsets.samples.push(transcriptBottom + trackPadding + (idx * (props.trackHeight + trackPadding)))
   })
   
@@ -195,7 +439,9 @@ const zoomGroup = ref(null)
 const labelsGroup = ref(null)
 const rulerGroup = ref(null)
 const transcriptGroup = ref(null)
-const sampleGroupRefs = ref([])
+// Plain mutable array — NOT a ref. Vue's template ref callbacks do index-based
+// assignment (sampleGroupRefs[idx] = el) which breaks on reactive arrays.
+let sampleGroupRefs = []
 const browserContainer = ref(null)
 
 // Tooltip — single DOM node appended to body, positioned with fixed
@@ -406,7 +652,7 @@ const renderLabels = () => {
     .text(`${props.transcriptId}`)
 
   // Sample labels
-  props.samples.forEach((sample, idx) => {
+  activeSamples.value.forEach((sample, idx) => {
     g.append('rect')
       .attr('x', 8)
       .attr('y', trackOffsets.value.samples[idx] + props.trackHeight / 2 - 12)
@@ -568,8 +814,10 @@ const renderTranscript = () => {
 
 // Render APA sites for each sample (CLEAR non-overlapping markers)
 const renderSampleTracks = () => {
-  props.samples.forEach((sample, idx) => {
-    const g = d3.select(sampleGroupRefs.value[idx])
+  activeSamples.value.forEach((sample, idx) => {
+    const el = sampleGroupRefs[idx]
+    if (!el) return  // guard: DOM element not yet ready — skip silently
+    const g = d3.select(el)
     g.selectAll('*').remove()
 
     g.attr('transform', `translate(0, ${trackOffsets.value.samples[idx]})`)
@@ -641,7 +889,6 @@ const renderSampleTracks = () => {
         showTooltip(event, `PA Site @ ${site.site_position.toLocaleString()}`, [
           { label: 'Sample', value: sample },
           { label: 'Abundance', value: abundance.toFixed(2) },
-          { label: 'Count', value: sampleData.site_count.toLocaleString() },
           { label: 'PAS Motif', value: site.pas_motif || 'N/A' },
           { label: 'PAS Position', value: site.pas_position ? `${site.pas_position}bp` : 'N/A' },
           { label: 'PAS Type', value: site.pas_type || 'N/A' }
@@ -651,7 +898,6 @@ const renderSampleTracks = () => {
         showTooltip(event, `PA Site @ ${site.site_position.toLocaleString()}`, [
           { label: 'Sample', value: sample },
           { label: 'Abundance', value: abundance.toFixed(2) },
-          { label: 'Count', value: sampleData.site_count.toLocaleString() },
           { label: 'PAS Motif', value: site.pas_motif || 'N/A' },
           { label: 'PAS Position', value: site.pas_position ? `${site.pas_position}bp` : 'N/A' },
           { label: 'PAS Type', value: site.pas_type || 'N/A' }
@@ -668,27 +914,30 @@ const renderSampleTracks = () => {
 
 // Zoom behavior
 const setupZoom = () => {
-  const baseScale = xScale.value.copy()  // Store original scale
+  const baseScale = xScale.value.copy()  // Snapshot of the initial unzoomed scale
+
+  // Track pixel width for clamping pan
+  const trackLeft = margin.left
+  const trackRight = containerWidth.value - margin.right
+  const trackW = trackRight - trackLeft
 
   zoomBehavior.value = d3.zoom()
-    .scaleExtent([1, 100])  // Allow up to 100x zoom
-    .translateExtent([
-      [margin.left, 0],
-      [containerWidth.value - margin.right, totalHeight.value]
-    ])
+    .scaleExtent([1, 100])
+    // translateExtent controls how far you can pan. We use a generous extent
+    // equal to the full SVG width so panning is never blocked at identity.
+    // The [0,0] to [containerWidth, totalHeight] window keeps content reachable.
+    .translateExtent([[0, 0], [containerWidth.value, totalHeight.value]])
+    .extent([[trackLeft, 0], [trackRight, totalHeight.value]])
     .on('zoom', (event) => {
       currentTransform.value = event.transform
-      
-      // Rescale the x-axis
+      // Rescale from the original base — guarantees zoom-out always reaches identity
       xScale.value = event.transform.rescaleX(baseScale)
-      
-      // Re-render everything with new scale
-      renderRuler()
-      renderTranscript()
-      renderSampleTracks()
+      redrawTracks()
     })
 
   d3.select(svgElement.value).call(zoomBehavior.value)
+  // Safety net: hide tooltip whenever mouse leaves the SVG entirely
+  d3.select(svgElement.value).on('mouseleave.tooltip', hideTooltip)
 }
 
 // Zoom controls
@@ -713,13 +962,18 @@ const resetZoom = () => {
     .call(zoomBehavior.value.transform, d3.zoomIdentity)
 }
 
-// Main render function
-const render = () => {
-  initScale()
+// Redraw all tracks with the current xScale (no scale reinit — safe to call during zoom)
+const redrawTracks = () => {
   renderLabels()
   renderRuler()
   renderTranscript()
   renderSampleTracks()
+}
+
+// Full render: reinitialise scale then draw everything. Only call on first mount or resize.
+const render = () => {
+  initScale()
+  redrawTracks()
 }
 
 // Measure container width
@@ -734,29 +988,41 @@ const measureWidth = () => {
 }
 
 // Initialize on mount
-onMounted(() => {
-  nextTick(() => {
+// Wheel handler — stored so we can remove it on unmount
+let wheelHandler = null
+
+onMounted(async () => {
+  await nextTick()
+  measureWidth()
+  if (props.exons && props.exons.length > 0) {
+    // Clear refs and wait two ticks so the v-for <g> elements exist
+    sampleGroupRefs = []
+    await nextTick()
+    render()
+    setupZoom()
+  }
+  // Watch for container resize
+  resizeObserver.value = new ResizeObserver(async () => {
     measureWidth()
     if (props.exons && props.exons.length > 0) {
       render()
-      setupZoom()
-    }
-    // Watch for container resize
-    resizeObserver.value = new ResizeObserver(() => {
-      measureWidth()
-      if (props.exons && props.exons.length > 0) {
-        render()
-      }
-    })
-    if (browserContainer.value) {
-      resizeObserver.value.observe(browserContainer.value)
     }
   })
+  if (browserContainer.value) {
+    resizeObserver.value.observe(browserContainer.value)
+    // Prevent page scroll while mouse is inside the browser container
+    wheelHandler = (e) => e.preventDefault()
+    browserContainer.value.addEventListener('wheel', wheelHandler, { passive: false })
+  }
 })
 
 onBeforeUnmount(() => {
   if (resizeObserver.value) {
     resizeObserver.value.disconnect()
+  }
+  if (browserContainer.value && wheelHandler) {
+    browserContainer.value.removeEventListener('wheel', wheelHandler)
+    wheelHandler = null
   }
   if (tooltipEl) {
     tooltipEl.remove()
@@ -764,21 +1030,33 @@ onBeforeUnmount(() => {
   }
 })
 
-// Re-render on data changes
-watch(() => [props.exons, props.apaSites, props.samples], () => {
-  nextTick(() => {
-    if (props.exons && props.exons.length > 0) {
+// Re-render on data changes (including active sample selection changes)
+watch(() => [props.exons, props.apaSites, activeSamples.value], async () => {
+  // Clear stale refs so Vue can repopulate them from scratch
+  sampleGroupRefs = []
+  // First tick: Vue removes/unmounts old <g> elements from v-for
+  await nextTick()
+  // Second tick: Vue creates new <g> elements for updated activeSamples
+  await nextTick()
+  if (props.exons && props.exons.length > 0) {
+    if (zoomBehavior.value) {
+      // Zoom already active — only redraw, don't reinit scale (would reset zoom)
+      redrawTracks()
+    } else {
       render()
+      setupZoom()
     }
-  })
+  }
 }, { deep: true })
 
-// Sync margin.left whenever dynamic label width changes, then re-render
+// Sync margin.left whenever dynamic label width changes, then full re-render + zoom reset
+// (layout has changed — must reinit scale range and zoom base)
 watch(dynamicMarginLeft, (newLeft) => {
   margin.left = newLeft
   nextTick(() => {
     if (props.exons && props.exons.length > 0) {
       render()
+      setupZoom()
     }
   })
 }, { immediate: true })
@@ -799,6 +1077,175 @@ watch(dynamicMarginLeft, (newLeft) => {
   margin-bottom: 16px;
 }
 
+.sample-selectors {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.selector-btn {
+  font-size: 12px;
+  letter-spacing: 0.01em;
+  text-transform: none;
+  border-color: rgba(0, 0, 0, 0.2) !important;
+}
+
+.selector-btn.has-selection {
+  border-color: rgb(var(--v-theme-primary)) !important;
+  color: rgb(var(--v-theme-primary));
+}
+
+.selector-badge {
+  font-size: 10px;
+  height: 16px;
+  min-width: 28px;
+}
+
+/* ── Fancy selector buttons ────────────────────────────────────────────────── */
+.fancy-selector-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 12px 5px 10px;
+  border-radius: 8px;
+  border: 1.5px solid rgba(13, 115, 119, 0.28);
+  background: rgba(255, 255, 255, 0.72);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  box-shadow: 0 1px 4px rgba(13, 115, 119, 0.10), inset 0 1px 0 rgba(255,255,255,0.7);
+  cursor: pointer;
+  transition: border-color 0.18s ease, box-shadow 0.18s ease, background 0.18s ease, transform 0.12s ease;
+  outline: none;
+  font-family: Roboto, sans-serif;
+  white-space: nowrap;
+  min-width: 0;
+}
+
+.fancy-selector-btn:hover {
+  border-color: rgba(13, 115, 119, 0.6);
+  box-shadow: 0 2px 12px rgba(13, 115, 119, 0.20), inset 0 1px 0 rgba(255,255,255,0.8);
+  transform: translateY(-1px);
+  background: rgba(255, 255, 255, 0.90);
+}
+
+.fancy-selector-btn:active {
+  transform: translateY(0);
+  box-shadow: 0 1px 4px rgba(13, 115, 119, 0.12);
+}
+
+/* Open (search) state */
+.fancy-selector-btn--open {
+  border-color: #0D7377;
+  background: #ffffff;
+  box-shadow: 0 0 0 3px rgba(13, 115, 119, 0.12), 0 2px 8px rgba(13, 115, 119, 0.15);
+  transform: none;
+  cursor: default;
+}
+
+.fancy-selector-btn--open:hover {
+  transform: none;
+  border-color: #0D7377;
+}
+
+/* Inline search input (renders inside button when open) */
+.fancy-btn-icon-search {
+  color: #0D7377;
+  flex-shrink: 0;
+}
+
+.fancy-btn-search-input {
+  flex: 1;
+  min-width: 80px;
+  border: none;
+  outline: none;
+  background: transparent;
+  font-size: 13px;
+  font-family: Roboto, sans-serif;
+  color: rgba(0, 0, 0, 0.87);
+  line-height: 1.4;
+  padding: 0;
+}
+
+.fancy-selector-btn--active {
+  border-color: rgba(13, 115, 119, 0.75);
+  background: linear-gradient(135deg, rgba(13, 115, 119, 0.10) 0%, rgba(20, 145, 155, 0.08) 100%);
+  box-shadow: 0 2px 10px rgba(13, 115, 119, 0.22), inset 0 0 0 1px rgba(13, 115, 119, 0.15);
+}
+
+.fancy-selector-btn--active:hover {
+  border-color: #0D7377;
+  box-shadow: 0 3px 16px rgba(13, 115, 119, 0.32), inset 0 0 0 1px rgba(13, 115, 119, 0.20);
+}
+
+.fancy-btn-icon {
+  display: flex;
+  align-items: center;
+  color: #0D7377;
+  opacity: 0.85;
+}
+
+.fancy-btn-label {
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  color: rgba(0, 0, 0, 0.75);
+}
+
+.fancy-selector-btn--active .fancy-btn-label {
+  color: #0D7377;
+}
+
+.fancy-btn-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1px 7px;
+  border-radius: 4px;
+  background: rgba(0, 0, 0, 0.08);
+  font-size: 11px;
+  font-weight: 700;
+  color: rgba(0, 0, 0, 0.55);
+  min-width: 30px;
+  line-height: 1.6;
+  letter-spacing: 0.01em;
+  transition: background 0.18s ease, color 0.18s ease;
+}
+
+.fancy-btn-badge--active {
+  background: #0D7377;
+  color: #ffffff;
+}
+
+.fancy-btn-chevron {
+  color: rgba(0, 0, 0, 0.38);
+  margin-left: -2px;
+  transition: transform 0.18s ease;
+}
+
+.fancy-selector-btn--active .fancy-btn-chevron {
+  color: #0D7377;
+}
+
+.selector-dropdown-card {
+  border-radius: 8px !important;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12), 0 2px 6px rgba(0, 0, 0, 0.08) !important;
+  overflow: hidden;
+}
+
+.selector-list {
+  max-height: 260px;
+  overflow-y: auto;
+  padding: 0;
+}
+
+.selector-list-item {
+  min-height: 36px;
+  cursor: pointer;
+}
+
+.selector-list-item:hover {
+  background: rgba(0, 0, 0, 0.04);
+}
 .browser-svg-container {
   position: relative;
   width: 100%;

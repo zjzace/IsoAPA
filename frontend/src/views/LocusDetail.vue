@@ -53,6 +53,12 @@
               <span class="gene-meta-label">PA Sites</span>
               <span class="gene-meta-value gene-meta-accent">{{ locusData.apa_sites.length }}</span>
             </div>
+            <div class="gene-meta-item" v-if="locusData.transcript.transcript_biotype">
+              <span class="gene-meta-label">Biotype</span>
+              <span class="gene-meta-value">
+                <v-chip size="small" variant="tonal" color="teal">{{ locusData.transcript.transcript_biotype }}</v-chip>
+              </span>
+            </div>
             <div class="gene-meta-item" v-if="locusData.apa_sites[0]?.species">
               <span class="gene-meta-label">Species</span>
               <span class="gene-meta-value">
@@ -83,7 +89,7 @@
                 :exons="transcriptStructure.exons"
                 :cds="transcriptStructure.cds"
                 :apa-sites="locusData.apa_sites"
-                :samples="locusData.samples"
+                :all-samples-info="locusData.samples"
               />
             </div>
           </div>
@@ -113,6 +119,7 @@
                 class="elegant-table"
                 item-value="site_id"
                 v-model:expanded="seqOpen"
+                :row-props="({ item }) => seqOpen.includes(item.site_id) ? { class: 'row-seq-expanded' } : {}"
               >
                 <template v-slot:item.site_id="{ item }">
                   <code>{{ item.site_id }}</code>
@@ -207,7 +214,7 @@
                               {{ seqData[item.site_id].data.strand === '+' ? '(+) positive strand' : '(−) negative strand' }}
                             </span>
                             <span class="seq-meta-chip">
-                              chr{{ seqData[item.site_id].data.chromosome }}:{{
+                              {{ seqData[item.site_id].data.chromosome }}:{{
                                 (seqData[item.site_id].data.site_position - seqData[item.site_id].data.flank).toLocaleString()
                               }}–{{
                                 (seqData[item.site_id].data.site_position + seqData[item.site_id].data.flank).toLocaleString()
@@ -719,7 +726,7 @@ const siteIdOptions = computed(() => {
 
 const sampleOptions = computed(() => {
   if (!locusData.value) return []
-  return locusData.value.samples || []
+  return (locusData.value.samples || []).map(s => s?.name ?? s)
 })
 
 const sampleSiteAbundanceData = computed(() => {
@@ -859,7 +866,8 @@ const heatmapLookup = computed(() => {
 
 const heatmapData = computed(() => {
   if (!locusData.value) return { sites: [], samples: [] }
-  const allSamples = locusData.value.samples || []
+  // samples may be [{name, sample_type}] objects or plain strings — normalise to strings
+  const allSamples = (locusData.value.samples || []).map(s => s?.name ?? s)
   const sites = locusData.value.apa_sites.map(s => ({
     id: s.site_id,
     position: s.site_position
@@ -1015,7 +1023,7 @@ onMounted(async () => {
       selectedSiteId.value = locusData.value.apa_sites[0].site_id
     }
     if (locusData.value.samples && locusData.value.samples.length > 0) {
-      selectedSample.value = locusData.value.samples[0]
+      selectedSample.value = locusData.value.samples[0]?.name ?? locusData.value.samples[0]
     }
 
     // Fetch transcript structure separately — failure is non-fatal
@@ -1328,6 +1336,11 @@ code {
   font-size: 13px;
 }
 
+/* When row is expanded: suppress the full-width td borders */
+.elegant-table :deep(.row-seq-expanded .v-data-table__td) {
+  border-bottom: none !important;
+}
+
 .elegant-table :deep(.v-data-table__tr:hover .v-data-table__td) {
   background: rgba(13, 115, 119, 0.04) !important;
 }
@@ -1505,58 +1518,55 @@ code {
 
 /* ── Sequence context panel — inline expanded row ────────────────── */
 .seq-expanded-row td {
-  background: rgba(13, 115, 119, 0.03) !important;
+  background: #fafcfc !important;
+  padding: 0 !important;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.055) !important;
+  vertical-align: top;
 }
 
-.seq-context-panel--inline {
+/* --inline fully overrides every visual property of the base class */
+.seq-context-panel.seq-context-panel--inline {
   margin: 0;
-  border: none;
+  border: none !important;
   border-radius: 0;
-  border-top: 2px solid rgba(13, 115, 119, 0.18);
-  background: rgba(13, 115, 119, 0.02);
-}
-
-.seq-context-panel {
-  margin-top: 8px;
-  border: 1px solid rgba(13, 115, 119, 0.2);
-  border-radius: 8px;
-  overflow: hidden;
-  background: #f8fcfc;
-}
-
-.seq-panel-header {
-  display: flex;
-  align-items: center;
-  padding: 10px 16px;
-  background: rgba(13, 115, 119, 0.07);
-  border-bottom: 1px solid rgba(13, 115, 119, 0.12);
-  gap: 8px;
-}
-
-.seq-panel-title {
-  font-size: 13px;
-  font-weight: 700;
-  color: rgba(0, 0, 0, 0.80);
-}
-
-.seq-panel-siteid {
-  font-size: 12px;
-  background: rgba(0, 0, 0, 0.06);
-  padding: 2px 7px;
-  border-radius: 4px;
-  color: rgba(0, 0, 0, 0.65);
+  overflow: visible;
+  background: transparent !important;
 }
 
 .seq-panel-body {
-  padding: 14px 16px;
+  width: 100%;
+  padding: 0;
+  margin: 0 16px;
+  border-top: 1px solid rgba(0, 0, 0, 0.055);
+  display: flex;
+  flex-direction: column;
 }
 
-/* ── Sequence metadata chips ─────────────────────────────────────── */
+/* chips row — own fixed height, vertically centered */
 .seq-meta-row {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
-  margin-bottom: 10px;
+  align-items: center;
+  gap: 6px;
+  min-height: 44px;
+  padding: 8px 0;
+  margin-bottom: 0;
+}
+
+/* sequence row — own fixed height, vertically centered, left-aligned */
+.seq-display {
+  font-family: 'Roboto Mono', 'Courier New', monospace;
+  font-size: 13px;
+  line-height: 1.4;
+  letter-spacing: 0.05em;
+  word-break: break-all;
+  border-top: 1px solid rgba(0, 0, 0, 0.10);
+  text-align: left;
+  display: flex;
+  align-items: center;
+  min-height: 44px;
+  padding: 8px 0;
+  margin: 0;
 }
 
 .seq-meta-chip {
@@ -1565,7 +1575,7 @@ code {
   line-height: 1;
   font-size: 11px;
   font-weight: 600;
-  padding: 4px 9px;
+  padding: 6px 10px;
   border-radius: 12px;
   background: rgba(0, 0, 0, 0.06);
   color: rgba(0, 0, 0, 0.65);
@@ -1596,18 +1606,6 @@ code {
   color: #D45D79;
   margin-left: 3px;
   background: none;
-}
-
-/* ── Sequence display ────────────────────────────────────────────── */
-.seq-display {
-  font-family: 'Roboto Mono', 'Courier New', monospace;
-  font-size: 13px;
-  line-height: 1.9;
-  letter-spacing: 0.05em;
-  word-break: break-all;
-  border-top: 1px solid rgba(0, 0, 0, 0.08);
-  padding: 10px 0 2px 0;
-  margin-top: 8px;
 }
 
 .seq-nt {
