@@ -1092,11 +1092,13 @@ code {
 
 /* ── Gene/Transcript header card ─────────────────────────────────── */
 .gene-header-card {
-  background: #fff;
-  border: 1px solid rgba(0, 0, 0, 0.10);
-  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.78);
+  backdrop-filter: blur(16px) saturate(160%);
+  -webkit-backdrop-filter: blur(16px) saturate(160%);
+  border: 1px solid rgba(255, 255, 255, 0.62);
+  border-radius: 16px;
   padding: 20px 24px;
-  box-shadow: 0 1px 4px rgba(0,0,0,0.05);
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.07), 0 1px 4px rgba(0, 0, 0, 0.04);
 }
 
 .gene-header-title {
@@ -1163,11 +1165,13 @@ code {
 
 /* ── Section card ─────────────────────────────────────────────────── */
 .section-card {
-  background: #fff;
-  border: 1px solid rgba(0, 0, 0, 0.10);
-  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.72);
+  backdrop-filter: blur(16px) saturate(160%);
+  -webkit-backdrop-filter: blur(16px) saturate(160%);
+  border: 1px solid rgba(255, 255, 255, 0.58);
+  border-radius: 16px;
   padding: 24px;
-  box-shadow: 0 1px 4px rgba(0,0,0,0.05);
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.06), 0 1px 4px rgba(0, 0, 0, 0.04);
 }
 
 .section-title {
@@ -1183,10 +1187,12 @@ code {
 
 /* ── Panel box ────────────────────────────────────────────────────── */
 .panel-box {
-  border: 1px solid rgba(13, 115, 119, 0.15);
-  border-radius: 10px;
+  border: 1px solid rgba(13, 115, 119, 0.14);
+  border-radius: 12px;
   overflow: hidden;
-  background: #fafcfc;
+  background: rgba(250, 252, 252, 0.85);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
 }
 
 .panel-header {
@@ -1319,7 +1325,7 @@ code {
 }
 
 .elegant-table {
-  background: #fafcfc !important;
+  background: transparent !important;
   font-family: 'Roboto', sans-serif;
   font-size: 13px;
 }
@@ -1338,7 +1344,7 @@ code {
 
 .elegant-table :deep(.v-data-table__td) {
   padding: 11px 16px;
-  background: #fafcfc !important;
+  background: transparent !important;
   color: rgba(0, 0, 0, 0.82);
   border-bottom: 1px solid rgba(0, 0, 0, 0.055) !important;
   font-family: 'Roboto', sans-serif;
@@ -1355,22 +1361,22 @@ code {
 }
 
 .elegant-table :deep(.v-data-table-footer) {
-  background: #fafcfc !important;
+  background: transparent !important;
   border-top: 1px solid rgba(13, 115, 119, 0.10) !important;
   font-size: 12px;
   color: rgba(0, 0, 0, 0.60);
 }
 
 .elegant-table :deep(.v-data-table) {
-  background: #fafcfc !important;
+  background: transparent !important;
 }
 
 .elegant-table :deep(table) {
-  background: #fafcfc !important;
+  background: transparent !important;
 }
 
 .elegant-table :deep(tbody) {
-  background: #fafcfc !important;
+  background: transparent !important;
 }
 
 .elegant-table :deep(thead) {
@@ -1527,7 +1533,7 @@ code {
 
 /* ── Sequence context panel — inline expanded row ────────────────── */
 .seq-expanded-row td {
-  background: #fafcfc !important;
+  background: transparent !important;
   padding: 0 !important;
   border-bottom: 1px solid rgba(0, 0, 0, 0.055) !important;
   vertical-align: top;
@@ -1635,5 +1641,133 @@ code {
   border-radius: 3px;
   padding: 0 1px;
   font-weight: 700;
+}
+
+/* ── Dark mode ─────────────────────────────────────────────────── */
+.v-theme--apaAtlasDarkTheme .gene-header-card {
+  background: rgba(24, 28, 37, 0.82);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.35), 0 1px 4px rgba(0, 0, 0, 0.25);
+}
+
+.v-theme--apaAtlasDarkTheme .section-card {
+  background: rgba(24, 28, 37, 0.80);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.30), 0 1px 4px rgba(0, 0, 0, 0.20);
+}
+
+.v-theme--apaAtlasDarkTheme .section-title {
+  color: rgba(255, 255, 255, 0.85);
+  border-bottom-color: rgba(255, 255, 255, 0.07);
+}
+
+.v-theme--apaAtlasDarkTheme .panel-box {
+  background: rgba(20, 24, 33, 0.85);
+  border-color: rgba(42, 168, 174, 0.15);
+}
+
+.v-theme--apaAtlasDarkTheme .panel-header {
+  background: rgba(42, 168, 174, 0.07);
+  border-bottom-color: rgba(42, 168, 174, 0.12);
+}
+
+.v-theme--apaAtlasDarkTheme .panel-title-text {
+  color: rgba(255, 255, 255, 0.87);
+}
+
+.v-theme--apaAtlasDarkTheme .panel-subtitle-text {
+  color: rgba(255, 255, 255, 0.45);
+}
+
+.v-theme--apaAtlasDarkTheme .gene-name-text {
+  color: rgba(255, 255, 255, 0.90);
+}
+
+.v-theme--apaAtlasDarkTheme .gene-meta-label {
+  color: rgba(255, 255, 255, 0.38);
+}
+
+.v-theme--apaAtlasDarkTheme .gene-meta-value {
+  color: rgba(255, 255, 255, 0.75);
+}
+
+.v-theme--apaAtlasDarkTheme .gene-meta-accent {
+  color: #2AA8AE;
+}
+
+.v-theme--apaAtlasDarkTheme .gene-id-link {
+  color: #2AA8AE;
+}
+
+.v-theme--apaAtlasDarkTheme .elegant-table :deep(.v-data-table__th) {
+  background: rgba(42, 168, 174, 0.07) !important;
+  color: rgba(255, 255, 255, 0.50) !important;
+  border-bottom-color: rgba(42, 168, 174, 0.12) !important;
+}
+
+.v-theme--apaAtlasDarkTheme .elegant-table :deep(.v-data-table__td) {
+  color: rgba(255, 255, 255, 0.78) !important;
+  border-bottom-color: rgba(255, 255, 255, 0.05) !important;
+}
+
+.v-theme--apaAtlasDarkTheme .elegant-table :deep(.v-data-table__tr:hover .v-data-table__td) {
+  background: rgba(42, 168, 174, 0.05) !important;
+}
+
+.v-theme--apaAtlasDarkTheme .elegant-table :deep(.v-data-table-footer) {
+  color: rgba(255, 255, 255, 0.45) !important;
+  border-top-color: rgba(42, 168, 174, 0.12) !important;
+}
+
+.v-theme--apaAtlasDarkTheme .elegant-table :deep(code) {
+  background: rgba(42, 168, 174, 0.10);
+  color: #2AA8AE;
+}
+
+.v-theme--apaAtlasDarkTheme code {
+  background: rgba(255, 255, 255, 0.07);
+  color: rgba(255, 255, 255, 0.75);
+}
+
+.v-theme--apaAtlasDarkTheme .heatmap-site-pos {
+  color: rgba(255, 255, 255, 0.50);
+}
+
+.v-theme--apaAtlasDarkTheme .heatmap-legend-bar {
+  background: linear-gradient(to right, rgba(42,168,174,0.08), rgba(42,168,174,1));
+  border-color: rgba(255,255,255,0.10);
+}
+
+.v-theme--apaAtlasDarkTheme .utr-bar-track {
+  background: rgba(255,255,255,0.08);
+}
+
+.v-theme--apaAtlasDarkTheme .rbp-lollipop-track {
+  background: rgba(255,255,255,0.06);
+}
+
+.v-theme--apaAtlasDarkTheme .seq-meta-chip {
+  background: rgba(255, 255, 255, 0.07);
+  color: rgba(255, 255, 255, 0.60);
+  border-color: rgba(255, 255, 255, 0.10);
+}
+
+.v-theme--apaAtlasDarkTheme .seq-meta-strand {
+  background: rgba(42, 168, 174, 0.12);
+  color: #2AA8AE;
+  border-color: rgba(42, 168, 174, 0.28);
+}
+
+.v-theme--apaAtlasDarkTheme .seq-display {
+  color: rgba(255, 255, 255, 0.82);
+  border-top-color: rgba(255, 255, 255, 0.07);
+}
+
+.v-theme--apaAtlasDarkTheme .seq-panel-body {
+  border-top-color: rgba(255, 255, 255, 0.06);
+}
+
+.v-theme--apaAtlasDarkTheme .seq-nt {
+  color: rgba(255, 255, 255, 0.82);
 }
 </style>

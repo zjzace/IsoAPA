@@ -498,11 +498,13 @@ code {
 
 /* ── Gene header card ────────────────────────────────────────────── */
 .gene-header-card {
-  background: #fff;
-  border: 1px solid rgba(0, 0, 0, 0.10);
-  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.78);
+  backdrop-filter: blur(16px) saturate(160%);
+  -webkit-backdrop-filter: blur(16px) saturate(160%);
+  border: 1px solid rgba(255, 255, 255, 0.62);
+  border-radius: 16px;
   padding: 20px 24px;
-  box-shadow: 0 1px 4px rgba(0,0,0,0.05);
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.07), 0 1px 4px rgba(0, 0, 0, 0.04);
 }
 
 .gene-header-title {
@@ -559,11 +561,13 @@ code {
 
 /* ── Outer section card ──────────────────────────────────────────── */
 .section-card {
-  background: #fff;
-  border: 1px solid rgba(0, 0, 0, 0.10);
-  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.72);
+  backdrop-filter: blur(16px) saturate(160%);
+  -webkit-backdrop-filter: blur(16px) saturate(160%);
+  border: 1px solid rgba(255, 255, 255, 0.58);
+  border-radius: 16px;
   padding: 24px;
-  box-shadow: 0 1px 4px rgba(0,0,0,0.05);
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.06), 0 1px 4px rgba(0, 0, 0, 0.04);
 }
 
 .section-title {
@@ -579,10 +583,12 @@ code {
 
 /* ── Panel box (each of the 3 sections) ─────────────────────────── */
 .panel-box {
-  border: 1px solid rgba(13, 115, 119, 0.15);
-  border-radius: 10px;
+  border: 1px solid rgba(13, 115, 119, 0.14);
+  border-radius: 12px;
   overflow: hidden;
-  background: #fafcfc;
+  background: rgba(250, 252, 252, 0.85);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
 }
 
 /* ── Unified panel header ────────────────────────────────────────── */
@@ -920,5 +926,137 @@ code {
   background: rgba(13, 115, 119, 0.12);
   color: #0D7377;
   border-color: rgba(13, 115, 119, 0.30);
+}
+
+/* ── Dark mode ─────────────────────────────────────────────────── */
+.v-theme--apaAtlasDarkTheme .gene-header-card {
+  background: rgba(24, 28, 37, 0.82);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.35), 0 1px 4px rgba(0, 0, 0, 0.25);
+}
+
+.v-theme--apaAtlasDarkTheme .section-card {
+  background: rgba(24, 28, 37, 0.80);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.30), 0 1px 4px rgba(0, 0, 0, 0.20);
+}
+
+.v-theme--apaAtlasDarkTheme .section-title {
+  color: rgba(255, 255, 255, 0.85);
+  border-bottom-color: rgba(255, 255, 255, 0.07);
+}
+
+.v-theme--apaAtlasDarkTheme .panel-box {
+  background: rgba(20, 24, 33, 0.85);
+  border-color: rgba(42, 168, 174, 0.15);
+}
+
+.v-theme--apaAtlasDarkTheme .panel-header {
+  background: rgba(42, 168, 174, 0.07);
+  border-bottom-color: rgba(42, 168, 174, 0.12);
+}
+
+.v-theme--apaAtlasDarkTheme .panel-title-text {
+  color: rgba(255, 255, 255, 0.87);
+}
+
+.v-theme--apaAtlasDarkTheme .panel-subtitle-text {
+  color: rgba(255, 255, 255, 0.45);
+}
+
+.v-theme--apaAtlasDarkTheme .gene-name-text {
+  color: rgba(255, 255, 255, 0.90);
+}
+
+.v-theme--apaAtlasDarkTheme .gene-meta-label {
+  color: rgba(255, 255, 255, 0.38);
+}
+
+.v-theme--apaAtlasDarkTheme .gene-meta-value {
+  color: rgba(255, 255, 255, 0.75);
+}
+
+.v-theme--apaAtlasDarkTheme .gene-meta-accent {
+  color: #2AA8AE;
+}
+
+.v-theme--apaAtlasDarkTheme .tx-th {
+  color: rgba(255, 255, 255, 0.50) !important;
+  background: rgba(42, 168, 174, 0.06) !important;
+  border-bottom-color: rgba(42, 168, 174, 0.10) !important;
+}
+
+.v-theme--apaAtlasDarkTheme .tx-td {
+  color: rgba(255, 255, 255, 0.78);
+  border-bottom-color: rgba(255, 255, 255, 0.05) !important;
+}
+
+.v-theme--apaAtlasDarkTheme .tx-row:hover {
+  background: rgba(42, 168, 174, 0.05);
+}
+
+.v-theme--apaAtlasDarkTheme .tx-id-link {
+  color: #2AA8AE;
+}
+
+.v-theme--apaAtlasDarkTheme .tx-site-row {
+  background: rgba(42, 168, 174, 0.04);
+}
+
+.v-theme--apaAtlasDarkTheme code {
+  background: rgba(255, 255, 255, 0.07);
+  color: rgba(255, 255, 255, 0.75);
+}
+
+.v-theme--apaAtlasDarkTheme .tx-code {
+  background: rgba(42, 168, 174, 0.10);
+  color: #2AA8AE;
+}
+
+.v-theme--apaAtlasDarkTheme .gs-dt {
+  background: rgba(42, 168, 174, 0.05);
+  border-right-color: rgba(42, 168, 174, 0.10);
+  color: rgba(255, 255, 255, 0.55);
+}
+
+.v-theme--apaAtlasDarkTheme .gs-dd {
+  color: rgba(255, 255, 255, 0.78);
+}
+
+.v-theme--apaAtlasDarkTheme .gs-deflist {
+  border-color: rgba(42, 168, 174, 0.10);
+}
+
+.v-theme--apaAtlasDarkTheme .gs-row:not(:last-child) .gs-dt,
+.v-theme--apaAtlasDarkTheme .gs-row:not(:last-child) .gs-dd {
+  border-bottom-color: rgba(255, 255, 255, 0.05);
+}
+
+.v-theme--apaAtlasDarkTheme .gs-summary-text {
+  color: rgba(255, 255, 255, 0.70);
+}
+
+.v-theme--apaAtlasDarkTheme .gs-id-source {
+  background: rgba(255, 255, 255, 0.07);
+  color: rgba(255, 255, 255, 0.35);
+}
+
+.v-theme--apaAtlasDarkTheme .gs-id-code {
+  color: #2AA8AE;
+}
+
+.v-theme--apaAtlasDarkTheme .tx-filter-field :deep(.v-field) {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.v-theme--apaAtlasDarkTheme .tx-expand-btn {
+  color: rgba(255, 255, 255, 0.50);
+  border-color: rgba(255, 255, 255, 0.12);
+}
+
+.v-theme--apaAtlasDarkTheme .tx-expand-btn:hover {
+  background: rgba(42, 168, 174, 0.10);
+  border-color: rgba(42, 168, 174, 0.35);
+  color: #2AA8AE;
 }
 </style>

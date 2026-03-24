@@ -347,4 +347,95 @@ watch(() => route.query, (newQuery) => {
   min-height: 100vh;
   background: rgb(var(--v-theme-background));
 }
+
+/* ── Page title ─────────────────────────────────────────────── */
+.search-page :deep(h1.text-h4) {
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: rgba(0, 0, 0, 0.82);
+}
+
+/* ── Filter card — glassmorphism ────────────────────────────── */
+.search-page :deep(.v-card) {
+  background: rgba(255, 255, 255, 0.72) !important;
+  backdrop-filter: blur(16px) saturate(160%) !important;
+  -webkit-backdrop-filter: blur(16px) saturate(160%) !important;
+  border: 1px solid rgba(255, 255, 255, 0.60) !important;
+  border-radius: 16px !important;
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.06), 0 1px 4px rgba(0, 0, 0, 0.04) !important;
+}
+
+/* ── Data table — keep glass bg, refine header ───────────────── */
+.search-page :deep(.v-data-table) {
+  background: transparent !important;
+}
+
+.search-page :deep(.v-data-table__th) {
+  background: rgba(13, 115, 119, 0.05) !important;
+  font-size: 12px !important;
+  font-weight: 600 !important;
+  letter-spacing: 0.4px;
+  text-transform: uppercase;
+  color: rgba(0, 0, 0, 0.55) !important;
+  border-bottom: 1px solid rgba(13, 115, 119, 0.10) !important;
+  white-space: nowrap;
+}
+
+.search-page :deep(.v-data-table__td) {
+  padding: 11px 16px !important;
+  background: transparent !important;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.05) !important;
+  font-size: 13px;
+}
+
+.search-page :deep(.v-data-table__tr:hover .v-data-table__td) {
+  background: rgba(13, 115, 119, 0.03) !important;
+}
+
+.search-page :deep(.v-data-table-footer) {
+  border-top: 1px solid rgba(13, 115, 119, 0.08) !important;
+  font-size: 12px;
+  color: rgba(0, 0, 0, 0.55);
+}
+
+/* ── Chips in table ─────────────────────────────────────────── */
+.search-page :deep(.v-chip) {
+  font-size: 12px;
+  font-weight: 500;
+}
+
+/* ── Outlined input fields ──────────────────────────────────── */
+.search-page :deep(.v-field__outline) {
+  --v-field-border-opacity: 0.18;
+}
+
+/* ── Search/Export buttons ──────────────────────────────────── */
+.search-page :deep(.v-btn) {
+  letter-spacing: 0.02em;
+}
+
+/* ── Dark mode ──────────────────────────────────────────────── */
+.v-theme--apaAtlasDarkTheme .search-page :deep(.v-card) {
+  background: rgba(24, 28, 37, 0.80) !important;
+  border: 1px solid rgba(255, 255, 255, 0.07) !important;
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.30), 0 1px 4px rgba(0, 0, 0, 0.20) !important;
+}
+
+.v-theme--apaAtlasDarkTheme .search-page :deep(h1.text-h4) {
+  color: rgba(255, 255, 255, 0.90);
+}
+
+.v-theme--apaAtlasDarkTheme .search-page :deep(.v-data-table__th) {
+  background: rgba(13, 115, 119, 0.08) !important;
+  color: rgba(255, 255, 255, 0.50) !important;
+  border-bottom-color: rgba(13, 115, 119, 0.15) !important;
+}
+
+.v-theme--apaAtlasDarkTheme .search-page :deep(.v-data-table__td) {
+  border-bottom-color: rgba(255, 255, 255, 0.05) !important;
+}
+
+.v-theme--apaAtlasDarkTheme .search-page :deep(.v-data-table__tr:hover .v-data-table__td) {
+  background: rgba(42, 168, 174, 0.06) !important;
+}
 </style>

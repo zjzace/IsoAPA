@@ -460,9 +460,10 @@ const researchHighlights = [
 </script>
 
 <style scoped>
+/* ── Hero ─────────────────────────────────────────────────── */
 .hero-section {
   position: relative;
-  min-height: 500px;
+  min-height: 520px;
   display: flex;
   align-items: center;
   overflow: hidden;
@@ -470,13 +471,17 @@ const researchHighlights = [
 
 .hero-bg {
   position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: linear-gradient(135deg, #0D7377 0%, #14919B 50%, #1A1A2E 100%);
-  background-size: 400% 400%;
-  animation: gradientShift 15s ease infinite;
+  inset: 0;
+  background: linear-gradient(135deg, #0a4f53 0%, #0D7377 40%, #1a2744 100%);
+  background-size: 300% 300%;
+  animation: gradientShift 18s ease infinite;
+}
+
+.hero-bg::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse 80% 60% at 60% 40%, rgba(20,145,155,0.18) 0%, transparent 70%);
 }
 
 @keyframes gradientShift {
@@ -488,21 +493,27 @@ const researchHighlights = [
 .hero-content {
   position: relative;
   z-index: 1;
+  padding: 56px 0 64px;
 }
 
 .search-card {
-  border-radius: 16px !important;
+  background: rgba(255, 255, 255, 0.92) !important;
+  backdrop-filter: blur(20px) saturate(160%) !important;
+  -webkit-backdrop-filter: blur(20px) saturate(160%) !important;
+  border: 1px solid rgba(255, 255, 255, 0.70) !important;
+  border-radius: 18px !important;
+  box-shadow: 0 8px 40px rgba(0, 0, 0, 0.18), 0 2px 8px rgba(0, 0, 0, 0.10) !important;
 }
 
-/* APA Diagram - Genome Browser Style */
+/* ── APA Diagram ──────────────────────────────────────────── */
 .apa-diagram {
-  background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
-  border: 1px solid rgba(0, 0, 0, 0.1);
+  background: rgba(248, 250, 252, 0.80);
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(0, 0, 0, 0.07);
+  border-radius: 12px;
 }
 
-.isoform {
-  position: relative;
-}
+.isoform { position: relative; }
 
 .isoform-label {
   display: flex;
@@ -524,7 +535,6 @@ const researchHighlights = [
   font-weight: 600;
   min-width: 70px;
   text-align: center;
-  position: relative;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
   z-index: 2;
 }
@@ -533,37 +543,29 @@ const researchHighlights = [
   flex: 1;
   height: 2px;
   background: #0D7377;
-  position: relative;
   min-width: 35px;
   max-width: 60px;
 }
 
-/* 3' UTR box */
 .utr-box {
   height: 10px;
-  background: #E94560;
-  position: relative;
+  background: #D64545;
   display: flex;
   align-items: center;
 }
 
-.utr-box.short {
-  width: 30px;
-}
-
-.utr-box.long {
-  width: 100px;
-}
+.utr-box.short { width: 30px; }
+.utr-box.long  { width: 100px; }
 
 .pas-marker {
-  color: #E94560;
+  color: #D64545;
   font-size: 12px;
   font-weight: bold;
   margin-left: 2px;
 }
 
 .diagram-legend {
-  border-top: 1px solid rgba(0, 0, 0, 0.1);
+  border-top: 1px solid rgba(0, 0, 0, 0.08);
   padding-top: 12px;
 }
 
@@ -576,17 +578,14 @@ const researchHighlights = [
 .legend-utr {
   width: 20px;
   height: 10px;
-  background: #E94560;
-}
-
-/* Key Insight Section */
-.key-insight-section {
-  margin-top: 24px;
+  background: #D64545;
 }
 
 .why-apa-section {
-  background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
-  border: 1px solid rgba(0, 0, 0, 0.1);
+  background: rgba(248, 250, 252, 0.80);
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(0, 0, 0, 0.07);
+  border-radius: 12px;
 }
 
 .why-item {
@@ -594,44 +593,53 @@ const researchHighlights = [
   align-items: flex-start;
 }
 
-.gene-card {
-  cursor: pointer;
-  transition: all 0.3s ease;
-}
-
-.gene-card:hover {
-  transform: scale(1.05);
-}
-
-/* ==============================
-   DATABASE AT A GLANCE
-   ============================== */
-.glance-section {
+/* ── Sections layout ──────────────────────────────────────── */
+.glance-section,
+.disease-section {
   background: rgb(var(--v-theme-background));
 }
 
+.samples-section {
+  background: #E8ECF0;
+}
+
+.v-theme--apaAtlasDarkTheme .samples-section {
+  background: #13161E;
+}
+
+/* ── Section eyebrow ──────────────────────────────────────── */
 .section-eyebrow {
   display: inline-block;
-  font-size: 0.72rem;
+  font-size: 0.71rem;
   font-weight: 700;
-  letter-spacing: 0.12em;
+  letter-spacing: 0.13em;
   text-transform: uppercase;
   color: #0D7377;
   padding: 4px 14px;
-  background: rgba(13, 115, 119, 0.10);
+  background: rgba(13, 115, 119, 0.09);
   border-radius: 20px;
 }
 
+/* ── Stat cards (glassmorphism) ───────────────────────────── */
 .stat-glance-card {
   border-radius: 20px;
-  background: rgb(var(--v-theme-surface));
-  border: 1px solid rgba(var(--v-border-color), 0.12);
-  transition: transform 0.25s ease, box-shadow 0.25s ease;
+  background: rgba(255, 255, 255, 0.72);
+  backdrop-filter: blur(16px) saturate(150%);
+  -webkit-backdrop-filter: blur(16px) saturate(150%);
+  border: 1px solid rgba(255, 255, 255, 0.55);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.06), 0 1px 4px rgba(0, 0, 0, 0.04);
+  transition: transform 0.22s ease, box-shadow 0.22s ease;
 }
 
 .stat-glance-card:hover {
-  transform: translateY(-6px);
-  box-shadow: 0 12px 32px rgba(0,0,0,0.09);
+  transform: translateY(-5px);
+  box-shadow: 0 14px 36px rgba(0, 0, 0, 0.10);
+}
+
+.v-theme--apaAtlasDarkTheme .stat-glance-card {
+  background: rgba(24, 28, 37, 0.82);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.28);
 }
 
 .stat-icon-ring {
@@ -653,16 +661,25 @@ const researchHighlights = [
   font-size: 0.82rem;
 }
 
-/* Species Cards */
+/* ── Species cards ────────────────────────────────────────── */
 .species-card {
   border-radius: 20px;
-  background: rgb(var(--v-theme-surface));
-  border: 1px solid rgba(var(--v-border-color), 0.12);
-  transition: box-shadow 0.25s ease;
+  background: rgba(255, 255, 255, 0.72);
+  backdrop-filter: blur(16px) saturate(150%);
+  -webkit-backdrop-filter: blur(16px) saturate(150%);
+  border: 1px solid rgba(255, 255, 255, 0.55);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.06);
+  transition: box-shadow 0.22s ease, transform 0.22s ease;
 }
 
 .species-card:hover {
-  box-shadow: 0 8px 24px rgba(0,0,0,0.08);
+  transform: translateY(-4px);
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.09);
+}
+
+.v-theme--apaAtlasDarkTheme .species-card {
+  background: rgba(24, 28, 37, 0.82);
+  border: 1px solid rgba(255, 255, 255, 0.07);
 }
 
 .species-avatar {
@@ -675,31 +692,28 @@ const researchHighlights = [
   flex-shrink: 0;
 }
 
-.species-human {
-  background: linear-gradient(135deg, #0D7377, #14919B);
-}
+.species-human { background: linear-gradient(135deg, #0D7377, #14919B); }
+.species-mouse  { background: linear-gradient(135deg, #26A69A, #00695C); }
 
-.species-mouse {
-  background: linear-gradient(135deg, #26A69A, #00695C);
-}
-
-/* ==============================
-   EXPLORE BY SAMPLE
-   ============================== */
-.samples-section {
-  background: rgb(var(--v-theme-surface-variant), 0.3);
-}
-
+/* ── Sample cards ─────────────────────────────────────────── */
 .sample-profile-card {
   border-radius: 20px;
-  background: rgb(var(--v-theme-surface));
-  border: 1px solid rgba(var(--v-border-color), 0.12);
-  transition: transform 0.25s ease, box-shadow 0.25s ease;
+  background: rgba(255, 255, 255, 0.75);
+  backdrop-filter: blur(14px) saturate(150%);
+  -webkit-backdrop-filter: blur(14px) saturate(150%);
+  border: 1px solid rgba(255, 255, 255, 0.58);
+  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.06);
+  transition: transform 0.22s ease, box-shadow 0.22s ease;
 }
 
 .sample-profile-card:hover {
   transform: translateY(-6px);
-  box-shadow: 0 16px 40px rgba(0,0,0,0.10);
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.10);
+}
+
+.v-theme--apaAtlasDarkTheme .sample-profile-card {
+  background: rgba(24, 28, 37, 0.82);
+  border: 1px solid rgba(255, 255, 255, 0.07);
 }
 
 .sample-icon-wrap {
@@ -713,10 +727,14 @@ const researchHighlights = [
 }
 
 .apa-progress-track {
-  height: 6px;
+  height: 5px;
   border-radius: 3px;
-  background: rgba(var(--v-border-color), 0.15);
+  background: rgba(0, 0, 0, 0.08);
   overflow: hidden;
+}
+
+.v-theme--apaAtlasDarkTheme .apa-progress-track {
+  background: rgba(255, 255, 255, 0.10);
 }
 
 .apa-progress-fill {
@@ -726,45 +744,50 @@ const researchHighlights = [
 }
 
 .sample-cta {
-  border-top: 1px solid rgba(var(--v-border-color), 0.10);
+  border-top: 1px solid rgba(0, 0, 0, 0.07);
   padding-top: 12px;
 }
 
-/* ==============================
-   RESEARCH HIGHLIGHTS / DISEASE
-   ============================== */
-.disease-section {
-  background: rgb(var(--v-theme-background));
+.v-theme--apaAtlasDarkTheme .sample-cta {
+  border-top-color: rgba(255, 255, 255, 0.07);
 }
 
+/* ── Research cards ───────────────────────────────────────── */
 .research-card {
   border-radius: 20px;
-  background: rgb(var(--v-theme-surface));
-  border: 1px solid rgba(var(--v-border-color), 0.12);
-  transition: transform 0.25s ease, box-shadow 0.25s ease;
+  background: rgba(255, 255, 255, 0.72);
+  backdrop-filter: blur(16px) saturate(150%);
+  -webkit-backdrop-filter: blur(16px) saturate(150%);
+  border: 1px solid rgba(255, 255, 255, 0.55);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.06);
+  transition: transform 0.22s ease, box-shadow 0.22s ease;
 }
 
 .research-card:hover {
-  transform: translateY(-6px);
-  box-shadow: 0 12px 32px rgba(0,0,0,0.09);
+  transform: translateY(-5px);
+  box-shadow: 0 14px 36px rgba(0, 0, 0, 0.10);
+}
+
+.v-theme--apaAtlasDarkTheme .research-card {
+  background: rgba(24, 28, 37, 0.82);
+  border: 1px solid rgba(255, 255, 255, 0.07);
 }
 
 .research-icon-wrap {
-  width: 60px;
-  height: 60px;
-  border-radius: 16px;
+  width: 56px;
+  height: 56px;
+  border-radius: 14px;
   display: flex;
   align-items: center;
   justify-content: center;
 }
 
-.research-stat {
-  border-radius: 10px;
-}
+.research-stat { border-radius: 10px; }
 
-/* CTA Strip */
+/* ── CTA strip ────────────────────────────────────────────── */
 .cta-strip {
-  background: linear-gradient(135deg, #0D7377 0%, #14919B 50%, #1A1A2E 100%);
+  background: linear-gradient(135deg, #0a4f53 0%, #0D7377 50%, #1a2744 100%);
+  box-shadow: 0 8px 40px rgba(13, 115, 119, 0.25);
 }
 
 .cta-btn-primary {
@@ -773,11 +796,11 @@ const researchHighlights = [
 }
 
 .cta-btn-secondary {
-  border-color: rgba(255,255,255,0.6) !important;
+  border-color: rgba(255, 255, 255, 0.55) !important;
   color: white !important;
 }
 
 .cta-btn-secondary:hover {
-  background: rgba(255,255,255,0.1) !important;
+  background: rgba(255, 255, 255, 0.10) !important;
 }
 </style>
