@@ -28,7 +28,7 @@
             Low
           </span>
           <span class="legend-item">
-            <span class="legend-swatch" style="background: #e9ecef"></span>
+            <span class="legend-swatch" style="background: rgba(13,115,119,0.06);border:1px solid rgba(13,115,119,0.15)"></span>
             Absent
           </span>
         </div>
@@ -72,7 +72,7 @@
             <tbody>
               <tr
                 v-for="site in allSites"
-                :key="site.site_id"
+                :key="site.unified_id"
                 :class="['matrix-row', isShared(site) ? 'row-shared' : 'row-private']"
               >
                 <!-- Site position label -->
@@ -171,16 +171,16 @@ const allSites = computed(() => {
   const siteMap = new Map()
   for (const tx of transcripts.value) {
     for (const site of tx.apa_sites ?? []) {
-      const key = site.site_id
+      const key = site.unified_id
       if (!siteMap.has(key)) {
         const allSamples = new Set()
         for (const sd of site.sample_details ?? []) {
           allSamples.add(sd.sample_name)
         }
         siteMap.set(key, {
-          site_id: site.site_id,
-          site_position: site.site_position,
-          short_id: formatPosition(site.site_id, site.site_position),
+          unified_id: site.unified_id,
+          mode_site_position: site.mode_site_position,
+          short_id: formatPosition(site.unified_id, site.mode_site_position),
           samples: [...allSamples],
           // map of transcript_id -> sample_details
           transcriptData: new Map([[tx.transcript_id, site.sample_details ?? []]])
@@ -196,7 +196,7 @@ const allSites = computed(() => {
     }
   }
   // Sort by genomic position
-  return [...siteMap.values()].sort((a, b) => a.site_position - b.site_position)
+  return [...siteMap.values()].sort((a, b) => a.mode_site_position - b.mode_site_position)
 })
 
 const sharedSites = computed(() => allSites.value.filter(s => isShared(s)))
@@ -221,7 +221,7 @@ function getCellValue(site, tx) {
 function cellStyle(site, tx) {
   const val = getCellValue(site, tx)
   if (val === 0) {
-    return { background: '#e9ecef', opacity: 0.5 }
+    return { background: 'rgba(13,115,119,0.06)', opacity: 0.7 }
   }
   // Linear interpolation from low (#c8e6c9) to high (#1b5e20)
   const intensity = Math.min(1, val)
@@ -267,10 +267,10 @@ function formatPosition(siteId, pos) {
 }
 
 function interpolateGreen(t) {
-  // t: 0 → 1 mapping to low → high usage
-  // low: #c8e6c9 (light green), high: #1565c0 (deep blue-green via teal)
-  const r1 = 200, g1 = 230, b1 = 201
-  const r2 = 21,  g2 = 101, b2 = 192
+  // t: 0→1 mapping to low→high usage
+  // low: #d0f0f1 (light teal), high: #0A5C5F (deep teal — primary-darken-1)
+  const r1 = 208, g1 = 240, b1 = 241
+  const r2 = 10,  g2 = 92,  b2 = 95
   return `rgb(${Math.round(r1 + (r2-r1)*t)}, ${Math.round(g1 + (g2-g1)*t)}, ${Math.round(b1 + (b2-b1)*t)})`
 }
 </script>
@@ -278,12 +278,12 @@ function interpolateGreen(t) {
 <style scoped>
 /* ── CSS Variables ─────────────────────────────────────────────────────── */
 .isoform-fingerprint-panel {
-  --heat-high: #1565c0;
-  --heat-low: #c8e6c9;
-  --shared-color: #2e7d32;
-  --private-color: #e65100;
-  --border: #e0e0e0;
-  --row-hover: rgba(25, 118, 210, 0.04);
+  --heat-high: #0A5C5F;
+  --heat-low: #d0f0f1;
+  --shared-color: #0D7377;
+  --private-color: #C9821A;
+  --border: rgba(13, 115, 119, 0.15);
+  --row-hover: rgba(13, 115, 119, 0.04);
 
   font-family: inherit;
 }
@@ -315,16 +315,16 @@ function interpolateGreen(t) {
 }
 
 .panel-title {
-  font-size: 13px;
+  font-size: 14.5px;
   font-weight: 600;
-  color: rgba(0, 0, 0, 0.87);
+  color: #0f172a;
   line-height: 1.3;
   font-family: 'Roboto', sans-serif;
 }
 
 .panel-subtitle {
-  font-size: 12px;
-  color: rgba(0, 0, 0, 0.65);
+  font-size: 13.5px;
+  color: #475569;
   margin-top: 2px;
   font-family: 'Roboto', sans-serif;
 }
@@ -341,8 +341,8 @@ function interpolateGreen(t) {
   display: flex;
   align-items: center;
   gap: 5px;
-  font-size: 12px;
-  color: rgba(0,0,0,0.65);
+  font-size: 13px;
+  color: #475569;
   font-family: 'Roboto', sans-serif;
 }
 
@@ -352,7 +352,7 @@ function interpolateGreen(t) {
   border-radius: 50%;
   flex-shrink: 0;
 }
-.legend-dot.shared { background: var(--shared-color); }
+.legend-dot.shared  { background: var(--shared-color); }
 .legend-dot.private { background: var(--private-color); }
 
 .legend-swatch {
@@ -377,7 +377,7 @@ function interpolateGreen(t) {
   border-collapse: separate;
   border-spacing: 0;
   min-width: 100%;
-  font-size: 13px;
+  font-size: 13.5px;
   font-family: 'Roboto', sans-serif;
 }
 
@@ -400,8 +400,8 @@ function interpolateGreen(t) {
 }
 
 .tx-link {
-  font-size: 12px;
-  color: rgb(var(--v-theme-primary));
+  font-size: 13px;
+  color: #0D7377;
   text-decoration: none;
   writing-mode: vertical-rl;
   text-orientation: mixed;
@@ -412,6 +412,7 @@ function interpolateGreen(t) {
   justify-content: flex-end;
   letter-spacing: 0.01em;
   font-weight: 500;
+  font-family: 'Inter', sans-serif;
 }
 .tx-link:hover { text-decoration: underline; }
 
@@ -421,8 +422,8 @@ function interpolateGreen(t) {
   vertical-align: bottom;
   border-bottom: 2px solid var(--border);
   font-weight: 600;
-  font-size: 12px;
-  color: rgba(0,0,0,0.70);
+  font-size: 13px;
+  color: #475569;
   white-space: nowrap;
   min-width: 140px;
   font-family: 'Roboto', sans-serif;
@@ -434,8 +435,8 @@ function interpolateGreen(t) {
   vertical-align: bottom;
   border-bottom: 2px solid var(--border);
   font-weight: 600;
-  font-size: 12px;
-  color: rgba(0,0,0,0.70);
+  font-size: 13px;
+  color: #475569;
   white-space: nowrap;
   font-family: 'Roboto', sans-serif;
 }
@@ -448,7 +449,7 @@ function interpolateGreen(t) {
   background: var(--row-hover);
 }
 .matrix-row:not(:last-child) td {
-  border-bottom: 1px solid #f5f5f5;
+  border-bottom: 1px solid rgba(13, 115, 119, 0.07);
 }
 
 .row-shared .site-label::before {
@@ -478,13 +479,13 @@ function interpolateGreen(t) {
 }
 
 .site-chr {
-  font-family: 'JetBrains Mono', 'Fira Code', 'Courier New', monospace;
-  font-size: 12px;
-  color: rgba(0,0,0,0.87);
-  background: rgba(0,0,0,0.05);
+  font-family: 'Inter', sans-serif;
+  font-size: 13px;
+  color: #0f172a;
+  background: rgba(13, 115, 119, 0.08);
   padding: 2px 7px;
   border-radius: 4px;
-  font-weight: 500;
+  font-weight: 600;
 }
 
 .sample-chips {
@@ -495,13 +496,14 @@ function interpolateGreen(t) {
 }
 
 .sample-pill {
-  font-size: 11px;
-  background: rgba(25, 118, 210, 0.1);
-  color: rgb(25, 118, 210);
+  font-size: 12px;
+  background: rgba(13, 115, 119, 0.10);
+  color: #0D7377;
   padding: 2px 6px;
   border-radius: 10px;
   font-weight: 500;
-  font-family: 'Roboto', sans-serif;
+  font-family: 'Inter', sans-serif;
+  border: 1px solid rgba(13, 115, 119, 0.20);
 }
 
 /* Matrix data cells */
@@ -524,18 +526,18 @@ function interpolateGreen(t) {
 }
 .cell-block:hover {
   transform: scale(1.08);
-  box-shadow: 0 2px 8px rgba(0,0,0,0.18);
+  box-shadow: 0 2px 8px rgba(13, 115, 119, 0.25);
   z-index: 1;
   position: relative;
 }
 
 .cell-pct {
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 700;
   color: white;
-  text-shadow: 0 1px 2px rgba(0,0,0,0.4);
+  text-shadow: 0 1px 2px rgba(0,0,0,0.35);
   pointer-events: none;
-  font-family: 'Roboto', sans-serif;
+  font-family: 'Inter', sans-serif;
 }
 
 /* Classification badges */
@@ -549,23 +551,24 @@ function interpolateGreen(t) {
   display: inline-flex;
   align-items: center;
   padding: 3px 9px;
-  border-radius: 12px;
+  border-radius: 20px;
   font-size: 12px;
   font-weight: 600;
-  letter-spacing: 0.01em;
-  font-family: 'Roboto', sans-serif;
+  letter-spacing: 0.03em;
+  font-family: 'Inter', sans-serif;
+  white-space: nowrap;
 }
 
 .badge-shared {
-  background: rgba(46, 125, 50, 0.12);
-  color: var(--shared-color);
-  border: 1px solid rgba(46, 125, 50, 0.25);
+  background: rgba(13, 115, 119, 0.10);
+  color: #0A5C5F;
+  border: 1px solid rgba(13, 115, 119, 0.28);
 }
 
 .badge-private {
-  background: rgba(230, 81, 0, 0.1);
-  color: var(--private-color);
-  border: 1px solid rgba(230, 81, 0, 0.22);
+  background: rgba(201, 130, 26, 0.10);
+  color: #7a4f00;
+  border: 1px solid rgba(201, 130, 26, 0.30);
 }
 
 /* ── Summary Strip ──────────────────────────────────────────────────────── */
@@ -575,7 +578,7 @@ function interpolateGreen(t) {
   gap: 0;
   margin-top: 16px;
   padding: 12px 16px;
-  background: rgba(0, 0, 0, 0.025);
+  background: rgba(13, 115, 119, 0.04);
   border-radius: 8px;
   border: 1px solid var(--border);
 }
@@ -588,18 +591,18 @@ function interpolateGreen(t) {
 }
 
 .stat-num {
-  font-size: 1.25rem;
+  font-size: 1.35rem;
   font-weight: 700;
   line-height: 1.2;
-  color: rgba(0,0,0,0.85);
-  font-family: 'Roboto', sans-serif;
+  color: #0f172a;
+  font-family: 'Inter', sans-serif;
 }
 
 .stat-label {
-  font-size: 11px;
-  color: rgba(0,0,0,0.6);
+  font-size: 12px;
+  color: #475569;
   text-transform: uppercase;
-  letter-spacing: 0.05em;
+  letter-spacing: 0.06em;
   margin-top: 2px;
   font-family: 'Roboto', sans-serif;
 }
@@ -617,6 +620,6 @@ function interpolateGreen(t) {
   flex-direction: column;
   align-items: center;
   padding: 40px 0;
-  color: rgba(0,0,0,0.4);
+  color: #475569;
 }
 </style>

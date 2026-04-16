@@ -1,6 +1,5 @@
 from pydantic import BaseModel
 from typing import Optional, List
-from datetime import datetime
 
 
 class SpeciesBase(BaseModel):
@@ -11,7 +10,7 @@ class SpeciesBase(BaseModel):
 
 class Species(SpeciesBase):
     id: int
-    
+
     class Config:
         from_attributes = True
 
@@ -24,7 +23,7 @@ class CellLineBase(BaseModel):
 class CellLine(CellLineBase):
     id: int
     species: Optional[Species] = None
-    
+
     class Config:
         from_attributes = True
 
@@ -38,7 +37,7 @@ class GeneBase(BaseModel):
 
 class Gene(GeneBase):
     id: int
-    
+
     class Config:
         from_attributes = True
 
@@ -51,34 +50,32 @@ class TranscriptBase(BaseModel):
 class Transcript(TranscriptBase):
     id: int
     gene: Optional[Gene] = None
-    
+
     class Config:
         from_attributes = True
 
 
 class APASiteBase(BaseModel):
-    site_id: str
+    unified_id: str
     transcript_id: int
     species_id: int
-    site_position: int
+    mode_site_position: int
+    transcript_biotype: Optional[str] = None
     site_count: int = 0
     site_abundance: float = 0.0
     sample_data: Optional[str] = None
-    # Tier 1 enhancements
+    sequence: Optional[str] = None
     pas_motif: Optional[str] = None
     pas_position: Optional[int] = None
     pas_type: Optional[str] = None
-    pas_confidence: Optional[str] = None
-    apa_type: Optional[str] = None
-    apa_region: Optional[str] = None
-    apa_confidence: Optional[str] = None
+    search_level: Optional[str] = None
 
 
 class APASite(APASiteBase):
     id: int
     transcript: Optional[Transcript] = None
     species: Optional[Species] = None
-    
+
     class Config:
         from_attributes = True
 
@@ -88,7 +85,7 @@ class APASiteWithDetails(APASiteBase):
     transcript: Transcript
     species: Species
     sample_details: List[dict] = []
-    
+
     class Config:
         from_attributes = True
 
@@ -97,7 +94,7 @@ class TranscriptWithGene(BaseModel):
     id: int
     transcript_id: str
     gene: GeneBase
-    
+
     class Config:
         from_attributes = True
 
@@ -111,7 +108,7 @@ class SearchResult(BaseModel):
     apa_site_count: int
     cell_lines: List[str]
     species: str
-    
+
     class Config:
         from_attributes = True
 
@@ -133,7 +130,7 @@ class LocusDetail(BaseModel):
     apa_sites: List[APASiteWithDetails]
     samples: List[str]
     chromosomes: List[str]
-    
+
     class Config:
         from_attributes = True
 
@@ -144,6 +141,6 @@ class GeneDetail(BaseModel):
     chromosome: str
     strand: str
     transcripts: List[dict]
-    
+
     class Config:
         from_attributes = True

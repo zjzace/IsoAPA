@@ -25,7 +25,7 @@
           x="0" 
           y="-10" 
           class="diagram-title"
-          font-size="14"
+          font-size="16"
           font-weight="600"
           fill="currentColor"
         >
@@ -72,7 +72,7 @@
             :x="site.x"
             :y="centerY + markerHeight + 15"
             text-anchor="middle"
-            font-size="10"
+            font-size="11"
             fill="#E94560"
           >
             APA
@@ -84,7 +84,7 @@
             :x="scaledApaSites[0].x"
             :y="centerY - markerHeight - 20"
             text-anchor="middle"
-            font-size="11"
+            font-size="13"
             fill="#666"
           >
             Proximal
@@ -93,7 +93,7 @@
             :x="scaledApaSites[scaledApaSites.length - 1].x"
             :y="centerY - markerHeight - 20"
             text-anchor="middle"
-            font-size="11"
+            font-size="13"
             fill="#666"
           >
             Distal
@@ -103,7 +103,7 @@
         <text 
           :x="0" 
           :y="centerY + 35" 
-          font-size="10" 
+          font-size="11" 
           fill="#888"
         >
           {{ formatPosition(minPosition) }}
@@ -112,7 +112,7 @@
           :x="drawWidth" 
           :y="centerY + 35" 
           text-anchor="end" 
-          font-size="10" 
+          font-size="11" 
           fill="#888"
         >
           {{ formatPosition(maxPosition) }}
@@ -172,7 +172,7 @@ const markerHeight = 25
 const minPosition = computed(() => {
   const positions = [
     ...props.geneStructure.exons.map(e => e.start),
-    ...props.apaSites.map(s => s.site_position)
+    ...props.apaSites.map(s => s.mode_site_position)
   ]
   return Math.min(...positions)
 })
@@ -180,7 +180,7 @@ const minPosition = computed(() => {
 const maxPosition = computed(() => {
   const positions = [
     ...props.geneStructure.exons.map(e => e.end),
-    ...props.apaSites.map(s => s.site_position)
+    ...props.apaSites.map(s => s.mode_site_position)
   ]
   return Math.max(...positions)
 })
@@ -204,7 +204,7 @@ const scaledExons = computed(() => {
 
 const scaledApaSites = computed(() => {
   return props.apaSites.map(site => {
-    const x = (site.site_position - minPosition.value) * scale.value
+    const x = (site.mode_site_position - minPosition.value) * scale.value
     return { x }
   })
 })
@@ -250,7 +250,7 @@ const formatPosition = (pos) => {
   display: flex;
   align-items: center;
   gap: 8px;
-  font-size: 12px;
+  font-size: 13.5px;
   color: rgb(var(--v-theme-on-surface));
 }
 
@@ -267,7 +267,7 @@ const formatPosition = (pos) => {
   align-items: center;
   justify-content: center;
   color: #E94560;
-  font-size: 18px;
+  font-size: 20px;
   font-weight: bold;
 }
 </style>

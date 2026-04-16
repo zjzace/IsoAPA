@@ -338,7 +338,7 @@ code {
   background: rgba(0, 0, 0, 0.05);
   padding: 2px 6px;
   border-radius: 4px;
-  font-size: 0.85em;
+  font-size: 0.95em;
 }
 
 .elegant-table {

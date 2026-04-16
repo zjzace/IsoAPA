@@ -74,13 +74,13 @@
         </v-col>
         <v-col cols="auto">
           <div class="stat-card stat-shared">
-            <div class="stat-value" style="color: #7B5EA7;">{{ stats.sharedSites }}</div>
+            <div class="stat-value" style="color: #0D7377;">{{ stats.sharedSites }}</div>
             <div class="stat-label">Shared</div>
           </div>
         </v-col>
         <v-col cols="auto">
           <div class="stat-card stat-private">
-            <div class="stat-value" style="color: #C0715A;">{{ stats.privateSites }}</div>
+            <div class="stat-value" style="color: #C9821A;">{{ stats.privateSites }}</div>
             <div class="stat-label">Private</div>
           </div>
         </v-col>
@@ -119,9 +119,8 @@ const ensureTooltipEl = () => {
       color: #fff;
       padding: 10px 13px;
       border-radius: 6px;
-      font-size: 12px;
+      font-size: 13.5px;
       font-family: Roboto, sans-serif;
-      pointer-events: none;
       z-index: 99999;
       min-width: 190px;
       max-width: 280px;
@@ -169,8 +168,8 @@ const apaTrackHeight = 40
 const isoformGap = 12
 
 // ── Colors ───────────────────────────────────────────────────────────────────
-const SHARED_COLOR = '#7B5EA7'
-const PRIVATE_COLOR = '#C0715A'
+const SHARED_COLOR = '#0D7377'
+const PRIVATE_COLOR = '#C9821A'
 const CDS_COLOR = '#0D7377'
 const UTR_COLOR = '#14919B'
 const INTRON_COLOR = '#B0B8C1'
@@ -196,7 +195,7 @@ const siteTranscriptCount = computed(() => {
   const map = new Map()
   for (const tx of transcripts.value) {
     for (const site of tx.apa_sites ?? []) {
-      map.set(site.site_id, (map.get(site.site_id) ?? 0) + 1)
+      map.set(site.unified_id, (map.get(site.unified_id) ?? 0) + 1)
     }
   }
   return map
@@ -212,7 +211,7 @@ const genomicExtent = computed(() => {
       for (const e of struct.exons) { positions.push(e.start, e.end) }
     }
     for (const site of tx.apa_sites ?? []) {
-      positions.push(site.site_position)
+      positions.push(site.mode_site_position)
     }
   }
   if (positions.length === 0) return [0, 1000]
@@ -245,7 +244,7 @@ const totalHeight = computed(() => {
 const stats = computed(() => {
   const allSiteIds = new Set()
   for (const tx of transcripts.value) {
-    for (const site of tx.apa_sites ?? []) allSiteIds.add(site.site_id)
+    for (const site of tx.apa_sites ?? []) allSiteIds.add(site.unified_id)
   }
   const totalSites = allSiteIds.size
   const sharedSites = [...allSiteIds].filter(id => isShared(id)).length
@@ -285,12 +284,21 @@ const showTooltip = (event, title, items) => {
   ).join('')
 
   el.innerHTML = `
-    <div style="font-weight:700;font-size:13px;margin-bottom:6px;padding-bottom:5px;border-bottom:1px solid rgba(255,255,255,0.25)">${title}</div>
+    <div style="font-weight:700;font-size:14.5px;margin-bottom:6px;padding-bottom:5px;border-bottom:1px solid rgba(255,255,255,0.25)">${title}</div>
     ${rows}
   `
+  el.style.padding = '10px 13px'
+  el.style.borderRadius = '6px'
+  el.style.background = 'rgba(33,37,41,0.95)'
+  el.style.backdropFilter = 'blur(4px)'
+  el.style.webkitBackdropFilter = 'blur(4px)'
+  el.style.border = 'none'
+  el.style.boxShadow = '0 4px 16px rgba(0,0,0,0.35)'
+  el.style.color = '#fff'
+  el.style.minWidth = '190px'
+  el.style.maxWidth = '280px'
   el.style.display = 'block'
 
-  // Use sourceEvent if available (zoom/drag wrapper), otherwise use event directly
   const nativeEvent = event.sourceEvent || event
   const clientX = nativeEvent.clientX
   const clientY = nativeEvent.clientY
@@ -307,6 +315,115 @@ const showTooltip = (event, title, items) => {
 
   if (x + W > vw - 8) x = clientX - W - OFFSET_X
   if (y + H > vh - 8) y = clientY - H - Math.abs(OFFSET_Y)
+  if (y < 4) y = 4
+  if (x < 4) x = 4
+
+  el.style.left = x + 'px'
+  el.style.top  = y + 'px'
+}
+
+const showApaTooltip = (event, site, classification, meanAbundance, sampleDetails, txSamples) => {
+  const el = ensureTooltipEl()
+
+  const pct = (meanAbundance * 100).toFixed(1)
+  const classColor = classification === 'Shared'
+    ? { bg: 'rgba(13,115,119,0.12)', border: 'rgba(13,115,119,0.35)', text: '#0A5C5F' }
+    : { bg: 'rgba(201,130,26,0.12)', border: 'rgba(201,130,26,0.40)', text: '#7a4f00' }
+
+  const detectedSet = new Set(sampleDetails.map(d => d.sample_name ?? d.sample ?? ''))
+  const totalN = txSamples.length || detectedSet.size
+  const detected = detectedSet.size || sampleDetails.length
+  const coveragePct = totalN > 0 ? (detected / totalN) * 100 : 0
+
+  // Donut ring — r=24, SW=5 → inner clear radius = 21.5px
+  const R = 24, SW = 5
+  const circ = 2 * Math.PI * R
+  const dash = (coveragePct / 100) * circ
+  const gap = circ - dash
+  const cx = 32, cy = 32, size = 64
+
+  const ringColor = coveragePct === 100 ? '#0D7377' : coveragePct >= 50 ? '#14919B' : '#C9821A'
+  const tagLine = coveragePct === 100 ? 'in every sample'
+    : coveragePct >= 75 ? 'in most samples'
+    : coveragePct >= 50 ? 'in half the samples'
+    : 'in a few samples'
+
+  const donutSvg = `
+    <svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}" style="flex-shrink:0;display:block">
+      <circle cx="${cx}" cy="${cy}" r="${R}" fill="none" stroke="rgba(13,115,119,0.12)" stroke-width="${SW}"/>
+      <circle cx="${cx}" cy="${cy}" r="${R}" fill="none"
+        stroke="${ringColor}" stroke-width="${SW}"
+        stroke-dasharray="${dash.toFixed(2)} ${gap.toFixed(2)}"
+        stroke-linecap="round"
+        transform="rotate(-90 ${cx} ${cy})"/>
+      <text x="${cx}" y="${cy - 4}" text-anchor="middle" dominant-baseline="auto"
+        style="font-family:'Inter',sans-serif;font-size:11px;font-weight:800;fill:${ringColor}"
+      >${detected}</text>
+      <line x1="${cx - 7}" y1="${cy + 1}" x2="${cx + 7}" y2="${cy + 1}" stroke="rgba(13,115,119,0.30)" stroke-width="0.8"/>
+      <text x="${cx}" y="${cy + 12}" text-anchor="middle" dominant-baseline="auto"
+        style="font-family:'Inter',sans-serif;font-size:9px;font-weight:600;fill:#94a3b8"
+      >${totalN}</text>
+    </svg>`
+
+  el.innerHTML = `
+    <div style="padding:13px 15px">
+      <div style="font-size:10.5px;letter-spacing:0.10em;color:#0D7377;font-weight:700;text-transform:uppercase;margin-bottom:3px">PA Cluster</div>
+      <div style="font-family:'Inter',sans-serif;font-size:11.5px;color:#0f172a;word-break:break-all;line-height:1.5;font-weight:600;margin-bottom:10px">${site.unified_id}</div>
+      <div style="height:1px;background:rgba(13,115,119,0.15);margin-bottom:9px"></div>
+      <div style="display:grid;grid-template-columns:auto 1fr;row-gap:6px;column-gap:16px;align-items:center">
+        <span style="color:#475569;font-size:12.5px;white-space:nowrap">Rep. Position</span>
+        <span style="color:#0f172a;font-size:12.5px;font-weight:700;font-family:'Inter',sans-serif">${site.mode_site_position.toLocaleString()}</span>
+        <span style="color:#475569;font-size:12.5px">Classification</span>
+        <span style="display:inline-block;padding:2px 9px;border-radius:20px;font-size:11.5px;font-weight:600;background:${classColor.bg};border:1px solid ${classColor.border};color:${classColor.text};letter-spacing:0.03em;justify-self:start;white-space:nowrap">${classification}</span>
+        <span style="color:#475569;font-size:12.5px">Mean Abundance</span>
+        <div style="display:flex;align-items:center;gap:7px">
+          <div style="width:60px;height:5px;background:rgba(13,115,119,0.15);border-radius:3px;overflow:hidden">
+            <div style="width:${pct}%;height:100%;background:linear-gradient(90deg,#0D7377,#14919B);border-radius:3px"></div>
+          </div>
+          <span style="color:#0D7377;font-size:12.5px;font-weight:700;font-family:'Inter',sans-serif">${pct}%</span>
+        </div>
+      </div>
+
+      <div style="height:1px;background:rgba(13,115,119,0.15);margin:10px 0 9px"></div>
+
+      <div style="background:rgba(13,115,119,0.05);border:1px solid rgba(13,115,119,0.14);border-radius:8px;padding:9px 11px;display:flex;align-items:center;gap:12px">
+        ${donutSvg}
+        <div>
+          <div style="font-family:'Inter',sans-serif;font-size:13px;font-weight:700;color:#0f172a;line-height:1.3">
+            <span style="color:${ringColor};font-size:16px;font-weight:800">${detected}</span>
+            <span style="color:#94a3b8;font-size:12px;font-weight:500"> / ${totalN} samples</span>
+          </div>
+          <div style="font-size:11px;color:#64748b;margin-top:3px">${tagLine}</div>
+        </div>
+      </div>
+    </div>
+  `
+
+  el.style.padding = '0'
+  el.style.borderRadius = '12px'
+  el.style.background = 'rgba(255,255,255,0.78)'
+  el.style.backdropFilter = 'blur(24px) saturate(180%)'
+  el.style.webkitBackdropFilter = 'blur(24px) saturate(180%)'
+  el.style.border = '1px solid rgba(13,115,119,0.20)'
+  el.style.boxShadow = '0 8px 32px rgba(13,115,119,0.12), 0 2px 8px rgba(0,0,0,0.08), inset 0 1px 0 rgba(255,255,255,0.9)'
+  el.style.minWidth = '240px'
+  el.style.maxWidth = '310px'
+  el.style.fontSize = '13px'
+  el.style.fontFamily = 'Roboto, sans-serif'
+  el.style.color = '#0f172a'
+  el.style.display = 'block'
+
+  const nativeEvent = event.sourceEvent || event
+  const W = el.offsetWidth || 260
+  const H = el.offsetHeight || 200
+  const vw = window.innerWidth
+  const vh = window.innerHeight
+  const OFFSET_X = 14, OFFSET_Y = -10
+
+  let x = nativeEvent.clientX + OFFSET_X
+  let y = nativeEvent.clientY + OFFSET_Y
+  if (x + W > vw - 8) x = nativeEvent.clientX - W - OFFSET_X
+  if (y + H > vh - 8) y = nativeEvent.clientY - H - Math.abs(OFFSET_Y)
   if (y < 4) y = 4
   if (x < 4) x = 4
 
@@ -336,7 +453,7 @@ const renderRuler = () => {
   const trackWidth = containerWidth.value - margin.left - margin.right
 
   const sampleLabel = formatCoordinate((domain[0] + domain[1]) / 2)
-  const labelPx = sampleLabel.length * 7.5
+  const labelPx = sampleLabel.length * 7.0
   const minSpacingPx = labelPx + 20
 
   const maxTicks = Math.max(2, Math.floor(trackWidth / minSpacingPx))
@@ -389,7 +506,7 @@ const renderLabels = () => {
   chrText.append('tspan')
     .attr('x', labelWidth.value / 2)
     .attr('dy', '0')
-    .style('font-size', '11px')
+    .style('font-size', '12.5px')
     .style('font-weight', '500')
     .style('fill', 'rgba(0,0,0,0.45)')
     .text('Chromosome')
@@ -397,7 +514,7 @@ const renderLabels = () => {
   chrText.append('tspan')
     .attr('x', labelWidth.value / 2)
     .attr('dy', '16')
-    .style('font-size', '13px')
+    .style('font-size', '14.5px')
     .style('font-weight', '700')
     .style('fill', '#0D7377')
     .text(props.geneData?.chromosome ?? '')
@@ -413,7 +530,7 @@ const renderLabels = () => {
       .attr('dy', '0.35em')
       .attr('text-anchor', 'middle')
       .style('font-family', 'Roboto, sans-serif')
-      .style('font-size', '12px')
+      .style('font-size', '13.5px')
       .style('font-weight', '600')
       .style('fill', CDS_COLOR)
       .text(tx.transcript_id)
@@ -425,10 +542,10 @@ const renderLabels = () => {
       .attr('dy', '0.35em')
       .attr('text-anchor', 'middle')
       .style('font-family', 'Roboto, sans-serif')
-      .style('font-size', '11px')
+      .style('font-size', '12.5px')
       .style('font-weight', '500')
       .style('fill', 'rgba(0,0,0,0.54)')
-      .text('PA Sites')
+      .text('PA Clusters')
   })
 
   // Vertical separator
@@ -538,7 +655,7 @@ const renderExonTrack = (txIndex) => {
       g.append('text')
         .attr('x', x + w / 2).attr('y', trackY).attr('dy', '0.35em')
         .attr('text-anchor', 'middle')
-        .style('font-size', '10px').style('font-weight', '600')
+        .style('font-size', '11px').style('font-weight', '600')
         .style('fill', '#fff').style('pointer-events', 'none')
         .text(idx + 1)
     }
@@ -555,8 +672,9 @@ const renderApaTrack = (txIndex) => {
   const offsets = trackOffsets.value.isoforms[txIndex]
   g.attr('transform', `translate(0, ${offsets.apa})`)
 
-  const baseline = apaTrackHeight * 0.8
-  const maxLollipopH = apaTrackHeight * 0.75 - 2
+  const trackY = apaTrackHeight
+  const maxCurveH = trackY - 4
+  const MIN_HALF_PX = 8
 
   // Track background
   g.append('rect')
@@ -566,77 +684,98 @@ const renderApaTrack = (txIndex) => {
     .attr('fill', txIndex % 2 === 0 ? '#FAFBFC' : '#FFFFFF')
     .attr('stroke', 'rgba(0,0,0,0.12)').attr('stroke-width', 1)
 
-  // Baseline
-  g.append('line')
-    .attr('x1', margin.left).attr('x2', containerWidth.value - margin.right)
-    .attr('y1', baseline).attr('y2', baseline)
-    .attr('stroke', 'rgba(0,0,0,0.08)').attr('stroke-width', 1)
-
   for (const site of tx.apa_sites ?? []) {
-    const x = xScale.value(site.site_position)
     const sampleDetails = site.sample_details ?? []
     const meanAbundance = sampleDetails.length > 0
       ? sampleDetails.reduce((s, d) => s + d.site_abundance, 0) / sampleDetails.length
       : 1
-    const lineH = Math.max(4, meanAbundance * maxLollipopH)
-    const color = isShared(site.site_id) ? SHARED_COLOR : PRIVATE_COLOR
-    const classification = isShared(site.site_id) ? 'Shared' : 'Private'
+    const color = isShared(site.unified_id) ? SHARED_COLOR : PRIVATE_COLOR
+    const classification = isShared(site.unified_id) ? 'Shared' : 'Private'
 
-    const marker = g.append('g')
-      .attr('class', 'apa-marker')
-      .attr('transform', `translate(${x}, ${baseline})`)
-      .style('cursor', 'pointer')
+    const xRep = xScale.value(site.mode_site_position)
 
-    // Stem
+    // Parse cluster bounds from unified_id e.g. "GENE:CHR:start-end:strand"
+    const rangeMatch = site.unified_id.match(/:(\d+)-(\d+):/)
+    let xStart, xEnd
+    if (rangeMatch) {
+      const gStart = parseInt(rangeMatch[1])
+      const gEnd = parseInt(rangeMatch[2])
+      xStart = gStart === gEnd ? xRep - MIN_HALF_PX : Math.min(xScale.value(gStart), xRep - MIN_HALF_PX)
+      xEnd   = gStart === gEnd ? xRep + MIN_HALF_PX : Math.max(xScale.value(gEnd),   xRep + MIN_HALF_PX)
+    } else {
+      xStart = xRep - MIN_HALF_PX
+      xEnd   = xRep + MIN_HALF_PX
+    }
+
+    const sigmaL = (xRep - xStart) / 2.5
+    const sigmaR = (xEnd  - xRep)  / 2.5
+    const peakH  = Math.max(4, meanAbundance * maxCurveH)
+
+    const N = 60
+    const pts = []
+    for (let i = 0; i <= N; i++) {
+      const px = xStart + (i / N) * (xEnd - xStart)
+      const dx = px - xRep
+      const sigma = dx <= 0 ? sigmaL : sigmaR
+      const y = peakH * Math.exp(-0.5 * (dx / sigma) ** 2)
+      pts.push([px, trackY - y])
+    }
+
+    const lineGen = d3.line().curve(d3.curveCatmullRom.alpha(0.5))
+    const curvePath = lineGen(pts)
+    const areaPath = `M ${xStart} ${trackY} ` +
+      pts.map(([px, py]) => `L ${px} ${py}`).join(' ') +
+      ` L ${xEnd} ${trackY} Z`
+
+    const marker = g.append('g').attr('class', 'apa-marker').style('cursor', 'pointer')
+
+    // Filled area
+    marker.append('path')
+      .attr('d', areaPath)
+      .attr('fill', color)
+      .attr('fill-opacity', 0.18)
+      .attr('stroke', 'none')
+
+    // Curve outline
+    marker.append('path')
+      .attr('d', curvePath)
+      .attr('fill', 'none')
+      .attr('stroke', color)
+      .attr('stroke-width', 1.5)
+      .attr('stroke-opacity', 0.85)
+
+    // Dashed vertical at representative position
     marker.append('line')
-      .attr('x1', 0).attr('x2', 0)
-      .attr('y1', 0).attr('y2', -lineH)
-      .attr('stroke', color).attr('stroke-width', 1.5).attr('stroke-linecap', 'round')
+      .attr('x1', xRep).attr('x2', xRep)
+      .attr('y1', trackY - peakH).attr('y2', trackY)
+      .attr('stroke', color)
+      .attr('stroke-width', 1)
+      .attr('stroke-dasharray', '2,2')
+      .attr('stroke-opacity', 0.7)
 
-    // Circle head
-    marker.append('circle')
-      .attr('cx', 0).attr('cy', -lineH)
-      .attr('r', 4).attr('fill', color)
-
-    // Interaction area (wider hit target)
+    // Invisible hit area
     marker.append('rect')
-      .attr('x', -8).attr('y', -lineH - 4)
-      .attr('width', 16).attr('height', lineH + 8)
+      .attr('x', xStart).attr('y', 0)
+      .attr('width', Math.max(12, xEnd - xStart))
+      .attr('height', apaTrackHeight)
       .attr('fill', 'transparent')
+
+    marker
       .on('mouseenter', function(event) {
-        d3.select(marker.node()).select('line').attr('stroke-width', 3)
-        d3.select(marker.node()).select('circle').attr('r', 6)
-        const tooltipItems = [
-          { label: 'Site ID', value: site.site_id },
-          { label: 'Position', value: site.site_position.toLocaleString() },
-          { label: 'Classification', value: classification },
-          { label: 'Mean Abundance', value: meanAbundance.toFixed(3) }
-        ]
-        sampleDetails.forEach(sd => {
-          tooltipItems.push({ label: sd.sample_name, value: (sd.site_abundance * 100).toFixed(1) + '%' })
-        })
-        showTooltip(event, `PA Site @ ${site.site_position.toLocaleString()}`, tooltipItems)
+        d3.select(this).select('path:nth-child(2)').attr('stroke-width', 2.5).attr('stroke-opacity', 1)
+        d3.select(this).select('path:first-child').attr('fill-opacity', 0.32)
+        showApaTooltip(event, site, classification, meanAbundance, sampleDetails, tx.samples ?? [])
       })
       .on('mousemove', function(event) {
-        const tooltipItems = [
-          { label: 'Site ID', value: site.site_id },
-          { label: 'Position', value: site.site_position.toLocaleString() },
-          { label: 'Classification', value: classification },
-          { label: 'Mean Abundance', value: meanAbundance.toFixed(3) }
-        ]
-        sampleDetails.forEach(sd => {
-          tooltipItems.push({ label: sd.sample_name, value: (sd.site_abundance * 100).toFixed(1) + '%' })
-        })
-        showTooltip(event, `PA Site @ ${site.site_position.toLocaleString()}`, tooltipItems)
+        showApaTooltip(event, site, classification, meanAbundance, sampleDetails, tx.samples ?? [])
       })
       .on('mouseleave', function() {
-        d3.select(marker.node()).select('line').attr('stroke-width', 1.5)
-        d3.select(marker.node()).select('circle').attr('r', 4)
+        d3.select(this).select('path:nth-child(2)').attr('stroke-width', 1.5).attr('stroke-opacity', 0.85)
+        d3.select(this).select('path:first-child').attr('fill-opacity', 0.18)
         hideTooltip()
       })
   }
 }
-
 // ── Full render ───────────────────────────────────────────────────────────────
 const render = () => {
   if (!svgElement.value) return
@@ -669,7 +808,7 @@ const initScale = () => {
       for (const e of struct.exons) { positions.push(e.start, e.end) }
     }
     for (const site of tx.apa_sites ?? []) {
-      positions.push(site.site_position)
+      positions.push(site.mode_site_position)
     }
   }
   const cMin = positions.length ? Math.min(...positions) : 0
@@ -804,7 +943,7 @@ watch(dynamicMarginLeft, (newLeft) => {
   color: white;
   padding: 12px 14px;
   border-radius: 6px;
-  font-size: 12px;
+  font-size: 13.5px;
   pointer-events: none;
   z-index: 1000;
   min-width: 200px;
@@ -815,7 +954,7 @@ watch(dynamicMarginLeft, (newLeft) => {
 
 .tooltip-title {
   font-weight: 700;
-  font-size: 13px;
+  font-size: 14.5px;
   margin-bottom: 8px;
   padding-bottom: 6px;
   border-bottom: 1px solid rgba(255, 255, 255, 0.3);
@@ -835,7 +974,7 @@ watch(dynamicMarginLeft, (newLeft) => {
 
 /* Statistics strip */
 .stats-strip {
-  border-top: 1px solid rgba(0, 0, 0, 0.08);
+  border-top: 1px solid rgba(13, 115, 119, 0.15);
   padding-top: 16px;
 }
 
@@ -843,27 +982,36 @@ watch(dynamicMarginLeft, (newLeft) => {
   text-align: center;
   padding: 8px 20px;
   border-radius: 8px;
-  background: rgba(0, 0, 0, 0.03);
-  border: 1px solid rgba(0, 0, 0, 0.08);
+  background: rgba(13, 115, 119, 0.04);
+  border: 1px solid rgba(13, 115, 119, 0.15);
   min-width: 90px;
 }
 
-.stat-shared { background: rgba(123, 94, 167, 0.05); border-color: rgba(123, 94, 167, 0.2); }
-.stat-private { background: rgba(192, 113, 90, 0.05); border-color: rgba(192, 113, 90, 0.2); }
+.stat-shared {
+  background: rgba(13, 115, 119, 0.08);
+  border-color: rgba(13, 115, 119, 0.28);
+}
+
+.stat-private {
+  background: rgba(201, 130, 26, 0.07);
+  border-color: rgba(201, 130, 26, 0.28);
+}
 
 .stat-value {
-  font-size: 22px;
+  font-size: 24px;
   font-weight: 700;
-  color: rgba(0, 0, 0, 0.87);
+  color: #0f172a;
   line-height: 1.2;
+  font-family: 'Inter', sans-serif;
 }
 
 .stat-label {
-  font-size: 11px;
-  color: rgba(0, 0, 0, 0.54);
+  font-size: 12px;
+  color: #475569;
   margin-top: 2px;
   text-transform: uppercase;
-  letter-spacing: 0.5px;
+  letter-spacing: 0.06em;
+  font-family: 'Roboto', sans-serif;
 }
 
 :deep(.exon-box) {

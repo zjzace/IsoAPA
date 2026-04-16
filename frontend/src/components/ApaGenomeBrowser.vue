@@ -257,16 +257,23 @@ const props = defineProps({
 
 // ── Sample selection state ─────────────────────────────────────────────────────
 
+// Normalise allSamplesInfo: API may return plain strings or {name, sample_type} objects
+const normalisedSamplesInfo = computed(() =>
+  (props.allSamplesInfo || []).map(s =>
+    typeof s === 'string' ? { name: s, sample_type: 'cell_culture' } : s
+  )
+)
+
 // Derived lists by type
 const tissueList = computed(() =>
-  (props.allSamplesInfo || [])
+  normalisedSamplesInfo.value
     .filter(s => s.sample_type === 'tissue')
-    .sort((a, b) => a.name.localeCompare(b.name))
+    .sort((a, b) => (a.name ?? '').localeCompare(b.name ?? ''))
 )
 const cellCultureList = computed(() =>
-  (props.allSamplesInfo || [])
+  normalisedSamplesInfo.value
     .filter(s => s.sample_type !== 'tissue')
-    .sort((a, b) => a.name.localeCompare(b.name))
+    .sort((a, b) => (a.name ?? '').localeCompare(b.name ?? ''))
 )
 
 // Selected sample names (string array — what the browser renders)
@@ -278,8 +285,11 @@ watch(() => props.allSamplesInfo, (newVal) => {
     selectedSampleNames.value = []
     return
   }
-  const tissue = newVal.filter(s => s.sample_type === 'tissue').map(s => s.name).sort()
-  const cell = newVal.filter(s => s.sample_type !== 'tissue').map(s => s.name).sort()
+  const normalised = (newVal).map(s =>
+    typeof s === 'string' ? { name: s, sample_type: 'cell_culture' } : s
+  )
+  const tissue = normalised.filter(s => s.sample_type === 'tissue').map(s => s.name).sort()
+  const cell = normalised.filter(s => s.sample_type !== 'tissue').map(s => s.name).sort()
   // Show tissue tracks only if any exist; otherwise show cell culture tracks only.
   // Never mix types on initial load — up to 5 of whichever group is present.
   const defaultGroup = tissue.length > 0 ? tissue : cell
@@ -380,6 +390,7 @@ const dynamicMarginLeft = computed(() => {
 const margin = reactive({ top: 40, right: 16, bottom: 15, left: 150 })
 const rulerHeight = 40
 const trackPadding = 10
+const SAMPLE_TRACK_H = 28
 
 // labelWidth is the usable label area (margin.left minus separator gap)
 const labelWidth = computed(() => margin.left - 12)
@@ -400,7 +411,7 @@ const trackOffsets = computed(() => {
   
   const transcriptBottom = offsets.transcript + props.trackHeight
   activeSamples.value.forEach((_, idx) => {
-    offsets.samples.push(transcriptBottom + trackPadding + (idx * (props.trackHeight + trackPadding)))
+    offsets.samples.push(transcriptBottom + trackPadding + (idx * (SAMPLE_TRACK_H + trackPadding)))
   })
   
   return offsets
@@ -411,14 +422,14 @@ const totalHeight = computed(() => {
     return trackOffsets.value.transcript + props.trackHeight + margin.bottom + 20
   }
   const lastSampleOffset = trackOffsets.value.samples[trackOffsets.value.samples.length - 1]
-  return lastSampleOffset + props.trackHeight + margin.bottom + 20
+  return lastSampleOffset + SAMPLE_TRACK_H + margin.bottom + 20
 })
 
 // Domain: genomic coordinates
 const genomicExtent = computed(() => {
   const allPositions = [
     ...props.exons.map(e => [e.start, e.end]).flat(),
-    ...props.apaSites.map(s => s.site_position)
+    ...props.apaSites.map(s => s.mode_site_position)
   ]
   if (allPositions.length === 0) return [0, 1000]
   
@@ -454,18 +465,8 @@ const ensureTooltipEl = () => {
     tooltipEl.style.cssText = `
       position: fixed;
       display: none;
-      background: rgba(33,37,41,0.95);
-      color: #fff;
-      padding: 10px 13px;
-      border-radius: 6px;
-      font-size: 12px;
-      font-family: Roboto, sans-serif;
       pointer-events: none;
       z-index: 99999;
-      min-width: 190px;
-      max-width: 280px;
-      box-shadow: 0 4px 16px rgba(0,0,0,0.35);
-      backdrop-filter: blur(4px);
     `
     document.body.appendChild(tooltipEl)
   }
@@ -476,7 +477,6 @@ const ensureTooltipEl = () => {
 const showTooltip = (event, title, items) => {
   const el = ensureTooltipEl()
 
-  // Build inner HTML
   const rows = items.map(i =>
     `<div style="display:flex;justify-content:space-between;gap:14px;margin-top:4px;line-height:1.5">
       <span style="color:#adb5bd;font-weight:500">${i.label}:</span>
@@ -485,30 +485,35 @@ const showTooltip = (event, title, items) => {
   ).join('')
 
   el.innerHTML = `
-    <div style="font-weight:700;font-size:13px;margin-bottom:6px;padding-bottom:5px;border-bottom:1px solid rgba(255,255,255,0.25)">${title}</div>
+    <div style="font-weight:700;font-size:14.5px;margin-bottom:6px;padding-bottom:5px;border-bottom:1px solid rgba(255,255,255,0.25)">${title}</div>
     ${rows}
   `
+
+  el.style.padding = '10px 13px'
+  el.style.borderRadius = '8px'
+  el.style.background = 'rgba(33,37,41,0.95)'
+  el.style.border = '1px solid rgba(255,255,255,0.12)'
+  el.style.boxShadow = '0 4px 16px rgba(0,0,0,0.35)'
+  el.style.backdropFilter = 'blur(8px)'
+  el.style.webkitBackdropFilter = 'blur(8px)'
+  el.style.minWidth = '190px'
+  el.style.maxWidth = '280px'
+  el.style.fontSize = '13.5px'
+  el.style.fontFamily = 'Roboto, sans-serif'
+  el.style.color = '#fff'
   el.style.display = 'block'
 
-  // In D3 v7, mouse events are native MouseEvent objects passed directly.
-  // Use sourceEvent if available (zoom/drag), otherwise use event itself.
   const nativeEvent = event.sourceEvent || event
-  const clientX = nativeEvent.clientX
-  const clientY = nativeEvent.clientY
-
-  // Position with fixed coords — place right of cursor, flip left/up if near edge
-  const OFFSET_X = 14
-  const OFFSET_Y = -10
+  const OFFSET_X = 14, OFFSET_Y = -10
   const W = el.offsetWidth || 220
   const H = el.offsetHeight || 120
   const vw = window.innerWidth
   const vh = window.innerHeight
 
-  let x = clientX + OFFSET_X
-  let y = clientY + OFFSET_Y
-
-  if (x + W > vw - 8) x = clientX - W - OFFSET_X
-  if (y + H > vh - 8) y = clientY - H - Math.abs(OFFSET_Y)
+  let x = nativeEvent.clientX + OFFSET_X
+  let y = nativeEvent.clientY + OFFSET_Y
+  if (x + W > vw - 8) x = nativeEvent.clientX - W - OFFSET_X
+  if (y + H > vh - 8) y = nativeEvent.clientY - H - Math.abs(OFFSET_Y)
   if (y < 4) y = 4
   if (x < 4) x = 4
 
@@ -520,6 +525,94 @@ const hideTooltip = () => {
   if (tooltipEl) tooltipEl.style.display = 'none'
 }
 
+const showPaClusterTooltip = (event, site, sampleName, abundance) => {
+  const el = ensureTooltipEl()
+
+  const pct = (abundance * 100).toFixed(1)
+  const pasTypeColors = {
+    canonical:       { bg: 'rgba(13,115,119,0.12)', border: 'rgba(13,115,119,0.35)', text: '#0A5C5F' },
+    'near-canonical':{ bg: 'rgba(201,130,26,0.12)',  border: 'rgba(201,130,26,0.40)', text: '#7a4f00' },
+  }
+  const pasColor = pasTypeColors[site.pas_type] || { bg: 'rgba(100,116,139,0.10)', border: 'rgba(100,116,139,0.30)', text: '#475569' }
+  const pasLabel = site.pas_type
+    ? site.pas_type.replace(/-/g, '\u2011').replace(/\b\w/g, c => c.toUpperCase())
+    : 'N/A'
+
+  el.innerHTML = `
+    <div style="padding:13px 15px">
+
+      <div style="font-size:10.5px;letter-spacing:0.10em;color:#0D7377;font-weight:700;text-transform:uppercase;margin-bottom:3px">PA Cluster</div>
+      <div style="font-family:'Inter',sans-serif;font-size:11.5px;color:#0f172a;word-break:break-all;line-height:1.5;font-weight:600;margin-bottom:10px">${site.unified_id}</div>
+
+      <div style="height:1px;background:rgba(13,115,119,0.15);margin-bottom:9px"></div>
+
+      <div style="display:grid;grid-template-columns:auto 1fr;row-gap:6px;column-gap:16px;align-items:center">
+
+        <span style="color:#475569;font-size:12.5px;white-space:nowrap">Rep. Position</span>
+        <span style="color:#0f172a;font-size:12.5px;font-weight:700;font-family:'Inter',sans-serif">${site.mode_site_position.toLocaleString()}</span>
+
+        <span style="color:#475569;font-size:12.5px">Sample</span>
+        <span style="color:#0f172a;font-size:12.5px;font-weight:600;font-family:'Inter',sans-serif">${sampleName}</span>
+
+        <span style="color:#475569;font-size:12.5px">Abundance</span>
+        <div style="display:flex;align-items:center;gap:7px">
+          <div style="width:60px;height:5px;background:rgba(13,115,119,0.15);border-radius:3px;overflow:hidden">
+            <div style="width:${pct}%;height:100%;background:linear-gradient(90deg,#0D7377,#14919B);border-radius:3px"></div>
+          </div>
+          <span style="color:#0D7377;font-size:12.5px;font-weight:700;font-family:'Inter',sans-serif">${pct}%</span>
+        </div>
+
+      </div>
+
+      <div style="height:1px;background:rgba(13,115,119,0.15);margin:9px 0"></div>
+
+      <div style="display:grid;grid-template-columns:auto 1fr;row-gap:6px;column-gap:16px;align-items:center">
+
+        <span style="color:#475569;font-size:12.5px">PAS Motif</span>
+        <span style="color:#0f172a;font-size:12.5px;font-weight:700;font-family:'Inter',sans-serif;letter-spacing:0.04em">${site.pas_motif || 'N/A'}</span>
+
+        <span style="color:#475569;font-size:12.5px">PAS Offset</span>
+        <span style="color:#0f172a;font-size:12.5px;font-weight:600;font-family:'Inter',sans-serif">${site.pas_position != null ? site.pas_position + '\u202fbp' : 'N/A'}</span>
+
+        <span style="color:#475569;font-size:12.5px">PAS Type</span>
+        <span style="display:inline-block;padding:2px 9px;border-radius:20px;font-size:11.5px;font-weight:600;background:${pasColor.bg};border:1px solid ${pasColor.border};color:${pasColor.text};letter-spacing:0.03em;justify-self:start;white-space:nowrap">${pasLabel}</span>
+
+      </div>
+    </div>
+  `
+
+  el.style.padding = '0'
+  el.style.borderRadius = '12px'
+  el.style.background = 'rgba(255,255,255,0.78)'
+  el.style.backdropFilter = 'blur(24px) saturate(180%)'
+  el.style.webkitBackdropFilter = 'blur(24px) saturate(180%)'
+  el.style.border = '1px solid rgba(13,115,119,0.20)'
+  el.style.boxShadow = '0 8px 32px rgba(13,115,119,0.12), 0 2px 8px rgba(0,0,0,0.08), inset 0 1px 0 rgba(255,255,255,0.9)'
+  el.style.minWidth = '240px'
+  el.style.maxWidth = '310px'
+  el.style.fontSize = '13px'
+  el.style.fontFamily = 'Roboto, sans-serif'
+  el.style.color = '#0f172a'
+  el.style.display = 'block'
+
+  const nativeEvent = event.sourceEvent || event
+  const W = el.offsetWidth || 260
+  const H = el.offsetHeight || 200
+  const vw = window.innerWidth
+  const vh = window.innerHeight
+  const OFFSET_X = 14, OFFSET_Y = -10
+
+  let x = nativeEvent.clientX + OFFSET_X
+  let y = nativeEvent.clientY + OFFSET_Y
+  if (x + W > vw - 8) x = nativeEvent.clientX - W - OFFSET_X
+  if (y + H > vh - 8) y = nativeEvent.clientY - H - Math.abs(OFFSET_Y)
+  if (y < 4) y = 4
+  if (x < 4) x = 4
+
+  el.style.left = x + 'px'
+  el.style.top  = y + 'px'
+}
+
 // Initialize scale
 const initScale = () => {
   // Base scale maps the content region (exons + APA sites + 5% pad) directly to the
@@ -527,7 +620,7 @@ const initScale = () => {
   // scaleExtent([1, 100]) and translateExtent behave correctly without any fitK gymnastics.
   const allPositions = [
     ...props.exons.map(e => [e.start, e.end]).flat(),
-    ...props.apaSites.map(s => s.site_position)
+    ...props.apaSites.map(s => s.mode_site_position)
   ]
   const cMin = allPositions.length ? Math.min(...allPositions) : 0
   const cMax = allPositions.length ? Math.max(...allPositions) : 1000
@@ -584,8 +677,8 @@ const renderRuler = () => {
 
   // Sample label width using a representative value near the centre of the domain
   const sampleLabel = formatCoordinate((domain[0] + domain[1]) / 2)
-  const labelPx = sampleLabel.length * 7.5   // ~7.5px per char for Roboto 500 12px
-  const minSpacingPx = labelPx + 20           // label width + 20px breathing room
+  const labelPx = sampleLabel.length * 9    // ~9px per char for Roboto 500 12px
+  const minSpacingPx = labelPx + 40         // label width + 40px breathing room
 
   // How many ticks fit?
   const maxTicks = Math.max(2, Math.floor(trackWidth / minSpacingPx))
@@ -648,7 +741,7 @@ const renderLabels = () => {
   chrText.append('tspan')
     .attr('x', labelWidth.value / 2)
     .attr('dy', '0')
-    .style('font-size', '11px')
+    .style('font-size', '12.5px')
     .style('font-weight', '500')
     .style('fill', 'rgba(0, 0, 0, 0.45)')
     .text('Chromosome')
@@ -656,7 +749,7 @@ const renderLabels = () => {
   chrText.append('tspan')
     .attr('x', labelWidth.value / 2)
     .attr('dy', '16')
-    .style('font-size', '13px')
+    .style('font-size', '14.5px')
     .style('font-weight', '700')
     .style('fill', '#0D7377')
     .text(props.chromosome)
@@ -668,7 +761,7 @@ const renderLabels = () => {
     .attr('dy', '0.35em')
     .attr('text-anchor', 'middle')
     .style('font-family', 'Roboto, sans-serif')
-    .style('font-size', '13px')
+    .style('font-size', '14.5px')
     .style('font-weight', '600')
     .style('fill', '#0D7377')
     .text(`${props.transcriptId}`)
@@ -677,7 +770,7 @@ const renderLabels = () => {
   activeSamples.value.forEach((sample, idx) => {
     g.append('rect')
       .attr('x', 8)
-      .attr('y', trackOffsets.value.samples[idx] + props.trackHeight / 2 - 12)
+      .attr('y', trackOffsets.value.samples[idx] + SAMPLE_TRACK_H / 2 - 12)
       .attr('width', labelWidth.value - 16)
       .attr('height', 24)
       .attr('fill', idx % 2 === 0 ? 'rgba(13, 115, 119, 0.06)' : 'rgba(13, 115, 119, 0.1)')
@@ -685,11 +778,11 @@ const renderLabels = () => {
 
     g.append('text')
       .attr('x', labelWidth.value / 2)
-      .attr('y', trackOffsets.value.samples[idx] + props.trackHeight / 2)
+      .attr('y', trackOffsets.value.samples[idx] + SAMPLE_TRACK_H / 2)
       .attr('dy', '0.35em')
       .attr('text-anchor', 'middle')
       .style('font-family', 'Roboto, sans-serif')
-      .style('font-size', '13px')
+      .style('font-size', '12px')
       .style('font-weight', '500')
       .style('fill', 'rgba(0, 0, 0, 0.87)')
       .text(sample)
@@ -825,7 +918,7 @@ const renderTranscript = () => {
         .attr('y', trackY)
         .attr('dy', '0.35em')
         .attr('text-anchor', 'middle')
-        .style('font-size', '10px')
+        .style('font-size', '11px')
         .style('font-weight', '600')
         .style('fill', '#fff')
         .style('pointer-events', 'none')
@@ -844,92 +937,114 @@ const renderSampleTracks = () => {
 
     g.attr('transform', `translate(0, ${trackOffsets.value.samples[idx]})`)
 
-    const trackY = props.trackHeight * 0.8
+    const trackY = SAMPLE_TRACK_H
 
     // Track background with zebra striping
     g.append('rect')
       .attr('x', margin.left)
       .attr('y', 0)
       .attr('width', containerWidth.value - margin.left - margin.right)
-      .attr('height', props.trackHeight)
+      .attr('height', SAMPLE_TRACK_H)
       .attr('fill', idx % 2 === 0 ? '#FFFFFF' : '#FAFBFC')
       .attr('stroke', 'rgba(0, 0, 0, 0.12)')
       .attr('stroke-width', 1)
 
-    // Baseline
-    g.append('line')
-      .attr('class', 'baseline')
-      .attr('x1', margin.left)
-      .attr('x2', containerWidth.value - margin.right)
-      .attr('y1', trackY)
-      .attr('y2', trackY)
-      .attr('stroke', 'rgba(0, 0, 0, 0.08)')
-      .attr('stroke-width', 1)
+    // APA sites — asymmetric Gaussian peak (split-normal)
+    const maxCurveH = trackY - 4
+    const MIN_HALF_PX = 8
+    const COLOR = '#D45D79'
 
-    // APA sites for this sample
-    const maxMarkerHeight = props.trackHeight * 0.75 - 2  // Max height from baseline upward
-    
-    props.apaSites.forEach((site, siteIdx) => {
+    props.apaSites.forEach((site) => {
       const sampleData = site.sample_details?.find(sd => sd.sample_name === sample)
       if (!sampleData || sampleData.site_abundance === 0) return
 
-      const x = xScale.value(site.site_position)
-      const color = '#D45D79'
       const abundance = sampleData.site_abundance
-      const lineHeight = Math.max(2, abundance * maxMarkerHeight)  // Min 2px visible
+      const xRep = xScale.value(site.mode_site_position)
 
-      // Marker group
-      const marker = g.append('g')
-        .attr('class', 'apa-marker')
-        .attr('transform', `translate(${x}, ${trackY})`)
-        .style('cursor', 'pointer')
+      // Parse cluster bounds from unified_id e.g. "GENE:CHR:start-end:strand"
+      const rangeMatch = site.unified_id.match(/:(\d+)-(\d+):/)
+      let xStart, xEnd
+      if (rangeMatch) {
+        const gStart = parseInt(rangeMatch[1])
+        const gEnd = parseInt(rangeMatch[2])
+        xStart = gStart === gEnd ? xRep - MIN_HALF_PX : Math.min(xScale.value(gStart), xRep - MIN_HALF_PX)
+        xEnd = gStart === gEnd ? xRep + MIN_HALF_PX : Math.max(xScale.value(gEnd), xRep + MIN_HALF_PX)
+      } else {
+        xStart = xRep - MIN_HALF_PX
+        xEnd = xRep + MIN_HALF_PX
+      }
 
-      // Lollipop stem — height proportional to abundance
-      marker.append('line')
-        .attr('x1', 0)
-        .attr('x2', 0)
-        .attr('y1', 0)
-        .attr('y2', -lineHeight)
-        .attr('stroke', color)
+      const sigmaL = (xRep - xStart) / 2.5
+      const sigmaR = (xEnd - xRep) / 2.5
+      const peakH = Math.max(4, abundance * maxCurveH)
+
+      // Sample 60 points for a smooth split-normal curve
+      const N = 60
+      const pts = []
+      for (let i = 0; i <= N; i++) {
+        const px = xStart + (i / N) * (xEnd - xStart)
+        const dx = px - xRep
+        const sigma = dx <= 0 ? sigmaL : sigmaR
+        const y = peakH * Math.exp(-0.5 * (dx / sigma) ** 2)
+        pts.push([px, trackY - y])
+      }
+
+      const lineGen = d3.line().curve(d3.curveCatmullRom.alpha(0.5))
+      const curvePath = lineGen(pts)
+
+      // Closed area path
+      const areaPath = `M ${xStart} ${trackY} ` +
+        pts.map(([px, py]) => `L ${px} ${py}`).join(' ') +
+        ` L ${xEnd} ${trackY} Z`
+
+      const marker = g.append('g').attr('class', 'apa-marker').style('cursor', 'pointer')
+
+      // Filled area under curve
+      marker.append('path')
+        .attr('d', areaPath)
+        .attr('fill', COLOR)
+        .attr('fill-opacity', 0.18)
+        .attr('stroke', 'none')
+
+      // Curve outline
+      marker.append('path')
+        .attr('d', curvePath)
+        .attr('fill', 'none')
+        .attr('stroke', COLOR)
         .attr('stroke-width', 1.5)
-        .attr('stroke-linecap', 'round')
+        .attr('stroke-opacity', 0.85)
 
-      // Lollipop circle head
-      marker.append('circle')
-        .attr('cx', 0)
-        .attr('cy', -lineHeight)
-        .attr('r', 4)
-        .attr('fill', color)
-        .attr('stroke', '#fff')
+      // Dashed vertical at representative position
+      marker.append('line')
+        .attr('x1', xRep).attr('x2', xRep)
+        .attr('y1', trackY - peakH).attr('y2', trackY)
+        .attr('stroke', COLOR)
         .attr('stroke-width', 1)
+        .attr('stroke-dasharray', '2,2')
+        .attr('stroke-opacity', 0.7)
 
-      // Interaction
-      marker.on('mouseenter', function(event) {
-        d3.select(this).select('line').attr('stroke-width', 3).attr('stroke-opacity', 0.8)
-        d3.select(this).select('circle').attr('r', 6)
-        
-        showTooltip(event, `PA Site @ ${site.site_position.toLocaleString()}`, [
-          { label: 'Sample', value: sample },
-          { label: 'Abundance', value: abundance.toFixed(2) },
-          { label: 'PAS Motif', value: site.pas_motif || 'N/A' },
-          { label: 'PAS Position', value: site.pas_position ? `${site.pas_position}bp` : 'N/A' },
-          { label: 'PAS Type', value: site.pas_type || 'N/A' }
-        ])
-      })
-      .on('mousemove', function(event) {
-        showTooltip(event, `PA Site @ ${site.site_position.toLocaleString()}`, [
-          { label: 'Sample', value: sample },
-          { label: 'Abundance', value: abundance.toFixed(2) },
-          { label: 'PAS Motif', value: site.pas_motif || 'N/A' },
-          { label: 'PAS Position', value: site.pas_position ? `${site.pas_position}bp` : 'N/A' },
-          { label: 'PAS Type', value: site.pas_type || 'N/A' }
-        ])
-      })
-      .on('mouseleave', function() {
-        d3.select(this).select('line').attr('stroke-width', 1.5).attr('stroke-opacity', 1)
-        d3.select(this).select('circle').attr('r', 4)
-        hideTooltip()
-      })
+      // Invisible hit area for hover
+      marker.append('rect')
+        .attr('x', xStart)
+        .attr('y', 0)
+        .attr('width', Math.max(12, xEnd - xStart))
+        .attr('height', SAMPLE_TRACK_H)
+        .attr('fill', 'transparent')
+
+      marker
+        .on('mouseenter', function(event) {
+          d3.select(this).select('path:nth-child(2)').attr('stroke-width', 2.5).attr('stroke-opacity', 1)
+          d3.select(this).select('path:first-child').attr('fill-opacity', 0.32)
+          showPaClusterTooltip(event, site, sample, abundance)
+        })
+        .on('mousemove', function(event) {
+          showPaClusterTooltip(event, site, sample, abundance)
+        })
+        .on('mouseleave', function() {
+          d3.select(this).select('path:nth-child(2)').attr('stroke-width', 1.5).attr('stroke-opacity', 0.85)
+          d3.select(this).select('path:first-child').attr('fill-opacity', 0.18)
+          hideTooltip()
+        })
     })
   })
 }
@@ -1114,7 +1229,7 @@ watch(dynamicMarginLeft, (newLeft) => {
 }
 
 .selector-btn {
-  font-size: 12px;
+  font-size: 13.5px;
   letter-spacing: 0.01em;
   text-transform: none;
   border-color: rgba(0, 0, 0, 0.2) !important;
@@ -1126,7 +1241,7 @@ watch(dynamicMarginLeft, (newLeft) => {
 }
 
 .selector-badge {
-  font-size: 10px;
+  font-size: 11px;
   height: 16px;
   min-width: 28px;
 }
@@ -1189,7 +1304,7 @@ watch(dynamicMarginLeft, (newLeft) => {
   border: none;
   outline: none;
   background: transparent;
-  font-size: 13px;
+  font-size: 14.5px;
   font-family: Roboto, sans-serif;
   color: rgba(0, 0, 0, 0.87);
   line-height: 1.4;
@@ -1215,7 +1330,7 @@ watch(dynamicMarginLeft, (newLeft) => {
 }
 
 .fancy-btn-label {
-  font-size: 14px;
+  font-size: 15px;
   font-weight: 600;
   letter-spacing: 0.01em;
   color: rgba(0, 0, 0, 0.75);
@@ -1232,7 +1347,7 @@ watch(dynamicMarginLeft, (newLeft) => {
   padding: 1px 7px;
   border-radius: 4px;
   background: rgba(0, 0, 0, 0.08);
-  font-size: 11px;
+  font-size: 12.5px;
   font-weight: 700;
   color: rgba(0, 0, 0, 0.55);
   min-width: 30px;
@@ -1344,11 +1459,7 @@ watch(dynamicMarginLeft, (newLeft) => {
   transition: opacity 0.15s ease, stroke 0.15s ease;
 }
 
-:deep(.apa-marker line) {
-  transition: stroke-width 0.15s ease;
-}
-
-:deep(.apa-marker circle) {
-  transition: r 0.15s ease;
+:deep(.apa-marker rect) {
+  transition: fill-opacity 0.15s ease, width 0.15s ease;
 }
 </style>

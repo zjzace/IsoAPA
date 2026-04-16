@@ -88,10 +88,10 @@
               <div class="sites-inline">
                 <span
                   v-for="site in tx.apa_sites"
-                  :key="site.site_id"
+                  :key="site.unified_id"
                   class="site-dot"
-                  :style="{ background: siteColor(site.site_id) }"
-                  :title="site.site_id"
+                  :style="{ background: siteColor(site.unified_id) }"
+                  :title="site.unified_id"
                 ></span>
               </div>
             </div>
@@ -106,10 +106,10 @@
                 <div class="stacked-bar">
                   <div
                     v-for="site in tx.apa_sites"
-                    :key="site.site_id"
+                    :key="site.unified_id"
                     class="bar-segment"
                     :style="barSegmentStyle(tx, site, sample)"
-                    :title="`${site.site_id}\n${sample}: ${getAbundance(tx, site, sample)}%`"
+                    :title="`${site.unified_id}\n${sample}: ${getAbundance(tx, site, sample)}%`"
                   ></div>
                   <!-- Empty state -->
                   <div
@@ -174,12 +174,12 @@
         <div class="site-bars">
           <div
             v-for="site in siteSpecificity"
-            :key="site.site_id"
+            :key="site.unified_id"
             class="site-spec-row"
           >
             <div class="site-spec-label">
-              <span class="site-color-dot" :style="{ background: siteColor(site.site_id) }"></span>
-              <span class="site-pos-text">{{ formatPos(site.site_position) }}</span>
+              <span class="site-color-dot" :style="{ background: siteColor(site.unified_id) }"></span>
+              <span class="site-pos-text">{{ formatPos(site.mode_site_position) }}</span>
               <span :class="['site-spec-badge', site.isSpecific ? 'badge-specific' : 'badge-common']">
                 {{ site.isSpecific ? 'Isoform-specific' : 'Constitutive' }}
               </span>
@@ -187,7 +187,7 @@
             <div class="site-spec-bar-track">
               <div
                 class="site-spec-bar-fill"
-                :style="{ width: `${site.specificityPct}%`, background: siteColor(site.site_id) }"
+                :style="{ width: `${site.specificityPct}%`, background: siteColor(site.unified_id) }"
               ></div>
               <span class="site-spec-pct">{{ site.specificityPct }}%</span>
             </div>
@@ -247,12 +247,12 @@ const allSites = computed(() => {
   const s = new Map()
   for (const tx of transcripts.value) {
     for (const site of tx.apa_sites ?? []) {
-      if (!s.has(site.site_id)) {
-        s.set(site.site_id, { site_id: site.site_id, site_position: site.site_position })
+      if (!s.has(site.unified_id)) {
+        s.set(site.unified_id, { unified_id: site.unified_id, mode_site_position: site.mode_site_position })
       }
     }
   }
-  return [...s.values()].sort((a, b) => a.site_position - b.site_position)
+  return [...s.values()].sort((a, b) => a.mode_site_position - b.mode_site_position)
 })
 
 // ---------------------------------------------------------------------------
@@ -260,7 +260,7 @@ const allSites = computed(() => {
 // ---------------------------------------------------------------------------
 
 function getAbundanceRaw(tx, site, sample) {
-  const siteObj = tx.apa_sites?.find(s => s.site_id === site.site_id)
+  const siteObj = tx.apa_sites?.find(s => s.unified_id === site.unified_id)
   if (!siteObj) return 0
   const sd = siteObj.sample_details?.find(d => d.sample_name === sample)
   return sd?.site_abundance ?? 0
@@ -403,7 +403,7 @@ const siteSpecificity = computed(() => {
 
 function barSegmentStyle(tx, site, sample) {
   const val = getAbundanceRaw(tx, site, sample)
-  const color = siteColor(site.site_id)
+  const color = siteColor(site.unified_id)
   return {
     width: `${val * 100}%`,
     background: color,
@@ -471,14 +471,14 @@ function formatPos(pos) {
 }
 
 .panel-title {
-  font-size: 0.92rem;
+  font-size: 1.02rem;
   font-weight: 600;
   color: rgba(0, 0, 0, 0.82);
   line-height: 1.3;
 }
 
 .panel-subtitle {
-  font-size: 0.75rem;
+  font-size: 0.86rem;
   color: rgba(0, 0, 0, 0.46);
   margin-top: 2px;
   max-width: 480px;
@@ -532,7 +532,7 @@ function formatPos(pos) {
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 1.05rem;
+  font-size: 1.15rem;
   font-weight: 700;
   color: rgba(0,0,0,0.85);
 }
@@ -540,14 +540,14 @@ function formatPos(pos) {
 .score-meta { display: flex; flex-direction: column; gap: 2px; }
 
 .score-level {
-  font-size: 0.85rem;
+  font-size: 0.95rem;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.04em;
 }
 
 .score-caption {
-  font-size: 0.7rem;
+  font-size: 0.80rem;
   color: rgba(0,0,0,0.45);
   text-transform: uppercase;
   letter-spacing: 0.03em;
@@ -561,7 +561,7 @@ function formatPos(pos) {
 }
 
 .breakdown-title {
-  font-size: 0.82rem;
+  font-size: 0.92rem;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.06em;
@@ -570,7 +570,7 @@ function formatPos(pos) {
 }
 
 .breakdown-subtitle {
-  font-size: 0.76rem;
+  font-size: 0.86rem;
   color: rgba(0,0,0,0.45);
   margin-bottom: 12px;
   max-width: 640px;
@@ -603,7 +603,7 @@ function formatPos(pos) {
 
 .tx-link {
   font-family: 'JetBrains Mono', 'Fira Code', monospace;
-  font-size: 0.78rem;
+  font-size: 0.88rem;
   color: rgb(var(--v-theme-primary));
   text-decoration: none;
   font-weight: 600;
@@ -639,7 +639,7 @@ function formatPos(pos) {
 }
 
 .sample-bar-label {
-  font-size: 0.68rem;
+  font-size: 0.78rem;
   color: rgba(0,0,0,0.5);
   text-align: center;
   text-transform: uppercase;
@@ -681,14 +681,14 @@ function formatPos(pos) {
 .jsd-matrix {
   border-collapse: separate;
   border-spacing: 4px;
-  font-size: 0.8rem;
+  font-size: 0.90rem;
 }
 
 .jsd-corner { width: 120px; }
 
 .jsd-col-header {
   text-align: center;
-  font-size: 0.72rem;
+  font-size: 0.82rem;
   font-weight: 600;
   color: rgba(0,0,0,0.55);
   padding: 4px 8px;
@@ -698,7 +698,7 @@ function formatPos(pos) {
 
 .jsd-row-label {
   font-family: 'JetBrains Mono', 'Fira Code', monospace;
-  font-size: 0.72rem;
+  font-size: 0.82rem;
   color: rgba(0,0,0,0.65);
   padding: 4px 10px 4px 0;
   white-space: nowrap;
@@ -726,7 +726,7 @@ function formatPos(pos) {
 }
 
 .jsd-value {
-  font-size: 0.72rem;
+  font-size: 0.82rem;
   font-weight: 700;
   color: rgba(0,0,0,0.7);
   text-shadow: 0 1px 1px rgba(255,255,255,0.6);
@@ -760,12 +760,12 @@ function formatPos(pos) {
 
 .site-pos-text {
   font-family: 'JetBrains Mono', 'Fira Code', monospace;
-  font-size: 0.78rem;
+  font-size: 0.88rem;
   color: rgba(0,0,0,0.7);
 }
 
 .site-spec-badge {
-  font-size: 0.68rem;
+  font-size: 0.78rem;
   font-weight: 600;
   padding: 1px 7px;
   border-radius: 10px;
@@ -803,7 +803,7 @@ function formatPos(pos) {
   right: 6px;
   top: 50%;
   transform: translateY(-50%);
-  font-size: 0.63rem;
+  font-size: 0.72rem;
   font-weight: 700;
   color: rgba(0,0,0,0.55);
 }
@@ -820,7 +820,7 @@ function formatPos(pos) {
 .single-notice {
   display: flex;
   align-items: center;
-  font-size: 0.82rem;
+  font-size: 0.92rem;
   color: rgba(0,0,0,0.55);
   background: rgba(255, 160, 0, 0.08);
   border: 1px solid rgba(255, 160, 0, 0.25);
@@ -830,7 +830,7 @@ function formatPos(pos) {
 }
 
 .tooltip-content {
-  font-size: 0.8rem;
+  font-size: 0.90rem;
   line-height: 1.5;
 }
 </style>

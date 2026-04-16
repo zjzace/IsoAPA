@@ -120,7 +120,7 @@ a {
 }
 
 .nav-brand {
-  font-size: 17px;
+  font-size: 18px;
   font-weight: 700;
   letter-spacing: -0.3px;
   color: #0D7377;
@@ -139,7 +139,7 @@ a {
   align-items: center;
   padding: 6px 14px;
   border-radius: 8px;
-  font-size: 13.5px;
+  font-size: 14.5px;
   font-weight: 500;
   color: #4B5563;
   text-decoration: none;
@@ -221,7 +221,7 @@ a {
 }
 
 .footer-brand-name {
-  font-size: 15px;
+  font-size: 16px;
   font-weight: 700;
   letter-spacing: -0.2px;
   color: #1E293B;
@@ -232,7 +232,7 @@ a {
 }
 
 .footer-heading {
-  font-size: 12px;
+  font-size: 13.5px;
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.8px;
@@ -241,14 +241,14 @@ a {
 }
 
 .footer-desc {
-  font-size: 13px;
+  font-size: 14.5px;
   color: #64748B;
   line-height: 1.6;
   margin: 0 0 8px;
 }
 
 .footer-version {
-  font-size: 11px;
+  font-size: 12.5px;
   color: #94A3B8;
   font-family: 'Fira Code', monospace;
 }
@@ -260,7 +260,7 @@ a {
 }
 
 .footer-link {
-  font-size: 13px;
+  font-size: 14.5px;
   color: #64748B;
   text-decoration: none;
   transition: color 150ms;
@@ -271,7 +271,7 @@ a {
 }
 
 .footer-email {
-  font-size: 13px;
+  font-size: 14.5px;
   color: #0D7377;
   text-decoration: none;
   font-weight: 500;
@@ -292,7 +292,7 @@ a {
 }
 
 .footer-copy {
-  font-size: 12px;
+  font-size: 13.5px;
   color: #94A3B8;
   text-align: center;
   margin: 0;

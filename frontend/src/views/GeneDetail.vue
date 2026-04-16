@@ -49,7 +49,7 @@
               <span class="gene-meta-label">Species</span>
               <span class="gene-meta-value">
                 {{ speciesInfo.name }}
-                <span style="font-style: italic; opacity: 0.65; font-size: 12px;">{{ speciesInfo.latin_name }}</span>
+                <span style="font-style: italic; opacity: 0.65; font-size: 13.5px;">{{ speciesInfo.latin_name }}</span>
                 <v-chip size="x-small" variant="tonal" color="secondary" class="ml-1">{{ speciesInfo.assembly }}</v-chip>
               </span>
             </div>
@@ -191,23 +191,12 @@
                 </span>
                 <div>
                   <div class="panel-title-text">Transcript Details</div>
-                  <div class="panel-subtitle-text">PA sites and sample coverage per transcript isoform</div>
+                  <div class="panel-subtitle-text">PA clusters and sample coverage per transcript isoform</div>
                 </div>
                 <v-chip size="x-small" color="primary" variant="tonal" class="ml-2">
                   {{ geneData.transcripts.length }}
                 </v-chip>
               </div>
-              <v-text-field
-                v-model="tableSearch"
-                placeholder="Filter transcripts…"
-                prepend-inner-icon="mdi-magnify"
-                density="compact"
-                variant="outlined"
-                hide-details
-                clearable
-                style="max-width: 220px;"
-                class="tx-filter-field"
-              ></v-text-field>
             </div>
 
             <!-- Table -->
@@ -215,93 +204,44 @@
               <table class="tx-table">
                 <thead>
                   <tr>
-                    <th class="tx-th" style="width: 34%;">Transcript ID</th>
-                    <th class="tx-th" style="width: 10%; text-align: center;">PA Sites</th>
-                    <th class="tx-th" style="width: 24%;">Samples</th>
-                    <th class="tx-th" style="width: 32%;">PA Site Details</th>
+                    <th class="tx-th" style="width: 30%;">Transcript</th>
+                    <th class="tx-th" style="width: 10%; text-align: center;">PA Clusters</th>
+                    <th class="tx-th">Cluster Ranges</th>
                   </tr>
                 </thead>
                 <tbody>
-                  <template v-for="tx in filteredTranscripts" :key="tx.transcript_id">
-                    <tr class="tx-row" :class="{ 'tx-row--expanded': expandedRows.has(tx.transcript_id) }">
-                      <td class="tx-td">
-                        <div class="d-flex align-center gap-2">
-                          <router-link
-                            :to="{ name: 'LocusDetail', params: { transcriptId: tx.transcript_id } }"
-                            class="tx-id-link"
-                          >
-                            <v-icon size="14" class="mr-1" style="opacity: 0.5;">mdi-dna</v-icon>
-                            {{ tx.transcript_id }}
-                          </router-link>
-                        </div>
-                      </td>
-                      <td class="tx-td" style="text-align: center;">
-                        <v-chip size="small" color="primary" variant="tonal" class="font-weight-bold">
-                          {{ tx.apa_site_count }}
-                        </v-chip>
-                      </td>
-                      <td class="tx-td">
-                        <div class="d-flex flex-wrap gap-1">
-                          <v-chip
-                            v-for="s in tx.samples.slice(0, 4)"
-                            :key="s"
-                            size="x-small"
-                            variant="tonal"
-                            color="secondary"
-                          >{{ s }}</v-chip>
-                          <v-chip v-if="tx.samples.length > 4" size="x-small" variant="outlined">
-                            +{{ tx.samples.length - 4 }}
-                          </v-chip>
-                        </div>
-                      </td>
-                      <td class="tx-td">
-                        <button
-                          v-if="tx.apa_sites.length > 0"
-                          class="tx-expand-btn"
-                          @click="toggleRow(tx.transcript_id)"
-                        >
-                          <v-icon size="14" class="mr-1">
-                            {{ expandedRows.has(tx.transcript_id) ? 'mdi-chevron-up' : 'mdi-chevron-down' }}
-                          </v-icon>
-                          {{ expandedRows.has(tx.transcript_id) ? 'Hide' : 'Show' }} {{ tx.apa_sites.length }} site{{ tx.apa_sites.length !== 1 ? 's' : '' }}
-                        </button>
-                        <span v-else class="text-caption text-medium-emphasis">—</span>
-                      </td>
-                    </tr>
-                    <tr
-                      v-if="expandedRows.has(tx.transcript_id)"
-                      v-for="site in tx.apa_sites"
-                      :key="site.site_id"
-                      class="tx-site-row"
-                    >
-                      <td class="tx-site-td" colspan="4">
-                        <div class="tx-site-inner">
-                          <div class="tx-site-id">
-                            <v-icon size="12" class="mr-1" style="color: #0D7377;">mdi-map-marker</v-icon>
-                            <code class="tx-code">{{ site.site_id }}</code>
-                            <span class="tx-site-pos">pos. {{ site.site_position.toLocaleString() }}</span>
-                          </div>
-                          <div class="tx-site-samples">
-                            <v-chip
-                              v-for="sd in site.sample_details"
-                              :key="sd.sample_name"
-                              size="x-small"
-                              variant="tonal"
-                              color="primary"
-                              class="mr-1"
-                            >
-                              {{ sd.sample_name }}: <strong class="ml-1">{{ (sd.site_abundance * 100).toFixed(1) }}%</strong>
-                            </v-chip>
-                          </div>
-                        </div>
-                      </td>
-                    </tr>
-                  </template>
-                  <tr v-if="filteredTranscripts.length === 0">
-                    <td colspan="4" class="tx-empty">
-                      <v-icon size="20" class="mr-2" style="opacity: 0.4;">mdi-filter-off</v-icon>
-                      No transcripts match "{{ tableSearch }}"
+                  <tr
+                    v-for="tx in geneData.transcripts"
+                    :key="tx.transcript_id"
+                    class="tx-row"
+                  >
+                    <!-- Transcript ID -->
+                    <td class="tx-td">
+                      <router-link
+                        :to="{ name: 'LocusDetail', params: { transcriptId: tx.transcript_id } }"
+                        class="tx-id-link"
+                      >{{ tx.transcript_id }}</router-link>
                     </td>
+
+                     <!-- PA cluster count -->
+                      <td class="tx-td" style="text-align: center;">
+                        <span class="tx-count-badge">{{ tx.apa_site_count }}</span>
+                      </td>
+
+                      <!-- Cluster ranges -->
+                      <td class="tx-td">
+                        <div class="tx-pos-list">
+                          <span
+                            v-for="site in tx.apa_sites"
+                            :key="site.unified_id"
+                            class="tx-pos-tag"
+                            :title="site.unified_id"
+                          >{{ clusterRange(site.unified_id) }}</span>
+                        </div>
+                      </td>
+                  </tr>
+                  <tr v-if="geneData.transcripts.length === 0">
+                    <td colspan="4" class="tx-empty">No transcripts found</td>
                   </tr>
                 </tbody>
               </table>
@@ -317,7 +257,7 @@
                 </span>
                 <div>
                   <div class="panel-title-text">Isoform–APA Fingerprint</div>
-                  <div class="panel-subtitle-text">Genome-aligned PA sites per isoform, coloured by Shared / Private classification</div>
+                  <div class="panel-subtitle-text" style="white-space: nowrap;">Genome-aligned PA sites per isoform, coloured by Shared / Private classification</div>
                 </div>
               </div>
             </div>
@@ -353,8 +293,6 @@ const structuresLoading = ref(true)
 const error = ref(null)
 const geneData = ref(null)
 const transcriptStructures = ref({})
-const tableSearch = ref('')
-const expandedRows = ref(new Set())
 const speciesInfo = ref(null)
 
 // ── Gene summary (MyGene.info) ─────────────────────────────────────────────
@@ -411,26 +349,16 @@ const fetchGeneSummary = async (geneSymbol) => {
   }
 }
 
-const toggleRow = (txId) => {
-  const s = new Set(expandedRows.value)
-  s.has(txId) ? s.delete(txId) : s.add(txId)
-  expandedRows.value = s
-}
-
-const filteredTranscripts = computed(() => {
-  if (!geneData.value) return []
-  const q = tableSearch.value?.toLowerCase().trim()
-  if (!q) return geneData.value.transcripts
-  return geneData.value.transcripts.filter(tx =>
-    tx.transcript_id.toLowerCase().includes(q) ||
-    tx.samples.some(s => s.toLowerCase().includes(q))
-  )
-})
-
 const totalAPASites = computed(() => {
   if (!geneData.value) return 0
   return geneData.value.transcripts.reduce((sum, t) => sum + t.apa_sites.length, 0)
 })
+
+const clusterRange = (unifiedId) => {
+  const m = unifiedId?.match(/:(\d+)-(\d+):/)
+  if (!m) return unifiedId ?? ''
+  return `${Number(m[1]).toLocaleString()}–${Number(m[2]).toLocaleString()}`
+}
 
 onMounted(async () => {
   const geneId = route.params.geneId
@@ -514,7 +442,7 @@ code {
 }
 
 .gene-name-text {
-  font-size: 1.45rem;
+  font-size: 1.6rem;
   font-weight: 700;
   color: rgba(0,0,0,0.87);
   letter-spacing: -0.01em;
@@ -537,7 +465,7 @@ code {
 }
 
 .gene-meta-label {
-  font-size: 11px;
+  font-size: 12.5px;
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.5px;
@@ -545,7 +473,7 @@ code {
 }
 
 .gene-meta-value {
-  font-size: 14px;
+  font-size: 15px;
   font-weight: 500;
   color: rgba(0,0,0,0.80);
   display: flex;
@@ -554,7 +482,7 @@ code {
 }
 
 .gene-meta-accent {
-  font-size: 16px;
+  font-size: 18px;
   font-weight: 700;
   color: #0D7377;
 }
@@ -573,7 +501,7 @@ code {
 .section-title {
   display: flex;
   align-items: center;
-  font-size: 1.05rem;
+  font-size: 1.15rem;
   font-weight: 700;
   color: rgba(0,0,0,0.80);
   margin-bottom: 20px;
@@ -625,7 +553,7 @@ code {
 }
 
 .panel-title-text {
-  font-size: 13px;
+  font-size: 14.5px;
   font-weight: 600;
   color: rgba(0, 0, 0, 0.87);
   line-height: 1.3;
@@ -633,7 +561,7 @@ code {
 }
 
 .panel-subtitle-text {
-  font-size: 12px;
+  font-size: 13.5px;
   color: rgba(0, 0, 0, 0.60);
   margin-top: 2px;
   max-width: 480px;
@@ -645,17 +573,6 @@ code {
   padding: 16px;
 }
 
-/* ── Filter field ────────────────────────────────────────────────── */
-.tx-filter-field :deep(.v-field) {
-  font-size: 13px;
-  border-radius: 7px;
-  background: #fff;
-}
-
-.tx-filter-field :deep(.v-field__outline) {
-  --v-field-border-opacity: 0.2;
-}
-
 /* ── Transcript table ────────────────────────────────────────────── */
 .tx-table-container {
   overflow-x: auto;
@@ -665,13 +582,13 @@ code {
   width: 100%;
   border-collapse: collapse;
   font-family: 'Roboto', sans-serif;
-  font-size: 13px;
+  font-size: 14.5px;
 }
 
 .tx-th {
   padding: 9px 16px;
   text-align: left;
-  font-size: 12px;
+  font-size: 13.5px;
   font-weight: 600;
   letter-spacing: 0.4px;
   text-transform: uppercase;
@@ -691,11 +608,7 @@ code {
   background: rgba(13, 115, 119, 0.04);
 }
 
-.tx-row--expanded {
-  background: rgba(13, 115, 119, 0.05);
-}
-
-.tx-row:last-child:not(.tx-row--expanded) {
+.tx-row:last-child {
   border-bottom: none;
 }
 
@@ -707,7 +620,7 @@ code {
 
 .tx-id-link {
   font-weight: 600;
-  font-size: 13px;
+  font-size: 14.5px;
   color: #0D7377;
   text-decoration: none;
   font-family: 'Roboto Mono', 'Courier New', monospace;
@@ -720,78 +633,66 @@ code {
   text-decoration: underline;
 }
 
-.tx-expand-btn {
+.tx-count-badge {
   display: inline-flex;
   align-items: center;
-  font-size: 12px;
-  font-weight: 500;
-  color: rgba(0, 0, 0, 0.54);
-  background: none;
-  border: 1px solid rgba(0, 0, 0, 0.15);
-  border-radius: 6px;
-  padding: 3px 10px;
-  cursor: pointer;
-  transition: all 0.15s ease;
-  font-family: 'Roboto', sans-serif;
-}
-
-.tx-expand-btn:hover {
-  background: rgba(13, 115, 119, 0.08);
-  border-color: rgba(13, 115, 119, 0.4);
+  justify-content: center;
+  min-width: 24px;
+  height: 24px;
+  padding: 0 8px;
+  background: rgba(13, 115, 119, 0.12);
   color: #0D7377;
+  border: 1px solid rgba(13, 115, 119, 0.25);
+  border-radius: 12px;
+  font-size: 13px;
+  font-weight: 700;
+  font-family: 'Inter', sans-serif;
 }
 
-.tx-site-row {
-  border-bottom: 1px solid rgba(0, 0, 0, 0.045);
-  background: rgba(13, 115, 119, 0.025);
-}
-
-.tx-site-row:last-child {
-  border-bottom: 1px solid rgba(0, 0, 0, 0.055);
-}
-
-.tx-site-td { padding: 0; }
-
-.tx-site-inner {
-  display: flex;
-  align-items: center;
-  gap: 20px;
-  padding: 8px 16px 8px 36px;
-  flex-wrap: wrap;
-}
-
-.tx-site-id {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  flex-shrink: 0;
-}
-
-.tx-code {
-  background: rgba(13, 115, 119, 0.08);
-  color: #0D7377;
-  padding: 2px 7px;
-  border-radius: 4px;
-  font-size: 12px;
-  font-family: 'Roboto Mono', 'Courier New', monospace;
-}
-
-.tx-site-pos {
-  font-size: 11px;
-  color: rgba(0, 0, 0, 0.38);
-}
-
-.tx-site-samples {
+.tx-sample-chips {
   display: flex;
   flex-wrap: wrap;
   gap: 4px;
+}
+
+.tx-sample-pill {
+  display: inline-block;
+  background: rgba(13, 115, 119, 0.10);
+  color: #0D7377;
+  border: 1px solid rgba(13, 115, 119, 0.22);
+  border-radius: 10px;
+  font-size: 12.5px;
+  font-weight: 500;
+  padding: 2px 9px;
+  font-family: 'Inter', sans-serif;
+  white-space: nowrap;
+}
+
+.tx-pos-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+
+.tx-pos-tag {
+  display: inline-block;
+  background: rgba(13, 115, 119, 0.06);
+  color: rgba(0, 0, 0, 0.70);
+  border: 1px solid rgba(13, 115, 119, 0.15);
+  border-radius: 6px;
+  font-size: 12.5px;
+  font-family: 'Inter', 'Roboto Mono', monospace;
+  font-weight: 500;
+  padding: 2px 8px;
+  white-space: nowrap;
+  cursor: default;
 }
 
 .tx-empty {
   padding: 32px 16px;
   text-align: center;
   color: rgba(0, 0, 0, 0.38);
-  font-size: 13px;
+  font-size: 14.5px;
 }
 
 /* ── Gene Summary definition list ───────────────────────────────── */
@@ -820,7 +721,7 @@ code {
   width: 160px;
   min-width: 130px;
   padding: 10px 14px 10px 16px;
-  font-size: 13px;
+  font-size: 14.5px;
   font-weight: 600;
   color: rgba(0, 0, 0, 0.62);
   vertical-align: top;
@@ -832,7 +733,7 @@ code {
 .gs-dd {
   display: table-cell;
   padding: 10px 16px;
-  font-size: 13px;
+  font-size: 14.5px;
   color: rgba(0, 0, 0, 0.80);
   vertical-align: middle;
   line-height: 1.55;
@@ -840,7 +741,7 @@ code {
 
 .gs-summary-text {
   margin: 0;
-  font-size: 13px;
+  font-size: 14.5px;
   line-height: 1.75;
   color: rgba(0, 0, 0, 0.72);
 }
@@ -867,7 +768,7 @@ code {
 }
 
 .gs-id-source {
-  font-size: 11px;
+  font-size: 12.5px;
   font-weight: 500;
   color: rgba(0, 0, 0, 0.38);
   background: rgba(0, 0, 0, 0.05);
@@ -879,7 +780,7 @@ code {
 .gs-id-code {
   color: #0D7377;
   font-family: 'Roboto Mono', 'Courier New', monospace;
-  font-size: 12px;
+  font-size: 13.5px;
   font-weight: 600;
 }
 
@@ -900,7 +801,7 @@ code {
 }
 
 .gs-chip {
-  font-size: 11px;
+  font-size: 12.5px;
   font-weight: 500;
   padding: 3px 9px;
   border-radius: 12px;
@@ -999,18 +900,22 @@ code {
   color: #2AA8AE;
 }
 
-.v-theme--apaAtlasDarkTheme .tx-site-row {
-  background: rgba(42, 168, 174, 0.04);
+.v-theme--apaAtlasDarkTheme .tx-count-badge {
+  background: rgba(42, 168, 174, 0.14);
+  color: #2AA8AE;
+  border-color: rgba(42, 168, 174, 0.28);
 }
 
-.v-theme--apaAtlasDarkTheme code {
-  background: rgba(255, 255, 255, 0.07);
-  color: rgba(255, 255, 255, 0.75);
-}
-
-.v-theme--apaAtlasDarkTheme .tx-code {
+.v-theme--apaAtlasDarkTheme .tx-sample-pill {
   background: rgba(42, 168, 174, 0.10);
   color: #2AA8AE;
+  border-color: rgba(42, 168, 174, 0.22);
+}
+
+.v-theme--apaAtlasDarkTheme .tx-pos-tag {
+  background: rgba(42, 168, 174, 0.07);
+  color: rgba(255, 255, 255, 0.65);
+  border-color: rgba(42, 168, 174, 0.18);
 }
 
 .v-theme--apaAtlasDarkTheme .gs-dt {
@@ -1042,21 +947,6 @@ code {
 }
 
 .v-theme--apaAtlasDarkTheme .gs-id-code {
-  color: #2AA8AE;
-}
-
-.v-theme--apaAtlasDarkTheme .tx-filter-field :deep(.v-field) {
-  background: rgba(255, 255, 255, 0.05);
-}
-
-.v-theme--apaAtlasDarkTheme .tx-expand-btn {
-  color: rgba(255, 255, 255, 0.50);
-  border-color: rgba(255, 255, 255, 0.12);
-}
-
-.v-theme--apaAtlasDarkTheme .tx-expand-btn:hover {
-  background: rgba(42, 168, 174, 0.10);
-  border-color: rgba(42, 168, 174, 0.35);
   color: #2AA8AE;
 }
 </style>

@@ -69,7 +69,7 @@
               <span class="gene-meta-label">Species</span>
               <span class="gene-meta-value">
                 {{ locusData.apa_sites[0].species.name }}
-                <span style="font-style: italic; opacity: 0.65; font-size: 12px;">{{ locusData.apa_sites[0].species.latin_name }}</span>
+                <span style="font-style: italic; opacity: 0.65; font-size: 13.5px;">{{ locusData.apa_sites[0].species.latin_name }}</span>
                 <v-chip size="x-small" variant="tonal" color="secondary" class="ml-1">{{ locusData.apa_sites[0].species.assembly }}</v-chip>
               </span>
             </div>
@@ -123,16 +123,16 @@
                 :items="flattenedTableData"
                 :items-per-page="10"
                 class="elegant-table"
-                item-value="site_id"
+                item-value="unified_id"
                 v-model:expanded="seqOpen"
-                :row-props="({ item }) => seqOpen.includes(item.site_id) ? { class: 'row-seq-expanded' } : {}"
+                :row-props="({ item }) => seqOpen.includes(item.unified_id) ? { class: 'row-seq-expanded' } : {}"
               >
-                <template v-slot:item.site_id="{ item }">
-                  <code>{{ item.site_id }}</code>
+                <template v-slot:item.unified_id="{ item }">
+                  <code class="code-plain">{{ item.unified_id }}</code>
                 </template>
 
-                <template v-slot:item.site_position="{ item }">
-                  <code>{{ item.site_position }}</code>
+                <template v-slot:item.mode_site_position="{ item }">
+                  <code class="code-plain">{{ item.mode_site_position }}</code>
                 </template>
 
                 <template v-slot:item.pas_motif="{ item }">
@@ -161,9 +161,9 @@
                   </span>
                 </template>
 
-                <template v-slot:item.sample_name="{ item }">
+                <template v-slot:item.sample_count="{ item }">
                   <v-chip size="small" variant="tonal" color="primary">
-                    {{ item.sample_name }}
+                    {{ item.sample_count }}
                   </v-chip>
                 </template>
 
@@ -185,76 +185,106 @@
                 <template v-slot:item.actions="{ item }">
                   <v-btn
                     size="small"
-                    :variant="seqOpen.includes(item.site_id) ? 'flat' : 'tonal'"
-                    :color="seqOpen.includes(item.site_id) ? 'primary' : 'primary'"
-                    @click.stop="toggleSeqPanel(item.site_id)"
+                    :variant="seqOpen.includes(item.unified_id) ? 'flat' : 'tonal'"
+                    :color="seqOpen.includes(item.unified_id) ? 'primary' : 'primary'"
+                    @click.stop="toggleSeqPanel(item.unified_id)"
                     class="seq-toggle-btn"
                   >
-                    <v-icon start size="14">mdi-dna</v-icon>
-                    {{ seqOpen.includes(item.site_id) ? 'Hide Seq' : 'Sequence' }}
+                    <v-icon start size="14">mdi-card-search-outline</v-icon>
+                    {{ seqOpen.includes(item.unified_id) ? 'Hide' : 'Detail' }}
                   </v-btn>
                 </template>
 
-                <!-- ── Expanded row: inline sequence panel ── -->
                 <template v-slot:expanded-row="{ item }">
                   <tr class="seq-expanded-row">
                     <td :colspan="tableHeaders.length" class="pa-0">
-                      <div class="seq-context-panel seq-context-panel--inline">
+                      <div class="detail-panel">
 
-                        <!-- Loading -->
-                        <div v-if="seqData[item.site_id]?.loading" class="seq-panel-body d-flex align-center" style="min-height:72px">
-                          <v-progress-circular indeterminate size="22" color="primary" />
-                          <span class="ml-3 text-body-2 text-medium-emphasis">Fetching sequence…</span>
-                        </div>
+                        <div class="detail-panel-inner">
 
-                        <!-- Error -->
-                        <div v-else-if="seqData[item.site_id]?.error" class="seq-panel-body">
-                          <v-alert type="error" variant="tonal" density="compact">{{ seqData[item.site_id].error }}</v-alert>
-                        </div>
+                          <!-- Sample Abundance -->
+                          <div v-if="item.sample_details && item.sample_details.length > 0" class="detail-section">
+                            <div class="detail-section-label">
+                              <v-icon size="12" class="mr-1" style="color:#0D7377;">mdi-chart-bar</v-icon>
+                              Sample Abundance
+                              <span class="detail-section-sub">{{ item.sample_details.length }} sample{{ item.sample_details.length > 1 ? 's' : '' }}</span>
+                            </div>
+                            <div class="sample-abundance-list">
+                              <div v-for="sd in item.sample_details" :key="sd.sample_name" class="sample-abundance-row">
+                                <div class="sample-abundance-label">
+                                  <v-chip size="x-small" variant="tonal" color="primary" class="sample-name-chip">{{ sd.sample_name }}</v-chip>
+                                  <span class="sample-type-text">{{ sd.sample_type ? sd.sample_type.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase()) : '' }}</span>
+                                </div>
+                                <div class="sample-abundance-bar">
+                                  <v-progress-linear
+                                    :model-value="(sd.site_abundance || 0) * 100"
+                                    color="primary"
+                                    height="6"
+                                    rounded
+                                    bg-color="rgba(0,0,0,0.06)"
+                                    class="sample-bar-track"
+                                  ></v-progress-linear>
+                                  <span class="sample-pct-text">{{ ((sd.site_abundance || 0) * 100).toFixed(1) }}%</span>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
 
-                        <!-- Sequence viewer -->
-                        <div v-else-if="seqData[item.site_id]?.data" class="seq-panel-body">
-                          <!-- Meta chips row — strand, coords, window, PAS motif, PA site ID -->
-                          <div class="seq-meta-row">
-                            <span class="seq-meta-chip seq-meta-strand">
-                              {{ seqData[item.site_id].data.strand === '+' ? '(+) positive strand' : '(−) negative strand' }}
-                            </span>
-                            <span class="seq-meta-chip">
-                              {{ seqData[item.site_id].data.chromosome }}:{{
-                                (seqData[item.site_id].data.site_position - seqData[item.site_id].data.flank).toLocaleString()
-                              }}–{{
-                                (seqData[item.site_id].data.site_position + seqData[item.site_id].data.flank).toLocaleString()
-                              }}
-                            </span>
-                            <span class="seq-meta-chip seq-meta-window">±{{ seqData[item.site_id].data.flank }} bp window</span>
-                            <template v-if="seqData[item.site_id].data.pas_motif">
-                              <span
-                                class="seq-meta-chip seq-meta-pas"
-                                :style="{ background: pasTypeMeta(seqData[item.site_id].data.pas_type).bg, border: '1px solid ' + pasTypeMeta(seqData[item.site_id].data.pas_type).border, color: pasTypeMeta(seqData[item.site_id].data.pas_type).text }"
-                              >
-                                {{ seqData[item.site_id].data.pas_motif }} · {{ pasTypeMeta(seqData[item.site_id].data.pas_type).label }}
-                                <span v-if="seqData[item.site_id].data.pas_position"> · {{ seqData[item.site_id].data.pas_position }}bp</span>
+                          <!-- Loading -->
+                          <div v-if="seqData[item.unified_id]?.loading" class="detail-section d-flex align-center" style="min-height:60px">
+                            <v-progress-circular indeterminate size="20" color="primary" />
+                            <span class="ml-3 text-body-2 text-medium-emphasis">Fetching sequence…</span>
+                          </div>
+
+                          <!-- Error -->
+                          <div v-else-if="seqData[item.unified_id]?.error" class="detail-section">
+                            <v-alert type="error" variant="tonal" density="compact">{{ seqData[item.unified_id].error }}</v-alert>
+                          </div>
+
+                          <!-- Sequence viewer -->
+                          <div v-else-if="seqData[item.unified_id]?.data" class="detail-section">
+                            <div class="detail-section-label">
+                              <v-icon size="12" class="mr-1" style="color:#0D7377;">mdi-dna</v-icon>
+                              Genomic Sequence Context
+                            </div>
+                            <div class="seq-meta-row">
+                              <span class="seq-meta-chip seq-meta-strand">
+                                {{ seqData[item.unified_id].data.strand === '+' ? '(+) positive strand' : '(−) negative strand' }}
                               </span>
-                            </template>
-                             <!-- PA site chip — same row, label only -->
-                             <span class="seq-meta-chip seq-meta-pasite">
-                               <v-icon size="11" style="color:#D45D79;">mdi-map-marker</v-icon>
-                               PA Site
-                             </span>
+                              <span class="seq-meta-chip">
+                                {{ seqData[item.unified_id].data.chromosome }}:{{
+                                  (seqData[item.unified_id].data.mode_site_position - seqData[item.unified_id].data.flank).toLocaleString()
+                                }}–{{
+                                  (seqData[item.unified_id].data.mode_site_position + seqData[item.unified_id].data.flank).toLocaleString()
+                                }}
+                              </span>
+                              <span class="seq-meta-chip seq-meta-window">±{{ seqData[item.unified_id].data.flank }} bp window</span>
+                              <template v-if="seqData[item.unified_id].data.pas_motif">
+                                <span
+                                  class="seq-meta-chip seq-meta-pas"
+                                  :style="{ background: pasTypeMeta(seqData[item.unified_id].data.pas_type).bg, border: '1px solid ' + pasTypeMeta(seqData[item.unified_id].data.pas_type).border, color: pasTypeMeta(seqData[item.unified_id].data.pas_type).text }"
+                                >
+                                  {{ seqData[item.unified_id].data.pas_motif }} · {{ pasTypeMeta(seqData[item.unified_id].data.pas_type).label }}
+                                  <span v-if="seqData[item.unified_id].data.pas_position"> · {{ seqData[item.unified_id].data.pas_position }}bp</span>
+                                </span>
+                              </template>
+                              <span class="seq-meta-chip seq-meta-pasite">
+                                <v-icon size="11" style="color:#D45D79;">mdi-map-marker</v-icon>
+                                Representative PA Site
+                              </span>
+                            </div>
+                            <div class="seq-display">
+                              <span
+                                v-for="(nt, idx) in seqData[item.unified_id].data.sequence.split('')"
+                                :key="idx"
+                                :class="seqNtClass(nt, idx, seqData[item.unified_id].data)"
+                                :style="seqNtStyle(nt, idx, seqData[item.unified_id].data)"
+                                :title="idx === seqData[item.unified_id].data.cleavage_index ? 'Cleavage site' : ''"
+                              >{{ nt }}</span>
+                            </div>
                           </div>
 
-                          <!-- Sequence display — no outer border, divider on top -->
-                          <div class="seq-display">
-                            <span
-                              v-for="(nt, idx) in seqData[item.site_id].data.sequence.split('')"
-                              :key="idx"
-                              :class="seqNtClass(nt, idx, seqData[item.site_id].data)"
-                              :style="seqNtStyle(nt, idx, seqData[item.site_id].data)"
-                              :title="idx === seqData[item.site_id].data.cleavage_index ? 'Cleavage site' : ''"
-                            >{{ nt }}</span>
-                          </div>
                         </div>
-
                       </div>
                     </td>
                   </tr>
@@ -347,213 +377,8 @@
           </div>
         </div>
 
-        <!-- ── 3′ UTR Length Consequence ────────────────────────────────── -->
-        <div class="section-card mb-6" v-if="utrLengthData.length > 0">
-          <div class="section-title">
-            <v-icon size="18" class="mr-2" style="color: #0D7377;">mdi-arrow-expand-horizontal</v-icon>
-            3′ UTR Length Consequence
-            <div class="pas-legend ml-4">
-              <span v-for="(meta, key) in PAS_TYPE_META" :key="key"
-                class="pas-legend-item"
-                :style="{ background: meta.bg, border: '1px solid ' + meta.border, color: meta.text }"
-              >
-                <span class="pas-chip-dot" :style="{ background: meta.border }"></span>
-                {{ meta.label }}
-              </span>
-            </div>
-            <v-tooltip location="bottom" max-width="340">
-              <template #activator="{ props }">
-                <v-icon v-bind="props" icon="mdi-information-outline" size="small" class="ml-2" style="color: rgba(0,0,0,0.38);"></v-icon>
-              </template>
-              Each bar shows the distance from the last CDS base to the PA site, representing
-              the resulting 3′ UTR length. Shorter isoforms (proximal sites) tend to escape
-              miRNA and RBP regulation encoded in the distal 3′ UTR.
-            </v-tooltip>
-          </div>
-          <v-row align="start">
-              <!-- Bar chart -->
-              <v-col cols="12" md="7">
-                <div class="utr-chart">
-                  <div
-                    v-for="(item, i) in utrLengthData"
-                    :key="item.siteId"
-                    class="utr-row mb-3"
-                  >
-                    <div class="d-flex align-center mb-1">
-                      <span class="text-caption text-grey-darken-1 utr-row-label">
-                        Site {{ i + 1 }}
-                        <span class="text-grey ml-1">({{ item.position.toLocaleString() }})</span>
-                      </span>
-                      <span
-                        class="pas-chip ml-2"
-                        :style="{
-                          background: pasTypeMeta(item.pasType).bg,
-                          border: '1px solid ' + pasTypeMeta(item.pasType).border,
-                          color: pasTypeMeta(item.pasType).text,
-                        }"
-                      >
-                        <span class="pas-chip-dot" :style="{ background: pasTypeMeta(item.pasType).border }"></span>
-                        {{ item.pasMotif || '—' }}
-                      </span>
-                      <v-tooltip location="top" text="Download 3′ UTR sequence (.fa)">
-                        <template #activator="{ props }">
-                          <v-btn
-                            v-bind="props"
-                            :href="apiService.getUtrSequenceUrl(locusData.transcript.transcript_id, item.siteId)"
-                            download
-                            icon
-                            size="x-small"
-                            variant="text"
-                            color="primary"
-                            class="ml-1"
-                          >
-                            <v-icon size="14">mdi-download</v-icon>
-                          </v-btn>
-                        </template>
-                      </v-tooltip>
-                    </div>
-                    <div class="d-flex align-center ga-2">
-                      <div class="utr-bar-track flex-grow-1">
-                        <div
-                          class="utr-bar"
-                          :style="{
-                            width: item.pct + '%',
-                            background: utrBarColor(i),
-                            opacity: item.utrLength === 0 ? 0.2 : 1
-                          }"
-                        ></div>
-                      </div>
-                      <span class="text-caption font-weight-medium utr-length-label">
-                        {{ item.utrLength > 0 ? item.utrLength.toLocaleString() + ' nt' : 'CDS end' }}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-                <div class="text-caption text-grey mt-2">
-                  * UTR length measured from last annotated CDS base to cleavage site.
-                  Requires transcript structure to be loaded.
-                </div>
-              </v-col>
+      </div><!-- closes v-else-if="locusData" -->
 
-              <!-- RBP Binding Motif Scanner -->
-              <v-col cols="12" md="5">
-                <div v-if="rbpLoading" class="d-flex justify-center align-center" style="min-height:180px;">
-                  <v-progress-circular indeterminate color="primary" size="32"></v-progress-circular>
-                </div>
-
-                <div v-else-if="rbpData.length > 0" class="rbp-panel">
-                  <!-- Tab strip: one tab per APA site -->
-                  <v-tabs
-                    v-model="rbpTab"
-                    density="compact"
-                    color="primary"
-                    class="mb-3"
-                    show-arrows
-                  >
-                    <v-tab
-                      v-for="(site, i) in rbpData"
-                      :key="site.site_id"
-                      :value="i"
-                      class="text-caption"
-                    >
-                      <span
-                        class="rbp-site-dot mr-1"
-                        :style="{ background: utrBarColor(i) }"
-                      ></span>
-                      Site {{ i + 1 }}
-                    </v-tab>
-                  </v-tabs>
-
-                  <v-window v-model="rbpTab">
-                    <v-window-item
-                      v-for="(site, i) in rbpData"
-                      :key="site.site_id"
-                      :value="i"
-                    >
-                      <div v-if="!site.sequence_available" class="text-caption text-grey pa-2">
-                        Sequence not available for this site
-                      </div>
-                      <div v-else>
-                        <!-- Category legend pills -->
-                        <div class="d-flex flex-wrap ga-1 mb-3">
-                          <v-chip
-                            v-for="cat in rbpCategories"
-                            :key="cat.name"
-                            size="x-small"
-                            :color="cat.color"
-                            variant="tonal"
-                          >{{ cat.name }}</v-chip>
-                        </div>
-
-                        <!-- One row per RBP -->
-                        <div
-                          v-for="hit in site.rbp_hits"
-                          :key="hit.rbp"
-                          class="rbp-row mb-2"
-                        >
-                          <div class="d-flex align-center mb-1 ga-1">
-                            <span
-                              class="rbp-color-dot"
-                              :style="{ background: hit.color }"
-                            ></span>
-                            <v-tooltip location="top" max-width="300">
-                              <template #activator="{ props }">
-                                <span v-bind="props" class="rbp-name text-caption font-weight-medium">
-                                  {{ hit.rbp }}
-                                </span>
-                              </template>
-                              <div>
-                                <strong>{{ hit.rbp }}</strong><br/>
-                                <span class="text-caption">{{ hit.function }}</span>
-                              </div>
-                            </v-tooltip>
-                            <v-spacer></v-spacer>
-                            <v-chip
-                              size="x-small"
-                              :color="hit.count === 0 ? 'default' : hit.color"
-                              :variant="hit.count === 0 ? 'tonal' : 'flat'"
-                              class="rbp-count-chip"
-                            >
-                              {{ hit.count === 0 ? 'none' : hit.count + (hit.count === 1 ? ' site' : ' sites') }}
-                            </v-chip>
-                          </div>
-
-                          <!-- Hit position lollipop track -->
-                          <div class="rbp-lollipop-track">
-                            <template v-if="hit.count > 0">
-                              <div
-                                v-for="(pos, pi) in hit.positions"
-                                :key="pi"
-                                class="rbp-lollipop"
-                                :style="{
-                                  left: ((pos / site.utr_length) * 100).toFixed(1) + '%',
-                                  background: hit.color
-                                }"
-                              ></div>
-                            </template>
-                          </div>
-                        </div>
-
-                        <!-- Footer: UTR length + density summary -->
-                        <div class="d-flex align-center mt-3 ga-2 text-caption text-grey">
-                          <v-icon size="12">mdi-ruler</v-icon>
-                          {{ site.utr_length.toLocaleString() }} nt UTR
-                          <span class="ml-auto">
-                            {{ site.rbp_hits.filter(h => h.count > 0).length }} / {{ site.rbp_hits.length }} RBPs detected
-                          </span>
-                        </div>
-                      </div>
-                    </v-window-item>
-                  </v-window>
-                </div>
-
-                <div v-else class="text-caption text-grey text-center pa-4">
-                  RBP motif data unavailable
-                </div>
-              </v-col>
-            </v-row>
-          </div>
-        </div>
     </v-container>
   </div>
 </template>
@@ -585,13 +410,11 @@ const locusData = ref(null)
 const transcriptStructure = ref(null)
 const selectedSiteId = ref(null)
 const selectedSample = ref(null)
-const rbpData = ref([])
-const rbpLoading = ref(false)
-const rbpTab = ref(0)
+
 
 // ── Sequence context panel ─────────────────────────────────────────────────
 // seqOpen: array of site_ids whose sequence panel is expanded (v-model:expanded expects array)
-// seqData: Map of site_id → { loading, data, error }
+// seqData: Map of unified_id → { loading, data, error }
 const seqOpen = ref([])
 const seqData = ref({})
 
@@ -641,20 +464,12 @@ const seqNtStyle = (nt, idx, data) => {
   return {}
 }
 
-const rbpCategories = [
-  { name: 'Stability',        color: 'error'   },
-  { name: 'Decay',            color: 'warning' },
-  { name: 'Translation',      color: 'purple'  },
-  { name: 'Polyadenylation',  color: 'blue'    },
-  { name: 'miRNA',            color: 'teal'    },
-]
-
 const tableHeaders = [
-  { title: 'Site ID', key: 'site_id', sortable: true },
-  { title: 'Position', key: 'site_position', sortable: true },
+  { title: 'Cluster ID', key: 'unified_id', sortable: true },
+  { title: 'Rep. Position', key: 'mode_site_position', sortable: true },
   { title: 'PAS Motif', key: 'pas_motif', sortable: true },
-  { title: 'Sample', key: 'sample_name', sortable: true },
-  { title: 'Relative Abundance', key: 'site_abundance', sortable: true },
+  { title: 'Samples', key: 'sample_count', sortable: true },
+  { title: 'Avg Abundance', key: 'site_abundance', sortable: true },
   { title: '', key: 'actions', sortable: false, width: 100 }
 ]
 
@@ -723,9 +538,9 @@ const barChartOptions = {
 const siteIdOptions = computed(() => {
   if (!locusData.value) return []
   return locusData.value.apa_sites.map(site => ({
-    value: site.site_id,
-    label: site.site_id.substring(0, 20) + (site.site_id.length > 20 ? '...' : ''),
-    position: site.site_position,
+    value: site.unified_id,
+    label: site.unified_id.substring(0, 20) + (site.unified_id.length > 20 ? '...' : ''),
+    position: site.mode_site_position,
     samples: site.sample_details?.length || 0
   }))
 })
@@ -746,10 +561,10 @@ const sampleSiteAbundanceData = computed(() => {
   const colors = ['#0D7377', '#14919B', '#323232', '#E94560', '#FF6B6B', '#4ECDC4', '#5C6BC0', '#AB47BC']
   
   sites.forEach((site, index) => {
-    // Shorten site_id for label
-    const shortId = site.site_id.length > 15 
-      ? site.site_id.substring(0, 15) + '...' 
-      : site.site_id
+    // Shorten unified_id for label
+    const shortId = site.unified_id.length > 15 
+      ? site.unified_id.substring(0, 15) + '...' 
+      : site.unified_id
     labels.push(shortId)
     
     // Find abundance for selected sample
@@ -779,38 +594,23 @@ const sampleSiteAbundanceData = computed(() => {
 
 const flattenedTableData = computed(() => {
   if (!locusData.value) return []
-  
-  const flattened = []
-  locusData.value.apa_sites.forEach(site => {
-    if (site.sample_details && site.sample_details.length > 0) {
-      site.sample_details.forEach(sd => {
-        flattened.push({
-          site_id: site.site_id,
-          site_position: site.site_position,
-          pas_motif: site.pas_motif,
-          pas_position: site.pas_position,
-          pas_type: site.pas_type,
-          pas_confidence: site.pas_confidence,
-          sample_name: sd.sample_name,
-          site_abundance: sd.site_abundance,
-          site_count: sd.site_count
-        })
-      })
-    } else {
-      flattened.push({
-        site_id: site.site_id,
-        site_position: site.site_position,
-        pas_motif: site.pas_motif,
-        pas_position: site.pas_position,
-        pas_type: site.pas_type,
-        pas_confidence: site.pas_confidence,
-        sample_name: '-',
-        site_abundance: 0,
-        site_count: 0
-      })
+  return locusData.value.apa_sites.map(site => {
+    const samples = site.sample_details || []
+    const avgAbundance = samples.length > 0
+      ? samples.reduce((sum, sd) => sum + (sd.site_abundance || 0), 0) / samples.length
+      : site.site_abundance || 0
+    return {
+      unified_id: site.unified_id,
+      mode_site_position: site.mode_site_position,
+      pas_motif: site.pas_motif,
+      pas_position: site.pas_position,
+      pas_type: site.pas_type,
+      sample_count: samples.length,
+      site_abundance: avgAbundance,
+      site_count: site.site_count,
+      sample_details: samples,
     }
   })
-  return flattened
 })
 
 const ucscBrowserLink = computed(() => {
@@ -820,7 +620,7 @@ const ucscBrowserLink = computed(() => {
   const apaSites = locusData.value.apa_sites
   if (apaSites.length === 0) return ''
   
-  const positions = apaSites.map(s => s.site_position)
+  const positions = apaSites.map(s => s.mode_site_position)
   const minPos = Math.min(...positions) - 5000
   const maxPos = Math.max(...positions) + 5000
   
@@ -859,9 +659,9 @@ const heatmapLookup = computed(() => {
   if (!locusData.value) return {}
   const lookup = {}
   for (const site of locusData.value.apa_sites) {
-    lookup[site.site_id] = {}
+    lookup[site.unified_id] = {}
     for (const sd of (site.sample_details || [])) {
-      lookup[site.site_id][sd.sample_name] = {
+      lookup[site.unified_id][sd.sample_name] = {
         abundance: sd.site_abundance,
         count: sd.site_count
       }
@@ -875,8 +675,8 @@ const heatmapData = computed(() => {
   // samples may be [{name, sample_type}] objects or plain strings — normalise to strings
   const allSamples = (locusData.value.samples || []).map(s => s?.name ?? s)
   const sites = locusData.value.apa_sites.map(s => ({
-    id: s.site_id,
-    position: s.site_position
+    id: s.unified_id,
+    position: s.mode_site_position
   }))
   // Sort sites by position (proximal → distal)
   const strand = locusData.value.gene.strand
@@ -930,65 +730,19 @@ const heatmapCount = (siteId, sample) => {
   return entry ? entry.count : 0
 }
 
-// ── 3′ UTR Length ──────────────────────────────────────────────────────────
-
-const utrLengthData = computed(() => {
-  if (!locusData.value) return []
-  const strand = locusData.value.gene.strand
-
-  // Derive CDS end from transcript structure if available, else fall back
-  // to inferring from site positions (the most-distal detected site ~ CDS end)
-  let cdsEndPos = null
-  if (transcriptStructure.value?.cds?.length) {
-    const cdsPositions = transcriptStructure.value.cds.flatMap(c => [c.start, c.end])
-    cdsEndPos = strand === '-' ? Math.min(...cdsPositions) : Math.max(...cdsPositions)
-  }
-
-  const sites = locusData.value.apa_sites.map(s => ({
-    siteId: s.site_id,
-    position: s.site_position,
-    pasMotif: s.pas_motif,
-    pasType: s.pas_type
-  }))
-
-  // Sort proximal → distal (relative to transcript direction)
-  sites.sort((a, b) => strand === '-' ? b.position - a.position : a.position - b.position)
-
-  // If no CDS info, use the most-proximal site as the reference baseline
-  if (cdsEndPos === null && sites.length > 0) {
-    cdsEndPos = sites[0].position
-  }
-
-  const result = sites.map(s => {
-    const utrLength = cdsEndPos !== null
-      ? Math.abs(s.position - cdsEndPos)
-      : 0
-    return { ...s, utrLength }
-  })
-
-  const maxLen = Math.max(...result.map(r => r.utrLength), 1)
-  return result.map(r => ({ ...r, pct: (r.utrLength / maxLen) * 100 }))
-})
-
-const UTR_BAR_COLORS = ['#0D7377', '#14919B', '#2196F3', '#7B1FA2', '#E53935', '#FB8C00', '#43A047', '#00ACC1']
-const utrBarColor = (i) => UTR_BAR_COLORS[i % UTR_BAR_COLORS.length]
-
-// ── PAS motif type colours ──────────────────────────────────────────────────
-// canonical  : deep teal   (#0D7377) — the two gold-standard hexamers
-// variant    : dusty amber (#B08C5A) — weaker single-nt variants
-// none       : muted grey  (#9E9E9E) — no motif detected
 const PAS_TYPE_META = {
-  canonical : { label: 'Canonical',  bg: 'rgba(22,163,74,0.12)',   border: '#16A34A', text: '#15803D' },
-  variant   : { label: 'Variant',    bg: 'rgba(37,99,235,0.12)',   border: '#2563EB', text: '#1D4ED8' },
-  other     : { label: 'Other',      bg: 'rgba(147,51,234,0.12)',  border: '#9333EA', text: '#7E22CE' },
-  none      : { label: 'None',       bg: 'rgba(0,0,0,0.05)',       border: '#9CA3AF', text: '#6B7280' },
+  canonical  : { label: 'Canonical',   bg: 'rgba(22,163,74,0.12)',   border: '#16A34A', text: '#15803D' },
+  variant    : { label: 'Variant',     bg: 'rgba(37,99,235,0.12)',   border: '#2563EB', text: '#1D4ED8' },
+  upstream   : { label: 'Upstream',    bg: 'rgba(234,88,12,0.10)',   border: '#EA580C', text: '#C2410C' },
+  downstream : { label: 'Downstream',  bg: 'rgba(139,92,246,0.10)',  border: '#8B5CF6', text: '#7C3AED' },
+  none       : { label: 'None',        bg: 'rgba(0,0,0,0.05)',       border: '#9CA3AF', text: '#6B7280' },
 }
 const pasTypeMeta = (type) => PAS_TYPE_META[type] ?? PAS_TYPE_META.none
 
 const abundanceBarChartData = computed(() => {
   if (!locusData.value || !selectedSiteId.value) return null
   
-  const site = locusData.value.apa_sites.find(s => s.site_id === selectedSiteId.value)
+  const site = locusData.value.apa_sites.find(s => s.unified_id === selectedSiteId.value)
   if (!site || !site.sample_details) return null
   
   const labels = site.sample_details.map(sd => sd.sample_name)
@@ -1026,7 +780,7 @@ onMounted(async () => {
     locusData.value = locusResponse
 
     if (locusData.value.apa_sites && locusData.value.apa_sites.length > 0) {
-      selectedSiteId.value = locusData.value.apa_sites[0].site_id
+      selectedSiteId.value = locusData.value.apa_sites[0].unified_id
     }
     if (locusData.value.samples && locusData.value.samples.length > 0) {
       selectedSample.value = locusData.value.samples[0]?.name ?? locusData.value.samples[0]
@@ -1042,24 +796,6 @@ onMounted(async () => {
         // Page still works without structure (genome browser will be hidden)
       })
 
-    // Fetch RBP motif hits — non-fatal
-    rbpLoading.value = true
-    apiService.getRbpMotifs(transcriptId)
-      .then(data => {
-        // Sort to match utrLengthData order (proximal → distal)
-        const strand = locusData.value?.gene?.strand
-        rbpData.value = [...data].sort((a, b) =>
-          strand === '-'
-            ? b.site_position - a.site_position
-            : a.site_position - b.site_position
-        )
-      })
-      .catch(err => {
-        console.warn('RBP motif data not available:', err)
-      })
-      .finally(() => {
-        rbpLoading.value = false
-      })
   } catch (err) {
     console.error('Failed to load locus detail:', err)
     error.value = 'Failed to load locus details. Please try again.'
@@ -1108,7 +844,7 @@ code {
 }
 
 .gene-name-text {
-  font-size: 1.45rem;
+  font-size: 1.6rem;
   font-weight: 700;
   color: rgba(0,0,0,0.87);
   letter-spacing: -0.01em;
@@ -1130,7 +866,7 @@ code {
 
 
 .gene-meta-label {
-  font-size: 11px;
+  font-size: 12.5px;
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.5px;
@@ -1138,7 +874,7 @@ code {
 }
 
 .gene-meta-value {
-  font-size: 14px;
+  font-size: 15px;
   font-weight: 500;
   color: rgba(0,0,0,0.80);
   display: flex;
@@ -1147,7 +883,7 @@ code {
 }
 
 .gene-meta-accent {
-  font-size: 16px;
+  font-size: 18px;
   font-weight: 700;
   color: #0D7377;
 }
@@ -1177,7 +913,7 @@ code {
 .section-title {
   display: flex;
   align-items: center;
-  font-size: 1.05rem;
+  font-size: 1.15rem;
   font-weight: 700;
   color: rgba(0,0,0,0.80);
   margin-bottom: 20px;
@@ -1227,14 +963,14 @@ code {
 }
 
 .panel-title-text {
-  font-size: 0.92rem;
+  font-size: 1.02rem;
   font-weight: 600;
   color: rgba(0, 0, 0, 0.82);
   line-height: 1.3;
 }
 
 .panel-subtitle-text {
-  font-size: 0.75rem;
+  font-size: 0.86rem;
   color: rgba(0, 0, 0, 0.46);
   margin-top: 2px;
   max-width: 480px;
@@ -1257,7 +993,7 @@ code {
   gap: 5px;
   padding: 2px 8px 2px 6px;
   border-radius: 20px;
-  font-size: 11.5px;
+  font-size: 13px;
   font-weight: 600;
   font-family: 'Roboto Mono', 'Courier New', monospace;
   letter-spacing: 0.3px;
@@ -1282,7 +1018,7 @@ code {
 }
 
 .pas-type-label {
-  font-size: 11px;
+  font-size: 12.5px;
   font-family: 'Roboto', sans-serif;
   font-weight: 500;
   opacity: 0.85;
@@ -1294,7 +1030,7 @@ code {
   align-items: center;
   gap: 6px;
   flex-wrap: wrap;
-  font-size: 11px;
+  font-size: 12.5px;
   font-weight: 400;
 }
 
@@ -1304,7 +1040,7 @@ code {
   gap: 4px;
   padding: 2px 8px 2px 6px;
   border-radius: 20px;
-  font-size: 11px;
+  font-size: 12.5px;
   font-family: 'Roboto', sans-serif;
   font-weight: 500;
   white-space: nowrap;
@@ -1315,8 +1051,14 @@ code {
   color: #0D7377;
   padding: 2px 7px;
   border-radius: 4px;
-  font-size: 12px;
+  font-size: 13.5px;
   font-family: 'Roboto Mono', 'Courier New', monospace;
+}
+
+.elegant-table :deep(code.code-plain) {
+  background: none;
+  border-radius: 0;
+  padding: 0;
 }
 
 .light-card-bg {
@@ -1327,12 +1069,12 @@ code {
 .elegant-table {
   background: transparent !important;
   font-family: 'Roboto', sans-serif;
-  font-size: 13px;
+  font-size: 14.5px;
 }
 
 .elegant-table :deep(.v-data-table__th) {
   background: rgba(13, 115, 119, 0.04) !important;
-  font-size: 12px !important;
+  font-size: 13px !important;
   font-weight: 600 !important;
   letter-spacing: 0.4px;
   text-transform: uppercase;
@@ -1348,7 +1090,7 @@ code {
   color: rgba(0, 0, 0, 0.82);
   border-bottom: 1px solid rgba(0, 0, 0, 0.055) !important;
   font-family: 'Roboto', sans-serif;
-  font-size: 13px;
+  font-size: 14.5px;
 }
 
 /* When row is expanded: suppress the full-width td borders */
@@ -1363,7 +1105,7 @@ code {
 .elegant-table :deep(.v-data-table-footer) {
   background: transparent !important;
   border-top: 1px solid rgba(13, 115, 119, 0.10) !important;
-  font-size: 12px;
+  font-size: 13.5px;
   color: rgba(0, 0, 0, 0.60);
 }
 
@@ -1419,7 +1161,7 @@ code {
 }
 
 .heatmap-site-pos {
-  font-size: 0.72rem;
+  font-size: 0.82rem;
   color: rgba(0, 0, 0, 0.6);
   font-family: monospace;
   white-space: nowrap;
@@ -1456,82 +1198,10 @@ code {
   border: 1px solid rgba(0,0,0,0.1);
 }
 
-/* ── 3′ UTR bars ── */
-.utr-chart {
-  width: 100%;
-}
+/* ── Detail toggle button ────────────────────────────────────────── */
+.seq-toggle-btn { font-size: 13.5px; }
 
-.utr-row-label {
-  min-width: 160px;
-  display: inline-block;
-}
-
-.utr-bar-track {
-  height: 18px;
-  background: rgba(0,0,0,0.06);
-  border-radius: 4px;
-  overflow: hidden;
-}
-
-.utr-bar {
-  height: 100%;
-  border-radius: 4px;
-  transition: width 0.6s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-.utr-length-label {
-  min-width: 72px;
-  text-align: right;
-  font-variant-numeric: tabular-nums;
-}
-
-/* ── RBP Binding Motif Scanner ── */
-.rbp-panel { width: 100%; }
-
-.rbp-site-dot {
-  width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; display: inline-block;
-}
-
-.rbp-color-dot {
-  width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0;
-}
-
-.rbp-name {
-  cursor: default;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  max-width: 160px;
-}
-
-.rbp-count-chip {
-  font-variant-numeric: tabular-nums;
-  flex-shrink: 0;
-}
-
-/* Lollipop position track */
-.rbp-lollipop-track {
-  position: relative;
-  height: 10px;
-  background: rgba(0,0,0,0.05);
-  border-radius: 5px;
-  overflow: hidden;
-}
-
-.rbp-lollipop {
-  position: absolute;
-  top: 1px;
-  width: 3px;
-  height: 8px;
-  border-radius: 2px;
-  transform: translateX(-50%);
-  opacity: 0.85;
-}
-
-/* ── Sequence toggle button ──────────────────────────────────────── */
-.seq-toggle-btn { font-size: 12px; }
-
-/* ── Sequence context panel — inline expanded row ────────────────── */
+/* ── Expanded row container ──────────────────────────────────────── */
 .seq-expanded-row td {
   background: transparent !important;
   padding: 0 !important;
@@ -1539,58 +1209,125 @@ code {
   vertical-align: top;
 }
 
-/* --inline fully overrides every visual property of the base class */
-.seq-context-panel.seq-context-panel--inline {
-  margin: 0;
-  border: none !important;
-  border-radius: 0;
-  overflow: visible;
-  background: transparent !important;
+.detail-panel {
+  width: 100%;
+  box-sizing: border-box;
+  background: rgba(13, 115, 119, 0.03);
+  border-top: 1px solid rgba(13, 115, 119, 0.12);
 }
 
-.seq-panel-body {
+.detail-panel-inner {
+  box-sizing: border-box;
   width: 100%;
-  padding: 0;
-  margin: 0 16px;
-  border-top: 1px solid rgba(0, 0, 0, 0.055);
+  padding: 4px 20px 4px;
   display: flex;
   flex-direction: column;
 }
 
-/* chips row — own fixed height, vertically centered */
+.detail-section {
+  box-sizing: border-box;
+  width: 100%;
+  padding: 14px 0 14px;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.055);
+}
+
+.detail-section:last-child {
+  border-bottom: none;
+}
+
+.detail-section-label {
+  display: flex;
+  align-items: center;
+  font-size: 11.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  color: #0D7377;
+  margin-bottom: 8px;
+  gap: 2px;
+}
+
+.detail-section-sub {
+  font-weight: 400;
+  text-transform: none;
+  letter-spacing: 0;
+  color: rgba(0, 0, 0, 0.35);
+  font-style: italic;
+  margin-left: 4px;
+}
+
+/* ── Sample abundance ────────────────────────────────────────────── */
+.sample-abundance-list {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+  max-height: 200px;
+  overflow-y: auto;
+  padding-right: 12px;
+}
+
+.sample-abundance-row {
+  display: grid;
+  grid-template-columns: minmax(120px, 220px) 1fr;
+  align-items: center;
+  gap: 12px;
+  min-height: 24px;
+}
+
+.sample-abundance-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.sample-name-chip { flex-shrink: 0; }
+
+.sample-type-text {
+  font-size: 12.5px;
+  color: rgba(0, 0, 0, 0.38);
+  font-style: italic;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.sample-abundance-bar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.sample-bar-track { flex: 1; min-width: 0; }
+
+.sample-pct-text {
+  font-size: 13px;
+  font-weight: 600;
+  color: rgba(0, 0, 0, 0.55);
+  min-width: 44px;
+  margin-left: 4px;
+  text-align: right;
+  font-family: 'Roboto Mono', monospace;
+  flex-shrink: 0;
+}
+
+/* ── Sequence viewer ─────────────────────────────────────────────── */
 .seq-meta-row {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   gap: 6px;
-  min-height: 44px;
-  padding: 8px 0;
-  margin-bottom: 0;
-}
-
-/* sequence row — own fixed height, vertically centered, left-aligned */
-.seq-display {
-  font-family: 'Roboto Mono', 'Courier New', monospace;
-  font-size: 13px;
-  line-height: 1.4;
-  letter-spacing: 0.05em;
-  word-break: break-all;
-  border-top: 1px solid rgba(0, 0, 0, 0.10);
-  text-align: left;
-  display: flex;
-  align-items: center;
-  min-height: 44px;
-  padding: 8px 0;
-  margin: 0;
+  padding-bottom: 8px;
 }
 
 .seq-meta-chip {
   display: inline-flex;
   align-items: center;
   line-height: 1;
-  font-size: 11px;
+  font-size: 12.5px;
   font-weight: 600;
-  padding: 6px 10px;
+  padding: 5px 10px;
   border-radius: 12px;
   background: rgba(0, 0, 0, 0.06);
   color: rgba(0, 0, 0, 0.65);
@@ -1607,7 +1344,6 @@ code {
   background: rgba(0, 0, 0, 0.04);
 }
 
-/* ── PA Site label above sequence ────────────────────────────────── */
 .seq-meta-pasite {
   background: rgba(212, 93, 121, 0.08);
   border-color: rgba(212, 93, 121, 0.25);
@@ -1615,12 +1351,17 @@ code {
   gap: 4px;
 }
 
-.seq-pasite-code {
+.seq-display {
+  box-sizing: border-box;
+  width: 100%;
   font-family: 'Roboto Mono', 'Courier New', monospace;
-  font-size: 11px;
-  color: #D45D79;
-  margin-left: 3px;
-  background: none;
+  font-size: 14px;
+  line-height: 1.6;
+  letter-spacing: 0.05em;
+  word-break: break-all;
+  overflow-wrap: break-word;
+  border-top: 1px solid rgba(0, 0, 0, 0.08);
+  padding: 8px 0 2px;
 }
 
 .seq-nt {
@@ -1628,13 +1369,11 @@ code {
   color: rgba(0, 0, 0, 0.82);
 }
 
-/* PAS motif — colours applied via inline style from pasTypeMeta */
 .seq-nt--pas {
   border-radius: 2px;
   font-weight: 700;
 }
 
-/* Cleavage site marker */
 .seq-nt--cleavage {
   background: #D45D79;
   color: #fff;
@@ -1738,14 +1477,6 @@ code {
   border-color: rgba(255,255,255,0.10);
 }
 
-.v-theme--apaAtlasDarkTheme .utr-bar-track {
-  background: rgba(255,255,255,0.08);
-}
-
-.v-theme--apaAtlasDarkTheme .rbp-lollipop-track {
-  background: rgba(255,255,255,0.06);
-}
-
 .v-theme--apaAtlasDarkTheme .seq-meta-chip {
   background: rgba(255, 255, 255, 0.07);
   color: rgba(255, 255, 255, 0.60);
@@ -1763,11 +1494,32 @@ code {
   border-top-color: rgba(255, 255, 255, 0.07);
 }
 
-.v-theme--apaAtlasDarkTheme .seq-panel-body {
-  border-top-color: rgba(255, 255, 255, 0.06);
-}
-
 .v-theme--apaAtlasDarkTheme .seq-nt {
   color: rgba(255, 255, 255, 0.82);
+}
+
+.v-theme--apaAtlasDarkTheme .detail-panel {
+  background: rgba(42, 168, 174, 0.04);
+  border-top-color: rgba(42, 168, 174, 0.15);
+}
+
+.v-theme--apaAtlasDarkTheme .detail-section {
+  border-bottom-color: rgba(255, 255, 255, 0.06);
+}
+
+.v-theme--apaAtlasDarkTheme .detail-section-label {
+  color: #2AA8AE;
+}
+
+.v-theme--apaAtlasDarkTheme .detail-section-sub {
+  color: rgba(255, 255, 255, 0.28);
+}
+
+.v-theme--apaAtlasDarkTheme .sample-type-text {
+  color: rgba(255, 255, 255, 0.30);
+}
+
+.v-theme--apaAtlasDarkTheme .sample-pct-text {
+  color: rgba(255, 255, 255, 0.55);
 }
 </style>

@@ -350,8 +350,8 @@ const schemas = {
     { name: 'gene_name', type: 'string', desc: 'Official gene symbol' },
     { name: 'gene_id', type: 'string', desc: 'Ensembl Gene ID' },
     { name: 'transcript_id', type: 'string', desc: 'Ensembl Transcript ID' },
-    { name: 'site_id', type: 'string', desc: 'APA site identifier' },
-    { name: 'site_position', type: 'integer', desc: 'Genomic position of APA site' },
+    { name: 'unified_id', type: 'string', desc: 'APA site identifier' },
+    { name: 'mode_site_position', type: 'integer', desc: 'Genomic position of APA site' },
     { name: 'site_count', type: 'integer', desc: 'Number of reads at site' },
     { name: 'site_abundance', type: 'float', desc: 'Relative abundance (0-1)' },
     { name: 'species', type: 'string', desc: 'Species name' },
@@ -423,7 +423,7 @@ code {
   background: rgba(0, 0, 0, 0.05);
   padding: 2px 6px;
   border-radius: 4px;
-  font-size: 0.85em;
+  font-size: 0.95em;
 }
 
 pre {

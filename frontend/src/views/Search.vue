@@ -372,7 +372,7 @@ watch(() => route.query, (newQuery) => {
 
 .search-page :deep(.v-data-table__th) {
   background: rgba(13, 115, 119, 0.05) !important;
-  font-size: 12px !important;
+  font-size: 13px !important;
   font-weight: 600 !important;
   letter-spacing: 0.4px;
   text-transform: uppercase;
@@ -385,7 +385,7 @@ watch(() => route.query, (newQuery) => {
   padding: 11px 16px !important;
   background: transparent !important;
   border-bottom: 1px solid rgba(0, 0, 0, 0.05) !important;
-  font-size: 13px;
+  font-size: 14.5px;
 }
 
 .search-page :deep(.v-data-table__tr:hover .v-data-table__td) {
@@ -394,13 +394,13 @@ watch(() => route.query, (newQuery) => {
 
 .search-page :deep(.v-data-table-footer) {
   border-top: 1px solid rgba(13, 115, 119, 0.08) !important;
-  font-size: 12px;
+  font-size: 13.5px;
   color: rgba(0, 0, 0, 0.55);
 }
 
 /* ── Chips in table ─────────────────────────────────────────── */
 .search-page :deep(.v-chip) {
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 500;
 }
 
