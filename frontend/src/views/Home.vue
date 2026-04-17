@@ -7,7 +7,7 @@
           <v-col cols="12" md="10" lg="8">
             <div class="text-center mb-8">
               <h1 class="text-h2 text-white font-weight-bold mb-4">
-                <v-icon icon="mdi-dna" size="48" class="mr-3"></v-icon>
+                <ApaAtlasIcon :size="48" class="mr-3" style="color:white;" />
                 ApaAtlas
               </h1>
               <p class="text-h5 text-white-lighten-1 mb-8">
@@ -233,6 +233,7 @@
 <script setup>
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
+import ApaAtlasIcon from '@/components/ApaAtlasIcon.vue'
 
 const router = useRouter()
 
@@ -258,7 +259,7 @@ const performSearch = () => {
 
 // Database at a Glance — static values from live DB
 const dbStats = [
-  { label: 'Genes', displayValue: '23,933', icon: 'mdi-dna', color: '#0D7377', ringColor: 'rgba(13,115,119,0.12)' },
+  { label: 'Genes', displayValue: '23,933', icon: 'mdi-map-marker-path', color: '#0D7377', ringColor: 'rgba(13,115,119,0.12)' },
   { label: 'Transcripts', displayValue: '54,937', icon: 'mdi-format-list-bulleted', color: '#14919B', ringColor: 'rgba(20,145,155,0.12)' },
   { label: 'APA Sites', displayValue: '86,280', icon: 'mdi-map-marker-multiple', color: '#E94560', ringColor: 'rgba(233,69,96,0.12)' },
   { label: 'Samples', displayValue: '4', icon: 'mdi-flask', color: '#5C6BC0', ringColor: 'rgba(92,107,192,0.12)' },

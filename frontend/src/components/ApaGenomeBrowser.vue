@@ -53,7 +53,7 @@
               <!-- Default mode -->
               <template v-else>
                 <span class="fancy-btn-icon">
-                  <v-icon size="15">mdi-dna</v-icon>
+                  <v-icon size="15">mdi-map-marker-path</v-icon>
                 </span>
                 <span class="fancy-btn-label">Tissue</span>
                 <span
@@ -525,7 +525,7 @@ const hideTooltip = () => {
   if (tooltipEl) tooltipEl.style.display = 'none'
 }
 
-const showPaClusterTooltip = (event, site, sampleName, abundance) => {
+const showPaSiteTooltip = (event, site, sampleName, abundance) => {
   const el = ensureTooltipEl()
 
   const pct = (abundance * 100).toFixed(1)
@@ -541,7 +541,7 @@ const showPaClusterTooltip = (event, site, sampleName, abundance) => {
   el.innerHTML = `
     <div style="padding:13px 15px">
 
-      <div style="font-size:10.5px;letter-spacing:0.10em;color:#0D7377;font-weight:700;text-transform:uppercase;margin-bottom:3px">PA Cluster</div>
+      <div style="font-size:10.5px;letter-spacing:0.10em;color:#0D7377;font-weight:700;text-transform:uppercase;margin-bottom:3px">PA Site</div>
       <div style="font-family:'Inter',sans-serif;font-size:11.5px;color:#0f172a;word-break:break-all;line-height:1.5;font-weight:600;margin-bottom:10px">${site.unified_id}</div>
 
       <div style="height:1px;background:rgba(13,115,119,0.15);margin-bottom:9px"></div>
@@ -961,7 +961,7 @@ const renderSampleTracks = () => {
       const abundance = sampleData.site_abundance
       const xRep = xScale.value(site.mode_site_position)
 
-      // Parse cluster bounds from unified_id e.g. "GENE:CHR:start-end:strand"
+      // Parse site bounds from unified_id e.g. "GENE:CHR:start-end:strand"
       const rangeMatch = site.unified_id.match(/:(\d+)-(\d+):/)
       let xStart, xEnd
       if (rangeMatch) {
@@ -1035,10 +1035,10 @@ const renderSampleTracks = () => {
         .on('mouseenter', function(event) {
           d3.select(this).select('path:nth-child(2)').attr('stroke-width', 2.5).attr('stroke-opacity', 1)
           d3.select(this).select('path:first-child').attr('fill-opacity', 0.32)
-          showPaClusterTooltip(event, site, sample, abundance)
+          showPaSiteTooltip(event, site, sample, abundance)
         })
         .on('mousemove', function(event) {
-          showPaClusterTooltip(event, site, sample, abundance)
+          showPaSiteTooltip(event, site, sample, abundance)
         })
         .on('mouseleave', function() {
           d3.select(this).select('path:nth-child(2)').attr('stroke-width', 1.5).attr('stroke-opacity', 0.85)

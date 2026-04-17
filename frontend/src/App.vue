@@ -9,7 +9,7 @@
       <v-container class="d-flex align-center py-0" style="max-width:1280px;">
         <router-link to="/" class="text-decoration-none d-flex align-center">
           <div class="nav-logo-wrap mr-2">
-            <v-icon icon="mdi-dna" size="20" style="color:#0D7377;"></v-icon>
+            <ApaAtlasIcon :size="20" style="color:#0D7377;" />
           </div>
           <span class="nav-brand">ApaAtlas</span>
         </router-link>
@@ -40,7 +40,7 @@
         <div class="footer-grid">
           <div class="footer-col">
             <div class="footer-brand d-flex align-center mb-3">
-              <v-icon icon="mdi-dna" size="18" style="color:#0D7377;" class="mr-2"></v-icon>
+              <ApaAtlasIcon :size="18" style="color:#0D7377;" class="mr-2" />
               <span class="footer-brand-name">ApaAtlas</span>
             </div>
             <p class="footer-desc">A comprehensive database for isoform-level Alternative Polyadenylation (APA) loci.</p>
@@ -72,6 +72,7 @@
 <script setup>
 import { ref, computed } from 'vue'
 import { useTheme } from 'vuetify'
+import ApaAtlasIcon from '@/components/ApaAtlasIcon.vue'
 
 const theme = useTheme()
 const isDark = computed(() => theme.global.name.value === 'apaAtlasDarkTheme')

@@ -367,7 +367,7 @@ const showApaTooltip = (event, site, classification, meanAbundance, sampleDetail
 
   el.innerHTML = `
     <div style="padding:13px 15px">
-      <div style="font-size:10.5px;letter-spacing:0.10em;color:#0D7377;font-weight:700;text-transform:uppercase;margin-bottom:3px">PA Cluster</div>
+      <div style="font-size:10.5px;letter-spacing:0.10em;color:#0D7377;font-weight:700;text-transform:uppercase;margin-bottom:3px">PA Site</div>
       <div style="font-family:'Inter',sans-serif;font-size:11.5px;color:#0f172a;word-break:break-all;line-height:1.5;font-weight:600;margin-bottom:10px">${site.unified_id}</div>
       <div style="height:1px;background:rgba(13,115,119,0.15);margin-bottom:9px"></div>
       <div style="display:grid;grid-template-columns:auto 1fr;row-gap:6px;column-gap:16px;align-items:center">
@@ -545,7 +545,7 @@ const renderLabels = () => {
       .style('font-size', '12.5px')
       .style('font-weight', '500')
       .style('fill', 'rgba(0,0,0,0.54)')
-      .text('PA Clusters')
+      .text('PA Sites')
   })
 
   // Vertical separator
@@ -694,7 +694,7 @@ const renderApaTrack = (txIndex) => {
 
     const xRep = xScale.value(site.mode_site_position)
 
-    // Parse cluster bounds from unified_id e.g. "GENE:CHR:start-end:strand"
+    // Parse site bounds from unified_id e.g. "GENE:CHR:start-end:strand"
     const rangeMatch = site.unified_id.match(/:(\d+)-(\d+):/)
     let xStart, xEnd
     if (rangeMatch) {

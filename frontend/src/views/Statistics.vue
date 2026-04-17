@@ -76,7 +76,7 @@
           <v-col cols="12" md="6">
             <v-card variant="outlined" class="pa-4 chart-card">
               <h3 class="text-h6 mb-4 d-flex align-center">
-                <v-icon icon="mdi-dna" class="mr-2" color="primary"></v-icon>
+                <v-icon icon="mdi-map-marker-path" class="mr-2" color="primary"></v-icon>
                 APA Sites by Strand
               </h3>
               <div style="height: 300px;">

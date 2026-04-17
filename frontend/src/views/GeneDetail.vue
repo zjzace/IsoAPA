@@ -191,7 +191,7 @@
                 </span>
                 <div>
                   <div class="panel-title-text">Transcript Details</div>
-                  <div class="panel-subtitle-text">PA clusters and sample coverage per transcript isoform</div>
+                  <div class="panel-subtitle-text">PA sites and sample coverage per transcript isoform</div>
                 </div>
                 <v-chip size="x-small" color="primary" variant="tonal" class="ml-2">
                   {{ geneData.transcripts.length }}
@@ -205,8 +205,8 @@
                 <thead>
                   <tr>
                     <th class="tx-th" style="width: 30%;">Transcript</th>
-                    <th class="tx-th" style="width: 10%; text-align: center;">PA Clusters</th>
-                    <th class="tx-th">Cluster Ranges</th>
+                    <th class="tx-th" style="width: 10%; text-align: center;">PA Sites</th>
+                     <th class="tx-th">Site Ranges</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -223,12 +223,12 @@
                       >{{ tx.transcript_id }}</router-link>
                     </td>
 
-                     <!-- PA cluster count -->
+                     <!-- PA site count -->
                       <td class="tx-td" style="text-align: center;">
                         <span class="tx-count-badge">{{ tx.apa_site_count }}</span>
                       </td>
 
-                      <!-- Cluster ranges -->
+                      <!-- Site ranges -->
                       <td class="tx-td">
                         <div class="tx-pos-list">
                           <span
@@ -236,7 +236,7 @@
                             :key="site.unified_id"
                             class="tx-pos-tag"
                             :title="site.unified_id"
-                          >{{ clusterRange(site.unified_id) }}</span>
+                          >{{ siteRange(site.unified_id) }}</span>
                         </div>
                       </td>
                   </tr>
@@ -354,7 +354,7 @@ const totalAPASites = computed(() => {
   return geneData.value.transcripts.reduce((sum, t) => sum + t.apa_sites.length, 0)
 })
 
-const clusterRange = (unifiedId) => {
+const siteRange = (unifiedId) => {
   const m = unifiedId?.match(/:(\d+)-(\d+):/)
   if (!m) return unifiedId ?? ''
   return `${Number(m[1]).toLocaleString()}–${Number(m[2]).toLocaleString()}`

@@ -79,7 +79,7 @@
         <!-- ── Genome Browser ───────────────────────────── -->
         <div class="section-card mb-6" v-if="transcriptStructure">
           <div class="section-title">
-            <v-icon size="18" class="mr-2" style="color: #0D7377;">mdi-dna</v-icon>
+            <v-icon size="18" class="mr-2" style="color: #0D7377;">mdi-chart-gantt</v-icon>
             Genome Browser
             <v-chip size="small" variant="tonal" color="primary" class="ml-auto">
               Single Transcript View
@@ -244,7 +244,7 @@
                           <!-- Sequence viewer -->
                           <div v-else-if="seqData[item.unified_id]?.data" class="detail-section">
                             <div class="detail-section-label">
-                              <v-icon size="12" class="mr-1" style="color:#0D7377;">mdi-dna</v-icon>
+                              <v-icon size="12" class="mr-1" style="color:#0D7377;">mdi-map-marker-path</v-icon>
                               Genomic Sequence Context
                             </div>
                             <div class="seq-meta-row">
@@ -298,8 +298,13 @@
         <!-- ── Abundance Heatmap ─────────────────────────────────────────── -->
         <div class="section-card mb-6" v-if="heatmapData.sites.length > 0">
           <div class="section-title">
-            <v-icon size="18" class="mr-2" style="color: #0D7377;">mdi-grid</v-icon>
+            <v-icon size="18" class="mr-2" style="color: #0D7377;">mdi-view-grid-outline</v-icon>
             Per-site Abundance Heatmap
+            <div class="heatmap-stats-chip ml-3">
+              {{ heatmapData.sites.length }} site{{ heatmapData.sites.length !== 1 ? 's' : '' }}
+              <span class="heatmap-stats-sep">×</span>
+              {{ heatmapData.samples.length }} sample{{ heatmapData.samples.length !== 1 ? 's' : '' }}
+            </div>
             <v-tooltip location="bottom" max-width="320">
               <template #activator="{ props }">
                 <v-icon v-bind="props" icon="mdi-information-outline" size="small" class="ml-2" style="color: rgba(0,0,0,0.38);"></v-icon>
@@ -308,71 +313,79 @@
               Darker = higher usage. Hatched = site not detected in that sample.
             </v-tooltip>
           </div>
-          <div class="panel-box">
-            <div class="panel-body pa-6">
-            <div class="heatmap-wrap">
-              <!-- Column headers (samples) -->
-              <div class="heatmap-grid" :style="heatmapGridStyle">
-                <div class="heatmap-row-label"></div>
-                <div
-                  v-for="sample in heatmapData.samples"
-                  :key="sample"
-                  class="heatmap-col-header text-caption font-weight-medium"
-                >
-                  {{ sample }}
+          <div class="panel-box" style="overflow: visible;">
+            <div class="panel-body pa-5">
+              <div class="heatmap-wrap">
+                <div class="heatmap-grid" :style="heatmapGridStyle">
+
+                  <!-- ┌─ Corner ───────────────────────────────────────── -->
+                  <div class="heatmap-corner">
+                    <span class="heatmap-corner-text">PA&nbsp;Site</span>
+                    <v-icon size="10" style="color:rgba(0,0,0,0.28);margin:0 2px;">mdi-arrow-right</v-icon>
+                    <span class="heatmap-corner-text">Sample</span>
+                  </div>
+
+                  <!-- ┌─ Column headers (samples) ─────────────────────── -->
+                  <div
+                    v-for="(sample, si) in heatmapData.samples"
+                    :key="sample"
+                    class="heatmap-col-header"
+                    :class="{ 'hm-col-active': hoverSampleName === sample }"
+                  >
+                    <span
+                      class="heatmap-sample-dot"
+                      :style="{ background: heatmapSampleColor(si) }"
+                    ></span>
+                    <span class="heatmap-col-text">{{ sample }}</span>
+                  </div>
+
+                  <!-- ┌─ Data rows ────────────────────────────────────── -->
+                  <template v-for="(site, si) in heatmapData.sites" :key="site.id">
+
+                    <!-- Row label: numbered badge + full site ID, no position -->
+                    <div class="heatmap-row-label" :class="{ 'hm-row-active': hoverSiteId === site.id }">
+                      <span class="heatmap-site-badge" :style="heatmapBadgeStyle(si)">{{ si + 1 }}</span>
+                      <span class="heatmap-site-id">{{ site.id }}</span>
+                    </div>
+
+                    <!-- Cells: plain divs; cross-hair highlight on hover -->
+                    <div
+                      v-for="sample in heatmapData.samples"
+                      :key="sample"
+                      class="heatmap-cell"
+                      :class="heatmapCellClass(site.id, sample)"
+                      :style="heatmapCellStyle(site.id, sample)"
+                      @mouseenter="(e) => onCellEnter(e, site, sample)"
+                      @mouseleave="onCellLeave"
+                    >
+                      <div class="heatmap-cell-inner">
+                        <span
+                          class="heatmap-cell-pct"
+                          :style="{ color: heatmapTextColor(site.id, sample) }"
+                        >{{ heatmapLabel(site.id, sample) }}</span>
+                      </div>
+                    </div>
+
+                  </template>
                 </div>
 
-                <!-- Data rows -->
-                <template v-for="(site, si) in heatmapData.sites" :key="site.id">
-                  <!-- Row label -->
-                  <div class="heatmap-row-label text-caption text-grey-darken-1">
-                    <div class="heatmap-site-pos">chr{{ locusData.gene.chromosome }}:{{ site.position }}</div>
+                <!-- ── Legend ──────────────────────────────────────────── -->
+                <div class="heatmap-legend">
+                  <div class="heatmap-legend-left">
+                    <div class="heatmap-legend-scale">
+                      <span class="heatmap-legend-tick">0%</span>
+                      <div class="heatmap-legend-bar"></div>
+                      <span class="heatmap-legend-tick">100%</span>
+                    </div>
+                    <span class="heatmap-legend-caption">Relative Abundance</span>
                   </div>
-                  <!-- Cells -->
-                  <div
-                    v-for="sample in heatmapData.samples"
-                    :key="sample"
-                    class="heatmap-cell"
-                    :style="heatmapCellStyle(site.id, sample)"
-                  >
-                    <v-tooltip location="top">
-                      <template #activator="{ props }">
-                        <div v-bind="props" class="heatmap-cell-inner">
-                          <span
-                            class="text-caption font-weight-medium"
-                            :style="{ color: heatmapTextColor(site.id, sample) }"
-                          >
-                            {{ heatmapLabel(site.id, sample) }}
-                          </span>
-                        </div>
-                      </template>
-                      <div>
-                        <strong>{{ site.id }}</strong><br/>
-                        Sample: {{ sample }}<br/>
-                        <template v-if="heatmapCount(site.id, sample) > 0">
-                          Abundance: {{ heatmapLabel(site.id, sample) }}<br/>
-                          Read count: {{ heatmapCount(site.id, sample) }}
-                        </template>
-                        <template v-else>
-                          <em style="opacity:0.7;">Not detected in this sample</em>
-                        </template>
-                      </div>
-                    </v-tooltip>
+                  <div class="heatmap-legend-nd">
+                    <span class="heatmap-legend-nd-swatch"></span>
+                    <span class="heatmap-legend-nd-label">Not detected</span>
                   </div>
-                </template>
-              </div>
+                </div>
 
-              <!-- Legend -->
-              <div class="d-flex align-center mt-4 ga-2">
-                <span class="text-caption text-grey">0%</span>
-                <div class="heatmap-legend-bar"></div>
-                <span class="text-caption text-grey">100%</span>
-                <span class="text-caption text-grey ml-4" style="display:flex; align-items:center; gap:4px;">
-                  <span style="display:inline-block; width:12px; height:12px; border-radius:2px; background: repeating-linear-gradient(45deg, rgba(0,0,0,0.04) 0px, rgba(0,0,0,0.04) 3px, rgba(0,0,0,0.1) 3px, rgba(0,0,0,0.1) 6px); border:1px solid rgba(0,0,0,0.15);"></span>
-                  Not detected
-                </span>
               </div>
-            </div>
             </div>
           </div>
         </div>
@@ -465,7 +478,7 @@ const seqNtStyle = (nt, idx, data) => {
 }
 
 const tableHeaders = [
-  { title: 'Cluster ID', key: 'unified_id', sortable: true },
+  { title: 'Site ID', key: 'unified_id', sortable: true },
   { title: 'Rep. Position', key: 'mode_site_position', sortable: true },
   { title: 'PAS Motif', key: 'pas_motif', sortable: true },
   { title: 'Samples', key: 'sample_count', sortable: true },
@@ -690,8 +703,8 @@ const heatmapGridStyle = computed(() => {
   // Each sample column is clamped between 80 px and 140 px.
   return {
     display: 'grid',
-    gridTemplateColumns: `200px repeat(${n}, minmax(80px, 140px))`,
-    gap: '4px'
+    gridTemplateColumns: `max-content repeat(${n}, 72px)`,
+    gap: '3px'
   }
 })
 
@@ -728,6 +741,57 @@ const heatmapLabel = (siteId, sample) => {
 const heatmapCount = (siteId, sample) => {
   const entry = heatmapLookup.value[siteId]?.[sample]
   return entry ? entry.count : 0
+}
+
+// ── Heatmap visual helpers ──────────────────────────────────────────────────
+
+const HEATMAP_SAMPLE_COLORS = [
+  '#0D7377', '#6366F1', '#EC4899', '#F59E0B', '#10B981', '#3B82F6', '#EF4444', '#8B5CF6'
+]
+const heatmapSampleColor = (idx) => HEATMAP_SAMPLE_COLORS[idx % HEATMAP_SAMPLE_COLORS.length]
+
+const BADGE_GRADIENTS = [
+  ['#0D7377', '#14919B'],
+  ['#6366F1', '#818CF8'],
+  ['#EC4899', '#F472B6'],
+  ['#F59E0B', '#FCD34D'],
+  ['#10B981', '#34D399'],
+  ['#3B82F6', '#60A5FA'],
+  ['#EF4444', '#F87171'],
+  ['#8B5CF6', '#A78BFA'],
+]
+const heatmapBadgeStyle = (idx) => {
+  const [c1, c2] = BADGE_GRADIENTS[idx % BADGE_GRADIENTS.length]
+  return { background: `linear-gradient(135deg, ${c1}, ${c2})` }
+}
+
+// Show site ID truncated; full ID visible in tooltip
+const formatSiteId = (id) => {
+  if (!id) return '—'
+  return id.length > 24 ? id.substring(0, 22) + '…' : id
+}
+
+// ── Heatmap cross-hair hover state ─────────────────────────────────────────
+const hoverSiteId = ref(null)
+const hoverSampleName = ref(null)
+
+function onCellEnter(_event, site, sample) {
+  hoverSiteId.value = site.id
+  hoverSampleName.value = sample
+}
+
+function onCellLeave() {
+  hoverSiteId.value = null
+  hoverSampleName.value = null
+}
+
+const heatmapCellClass = (siteId, sample) => {
+  if (hoverSiteId.value === null) return ''
+  const inRow = hoverSiteId.value === siteId
+  const inCol = hoverSampleName.value === sample
+  if (inRow && inCol) return 'hm-cross-intersection'
+  if (inRow || inCol) return 'hm-cross-arm'
+  return 'hm-dimmed'
 }
 
 const PAS_TYPE_META = {
@@ -1059,6 +1123,7 @@ code {
   background: none;
   border-radius: 0;
   padding: 0;
+  font-family: 'Roboto', sans-serif;
 }
 
 .light-card-bg {
@@ -1125,77 +1190,274 @@ code {
   background: rgba(13, 115, 119, 0.04) !important;
 }
 
-/* ── Heatmap ── */
+/* ── Heatmap ──────────────────────────────────────────────────────── */
 .heatmap-wrap {
   overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
 }
 
 .heatmap-grid {
   min-width: 300px;
-  max-width: max-content;  /* don't stretch beyond content when few samples */
+  max-width: max-content;
+  border: 1px solid rgba(13, 115, 119, 0.14);
+  box-shadow: 0 2px 14px rgba(13, 115, 119, 0.07);
+  border-radius: 8px;
 }
 
-.heatmap-col-header {
-  text-align: center;
-  padding: 4px 4px 10px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  /* Rotate long names 45° for readability */
-  writing-mode: vertical-lr;
-  text-orientation: mixed;
-  transform: rotate(180deg);
-  max-height: 120px;
+/* ── Corner cell ── */
+.heatmap-corner {
   display: flex;
   align-items: center;
   justify-content: center;
+  gap: 3px;
+  padding: 10px 12px;
+  background: rgba(13, 115, 119, 0.07);
+  border-right: 1px solid rgba(13, 115, 119, 0.12);
+  border-bottom: 2px solid rgba(13, 115, 119, 0.12);
+  min-height: 46px;
 }
 
-.heatmap-row-label {
+.heatmap-corner-text {
+  font-size: 10px;
+  font-family: 'Roboto', sans-serif;
+  font-weight: 700;
+  color: rgba(0, 0, 0, 0.38);
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+}
+
+/* ── Column headers ── */
+.heatmap-col-header {
   display: flex;
   flex-direction: column;
-  justify-content: center;
-  padding-right: 12px;
-  padding-top: 2px;
-  padding-bottom: 2px;
+  align-items: center;
+  justify-content: flex-end;
+  padding: 12px 6px 12px;
+  gap: 7px;
+  background: rgba(13, 115, 119, 0.04);
+  border-bottom: 2px solid rgba(13, 115, 119, 0.12);
+  border-right: 1px solid rgba(13, 115, 119, 0.07);
+  min-height: 96px;
 }
 
-.heatmap-site-pos {
-  font-size: 0.82rem;
-  color: rgba(0, 0, 0, 0.6);
-  font-family: monospace;
+.heatmap-sample-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.85), 0 1px 4px rgba(0, 0, 0, 0.15);
+}
+
+.heatmap-col-text {
+  font-size: 11.5px;
+  font-family: 'Roboto', sans-serif;
+  font-weight: 600;
+  color: rgba(0, 0, 0, 0.62);
+  letter-spacing: 0.2px;
+  writing-mode: vertical-lr;
+  text-orientation: mixed;
+  transform: rotate(180deg);
   white-space: nowrap;
+  max-height: 80px;
 }
 
-.heatmap-cell {
-  border-radius: 4px;
-  min-height: 56px;
+/* ── Row labels ── */
+.heatmap-row-label {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 14px 0 10px;
+  background: rgba(13, 115, 119, 0.03);
+  border-right: 2px solid rgba(13, 115, 119, 0.12);
+  border-bottom: 1px solid rgba(13, 115, 119, 0.07);
+  min-height: 44px;
+}
+
+.heatmap-site-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  color: white;
+  font-size: 11px;
+  font-weight: 700;
+  font-family: 'Roboto', sans-serif;
+  flex-shrink: 0;
+  box-shadow: 0 1px 5px rgba(0, 0, 0, 0.22);
+  letter-spacing: -0.2px;
+}
+
+.heatmap-site-id {
+  font-size: 12px;
+  font-family: 'Roboto', sans-serif;
+  font-weight: 500;
+  color: rgba(0, 0, 0, 0.80);
+  white-space: nowrap;
   cursor: default;
-  transition: transform 0.1s, box-shadow 0.1s;
+  letter-spacing: -0.2px;
 }
 
-.heatmap-cell:hover {
-  transform: scale(1.06);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.18);
-  z-index: 1;
+/* ── Cells ── */
+.heatmap-cell {
+  min-height: 44px;
+  cursor: default;
+  transition: opacity 0.12s ease, box-shadow 0.12s ease;
   position: relative;
+  border-right: 1px solid rgba(255, 255, 255, 0.18);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.18);
+}
+
+/* ── Cross-hair highlight ── */
+.heatmap-cell.hm-dimmed {
+  opacity: 0.30;
+}
+
+.heatmap-cell.hm-cross-arm {
+  box-shadow: inset 0 0 0 1.5px rgba(13, 115, 119, 0.45);
+  filter: brightness(1.12);
+}
+
+.heatmap-cell.hm-cross-intersection {
+  box-shadow: inset 0 0 0 2px rgba(13, 115, 119, 0.90);
+  filter: brightness(1.22);
+  z-index: 1;
+}
+
+.hm-row-active {
+  background: rgba(13, 115, 119, 0.10) !important;
+}
+
+.hm-col-active {
+  background: rgba(13, 115, 119, 0.08) !important;
 }
 
 .heatmap-cell-inner {
   width: 100%;
   height: 100%;
-  min-height: 56px;
+  min-height: 44px;
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
+  gap: 3px;
+  padding: 6px 4px;
+}
+
+.heatmap-cell-pct {
+  font-size: 12.5px;
+  font-weight: 700;
+  font-family: 'Roboto', sans-serif;
+  line-height: 1;
+  letter-spacing: -0.3px;
+}
+
+/* ── Stats chip in section title ── */
+.heatmap-stats-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 10px;
+  border-radius: 20px;
+  background: rgba(13, 115, 119, 0.08);
+  border: 1px solid rgba(13, 115, 119, 0.16);
+  font-size: 12px;
+  font-weight: 500;
+  color: #0D7377;
+  font-family: 'Roboto', sans-serif;
+}
+
+.heatmap-stats-sep {
+  opacity: 0.48;
+  font-size: 11px;
+}
+
+/* ── Legend ── */
+.heatmap-legend {
+  margin-top: 18px;
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  flex-wrap: wrap;
+}
+
+.heatmap-legend-left {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.heatmap-legend-scale {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.heatmap-legend-tick {
+  font-size: 11.5px;
+  font-family: 'Roboto', sans-serif;
+  color: rgba(0, 0, 0, 0.48);
+  min-width: 26px;
+}
+
+.heatmap-legend-tick:last-child {
+  text-align: right;
 }
 
 .heatmap-legend-bar {
-  width: 160px;
-  height: 12px;
+  width: 180px;
+  height: 11px;
   border-radius: 6px;
-  background: linear-gradient(to right, rgba(13,115,119,0.08), rgba(13,115,119,1));
-  border: 1px solid rgba(0,0,0,0.1);
+  background: linear-gradient(
+    to right,
+    rgba(13, 115, 119, 0.06),
+    rgba(13, 115, 119, 0.28),
+    rgba(13, 115, 119, 0.62),
+    rgba(13, 115, 119, 1.0)
+  );
+  border: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+.heatmap-legend-caption {
+  font-size: 10.5px;
+  font-family: 'Roboto', sans-serif;
+  color: rgba(0, 0, 0, 0.38);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.7px;
+  padding-left: 2px;
+}
+
+.heatmap-legend-nd {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 5px 12px;
+  border-radius: 8px;
+  border: 1px solid rgba(0, 0, 0, 0.09);
+  background: rgba(0, 0, 0, 0.015);
+}
+
+.heatmap-legend-nd-swatch {
+  display: inline-block;
+  width: 16px;
+  height: 16px;
+  border-radius: 4px;
+  background: repeating-linear-gradient(
+    45deg,
+    rgba(0, 0, 0, 0.04) 0px,
+    rgba(0, 0, 0, 0.04) 3px,
+    rgba(0, 0, 0, 0.10) 3px,
+    rgba(0, 0, 0, 0.10) 6px
+  );
+  border: 1px solid rgba(0, 0, 0, 0.12);
+}
+
+.heatmap-legend-nd-label {
+  font-size: 12px;
+  font-family: 'Roboto', sans-serif;
+  color: rgba(0, 0, 0, 0.48);
 }
 
 /* ── Detail toggle button ────────────────────────────────────────── */
@@ -1468,13 +1730,85 @@ code {
   color: rgba(255, 255, 255, 0.75);
 }
 
-.v-theme--apaAtlasDarkTheme .heatmap-site-pos {
-  color: rgba(255, 255, 255, 0.50);
+.v-theme--apaAtlasDarkTheme .heatmap-grid {
+  border-color: rgba(42, 168, 174, 0.18);
+  box-shadow: 0 2px 14px rgba(0, 0, 0, 0.32);
+}
+
+.v-theme--apaAtlasDarkTheme .heatmap-corner {
+  background: rgba(42, 168, 174, 0.08);
+  border-color: rgba(42, 168, 174, 0.15);
+}
+
+.v-theme--apaAtlasDarkTheme .heatmap-corner-text {
+  color: rgba(255, 255, 255, 0.32);
+}
+
+.v-theme--apaAtlasDarkTheme .heatmap-col-header {
+  background: rgba(42, 168, 174, 0.05);
+  border-color: rgba(42, 168, 174, 0.15);
+}
+
+.v-theme--apaAtlasDarkTheme .heatmap-col-text {
+  color: rgba(255, 255, 255, 0.60);
+}
+
+.v-theme--apaAtlasDarkTheme .heatmap-sample-dot {
+  box-shadow: 0 0 0 2px rgba(20, 20, 30, 0.85), 0 1px 4px rgba(0, 0, 0, 0.3);
+}
+
+.v-theme--apaAtlasDarkTheme .heatmap-row-label {
+  background: rgba(42, 168, 174, 0.04);
+  border-color: rgba(42, 168, 174, 0.15);
+}
+
+.v-theme--apaAtlasDarkTheme .heatmap-site-id {
+  color: rgba(255, 255, 255, 0.82);
+}
+
+.v-theme--apaAtlasDarkTheme .heatmap-stats-chip {
+  background: rgba(42, 168, 174, 0.12);
+  border-color: rgba(42, 168, 174, 0.22);
+  color: #2AA8AE;
 }
 
 .v-theme--apaAtlasDarkTheme .heatmap-legend-bar {
-  background: linear-gradient(to right, rgba(42,168,174,0.08), rgba(42,168,174,1));
-  border-color: rgba(255,255,255,0.10);
+  background: linear-gradient(
+    to right,
+    rgba(42, 168, 174, 0.06),
+    rgba(42, 168, 174, 0.28),
+    rgba(42, 168, 174, 0.65),
+    rgba(42, 168, 174, 1.0)
+  );
+  border-color: rgba(255, 255, 255, 0.08);
+}
+
+.v-theme--apaAtlasDarkTheme .heatmap-legend-tick {
+  color: rgba(255, 255, 255, 0.42);
+}
+
+.v-theme--apaAtlasDarkTheme .heatmap-legend-caption {
+  color: rgba(255, 255, 255, 0.30);
+}
+
+.v-theme--apaAtlasDarkTheme .heatmap-legend-nd {
+  border-color: rgba(255, 255, 255, 0.10);
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.v-theme--apaAtlasDarkTheme .heatmap-legend-nd-swatch {
+  background: repeating-linear-gradient(
+    45deg,
+    rgba(255, 255, 255, 0.04) 0px,
+    rgba(255, 255, 255, 0.04) 3px,
+    rgba(255, 255, 255, 0.10) 3px,
+    rgba(255, 255, 255, 0.10) 6px
+  );
+  border-color: rgba(255, 255, 255, 0.14);
+}
+
+.v-theme--apaAtlasDarkTheme .heatmap-legend-nd-label {
+  color: rgba(255, 255, 255, 0.42);
 }
 
 .v-theme--apaAtlasDarkTheme .seq-meta-chip {
