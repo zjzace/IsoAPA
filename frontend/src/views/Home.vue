@@ -288,11 +288,11 @@ const performSearch = () => {
 
 // Database at a Glance — live counts from DB (updated 2026-04)
 const dbStats = [
-  { label: 'Genes',       displayValue: '34,494',  desc: 'protein-coding & lncRNA loci',     color: '#0D7377' },
-  { label: 'Transcripts', displayValue: '102,164', desc: 'annotated isoforms',                color: '#14919B' },
-  { label: 'APA Sites',   displayValue: '235,377', desc: 'polyadenylation sites mapped',      color: '#E94560' },
-  { label: 'Samples',     displayValue: '232',     desc: 'cell lines & tissue types',         color: '#5C6BC0' },
   { label: 'Species',     displayValue: '2',       desc: 'species, expanding continuously',   color: '#2E7D32' },
+  { label: 'Samples',     displayValue: '232',     desc: 'cell lines & tissue types',         color: '#5C6BC0' },
+  { label: 'Genes',       displayValue: '34,494',  desc: 'protein-coding & lncRNA loci',      color: '#0D7377' },
+  { label: 'Transcripts', displayValue: '102,164', desc: 'annotated isoforms',                color: '#14919B' },
+  { label: 'PA Sites',    displayValue: '235,377', desc: 'polyadenylation sites mapped',      color: '#E94560' },
 ]
 
 const taxonomyGroups = [
