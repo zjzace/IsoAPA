@@ -181,94 +181,73 @@
       <v-container>
 
         <!-- Header -->
-        <div class="text-center mb-14">
-          <div class="section-eyebrow-light mb-2">Live Database</div>
-          <h2 class="text-h4 font-weight-bold text-white mb-3">The Database at a Glance</h2>
-          <p class="glance-subtitle mb-0" style="max-width: 560px; margin: 0 auto;">
-            Curated from high-throughput sequencing experiments across human and mouse transcriptomes.
+        <div class="text-center mb-12">
+          <div class="section-eyebrow mb-2">The Database at a Glance</div>
+          <h2 class="text-h4 font-weight-bold mb-3">Curated APA Data at Scale</h2>
+          <p class="text-body-1 text-grey-darken-1 mb-0" style="max-width: 560px; margin: 0 auto;">
+            High-throughput sequencing data integrated across species, samples, and isoforms — with coverage expanding continuously.
           </p>
         </div>
 
-        <!-- Stats Strip: unified dark grid -->
-        <div class="stats-strip mb-12">
-          <div v-for="stat in dbStats" :key="stat.label" class="stat-item">
-            <div class="stat-item-number font-weight-black" :style="{ color: stat.lightColor }">
+        <!-- Stats: 5 glassmorphism cards -->
+        <div class="stats-glass-row mb-14">
+          <div v-for="stat in dbStats" :key="stat.label" class="stat-glass-card">
+            <div class="stat-glass-number font-weight-black" :style="{ color: stat.color }">
               {{ stat.displayValue }}
             </div>
-            <div class="stat-item-label text-white font-weight-medium">{{ stat.label }}</div>
-            <div class="stat-item-desc">{{ stat.desc }}</div>
+            <div class="stat-glass-label">{{ stat.label }}</div>
+            <div class="stat-glass-desc">{{ stat.desc }}</div>
           </div>
         </div>
 
-        <!-- Coverage Cards -->
-        <v-row justify="center" class="ga-5">
-          <!-- Human -->
-          <v-col cols="12" md="6">
-            <div class="coverage-card pa-6">
-              <div class="d-flex align-center ga-3 mb-6">
-                <div class="coverage-species-badge coverage-badge--human">
-                  <v-icon icon="mdi-human" size="22" color="white"></v-icon>
-                </div>
-                <div>
-                  <div class="text-h6 font-weight-bold text-white">Homo sapiens</div>
-                  <div class="coverage-genome-ref">GRCh38 · Bulk RNA-seq</div>
-                </div>
-              </div>
-              <div class="coverage-stats-row mb-6">
-                <div class="coverage-stat">
-                  <div class="coverage-stat-num" style="color:#4DD0E1">77,784</div>
-                  <div class="coverage-stat-lbl">APA Sites</div>
-                </div>
-                <div class="coverage-stat-divider"></div>
-                <div class="coverage-stat">
-                  <div class="coverage-stat-num" style="color:#80CBC4">3</div>
-                  <div class="coverage-stat-lbl">Cell Lines</div>
-                </div>
-                <div class="coverage-stat-divider"></div>
-                <div class="coverage-stat">
-                  <div class="coverage-stat-num" style="color:#B2EBF2">~3.2</div>
-                  <div class="coverage-stat-lbl">Sites / Gene</div>
-                </div>
-              </div>
-              <div class="d-flex flex-wrap ga-2">
-                <v-chip size="x-small" variant="outlined" class="coverage-chip">A549</v-chip>
-                <v-chip size="x-small" variant="outlined" class="coverage-chip">HepG2</v-chip>
-                <v-chip size="x-small" variant="outlined" class="coverage-chip">K562</v-chip>
-              </div>
-            </div>
-          </v-col>
+        <!-- Taxonomy Breakdown -->
+        <div class="d-flex align-center justify-space-between flex-wrap ga-2 mb-6">
+          <div>
+            <h3 class="text-h6 font-weight-bold mb-1">Species Coverage</h3>
+            <p class="text-caption text-grey-darken-1 mb-0">Grouped by taxonomic class · expanding continuously</p>
+          </div>
+          <v-chip color="primary" variant="tonal" size="small" prepend-icon="mdi-earth">
+            {{ dbStats.find(s => s.label === 'Species').displayValue }} Species Covered
+          </v-chip>
+        </div>
 
-          <!-- Mouse -->
-          <v-col cols="12" md="6">
-            <div class="coverage-card pa-6">
-              <div class="d-flex align-center ga-3 mb-6">
-                <div class="coverage-species-badge coverage-badge--mouse">
-                  <v-icon icon="mdi-rodent" size="22" color="white"></v-icon>
+        <v-row>
+          <v-col v-for="group in taxonomyGroups" :key="group.class" cols="12" sm="6" lg="4">
+            <div class="taxonomy-card pa-5">
+              <!-- Group header -->
+              <div class="d-flex align-center ga-3 mb-4">
+                <div class="taxonomy-icon-badge" :style="{ background: `linear-gradient(135deg, ${group.color}, ${group.colorAlt})` }">
+                  <v-icon :icon="group.icon" size="20" color="white"></v-icon>
                 </div>
-                <div>
-                  <div class="text-h6 font-weight-bold text-white">Mus musculus</div>
-                  <div class="coverage-genome-ref">GRCm39 · Bulk RNA-seq</div>
+                <div class="flex-grow-1" style="min-width:0">
+                  <div class="text-subtitle-1 font-weight-bold">{{ group.class }}</div>
+                  <div class="text-caption text-grey-darken-1">{{ group.phylum }}</div>
+                </div>
+                <v-chip size="x-small" color="primary" variant="tonal">
+                  {{ group.species.length }} sp.
+                </v-chip>
+              </div>
+              <!-- Species rows -->
+              <div v-for="sp in group.species" :key="sp.latin" class="taxonomy-species-row d-flex align-center ga-3">
+                <div class="flex-grow-1" style="min-width:0">
+                  <div class="text-body-2 font-weight-medium">{{ sp.name }}</div>
+                  <div class="text-caption text-grey-darken-1 font-italic">{{ sp.latin }}</div>
+                </div>
+                <div class="text-right flex-shrink-0">
+                  <div class="text-caption font-weight-bold" :style="{ color: group.color }">{{ sp.apaSites }}</div>
+                  <div class="taxonomy-site-sublabel">APA sites</div>
                 </div>
               </div>
-              <div class="coverage-stats-row mb-6">
-                <div class="coverage-stat">
-                  <div class="coverage-stat-num" style="color:#4DD0E1">8,496</div>
-                  <div class="coverage-stat-lbl">APA Sites</div>
-                </div>
-                <div class="coverage-stat-divider"></div>
-                <div class="coverage-stat">
-                  <div class="coverage-stat-num" style="color:#80CBC4">1</div>
-                  <div class="coverage-stat-lbl">Tissue</div>
-                </div>
-                <div class="coverage-stat-divider"></div>
-                <div class="coverage-stat">
-                  <div class="coverage-stat-num" style="color:#B2EBF2">~3.5</div>
-                  <div class="coverage-stat-lbl">Sites / Gene</div>
-                </div>
-              </div>
-              <div class="d-flex flex-wrap ga-2">
-                <v-chip size="x-small" variant="outlined" class="coverage-chip">Liver</v-chip>
-                <v-chip size="x-small" variant="outlined" class="coverage-chip">GRCm39</v-chip>
+              <!-- Footer: assembly + sample count chips -->
+              <div class="taxonomy-footer mt-3 pt-3 d-flex flex-wrap ga-1 align-center">
+                <v-chip v-for="sp in group.species" :key="sp.assembly"
+                        size="x-small" variant="outlined" class="taxonomy-chip">
+                  {{ sp.assembly }}
+                </v-chip>
+                <v-chip v-for="sp in group.species" :key="sp.name + '-samples'"
+                        size="x-small" variant="tonal" color="primary" class="ml-1">
+                  {{ sp.samples }} samples
+                </v-chip>
               </div>
             </div>
           </v-col>
@@ -307,12 +286,27 @@ const performSearch = () => {
   }
 }
 
-// Database at a Glance — static values from live DB
+// Database at a Glance — live counts from DB (updated 2026-04)
 const dbStats = [
-  { label: 'Genes',       displayValue: '23,933', desc: 'protein-coding & lncRNA loci',   icon: 'mdi-map-marker-path',       color: '#0D7377', lightColor: '#4DD0E1', ringColor: 'rgba(13,115,119,0.12)' },
-  { label: 'Transcripts', displayValue: '54,937', desc: 'annotated isoforms',              icon: 'mdi-format-list-bulleted',  color: '#14919B', lightColor: '#80CBC4', ringColor: 'rgba(20,145,155,0.12)' },
-  { label: 'APA Sites',   displayValue: '86,280', desc: 'polyadenylation sites mapped',    icon: 'mdi-map-marker-multiple',   color: '#E94560', lightColor: '#FF8A80', ringColor: 'rgba(233,69,96,0.12)' },
-  { label: 'Samples',     displayValue: '4',      desc: 'cell lines & tissue types',       icon: 'mdi-flask',                 color: '#5C6BC0', lightColor: '#9FA8DA', ringColor: 'rgba(92,107,192,0.12)' },
+  { label: 'Genes',       displayValue: '34,494',  desc: 'protein-coding & lncRNA loci',     color: '#0D7377' },
+  { label: 'Transcripts', displayValue: '102,164', desc: 'annotated isoforms',                color: '#14919B' },
+  { label: 'APA Sites',   displayValue: '235,377', desc: 'polyadenylation sites mapped',      color: '#E94560' },
+  { label: 'Samples',     displayValue: '232',     desc: 'cell lines & tissue types',         color: '#5C6BC0' },
+  { label: 'Species',     displayValue: '2',       desc: 'species, expanding continuously',   color: '#2E7D32' },
+]
+
+const taxonomyGroups = [
+  {
+    icon: 'mdi-paw',
+    class: 'Mammalia',
+    phylum: 'Chordata',
+    color: '#0D7377',
+    colorAlt: '#14919B',
+    species: [
+      { name: 'Human', latin: 'Homo sapiens',  assembly: 'GRCh38', apaSites: '199,014', samples: 228 },
+      { name: 'Mouse', latin: 'Mus musculus',  assembly: 'GRCm39', apaSites: '36,363',  samples: 4   },
+    ],
+  },
 ]
 
 </script>
@@ -512,105 +506,100 @@ const dbStats = [
 /* ── Section Divider ──────────────────────────────────────── */
 .section-divider {
   height: 1px;
+  margin: 0 8%;
   background: linear-gradient(
     90deg,
     transparent 0%,
-    rgba(13, 115, 119, 0.35) 20%,
-    rgba(20, 145, 155, 0.55) 50%,
-    rgba(13, 115, 119, 0.35) 80%,
+    rgba(13, 115, 119, 0.18) 20%,
+    rgba(20, 145, 155, 0.32) 50%,
+    rgba(13, 115, 119, 0.18) 80%,
     transparent 100%
   );
 }
 
-/* ── Glance Section (dark panel) ──────────────────────────── */
+/* ── Glance Section ───────────────────────────────────────── */
 .glance-section {
-  background: linear-gradient(160deg, #061518 0%, #091d28 55%, #0b1828 100%);
+  background: linear-gradient(
+    180deg,
+    rgb(var(--v-theme-background)) 0%,
+    rgba(13, 115, 119, 0.04) 50%,
+    rgb(var(--v-theme-background)) 100%
+  );
   position: relative;
 }
 
-.glance-subtitle {
-  color: rgba(255, 255, 255, 0.55);
-  font-size: 1rem;
-  line-height: 1.6;
-}
-
-/* Eyebrow variant for dark backgrounds */
-.section-eyebrow-light {
-  display: inline-block;
-  font-size: 0.80rem;
-  font-weight: 700;
-  letter-spacing: 0.13em;
-  text-transform: uppercase;
-  color: #4DD0E1;
-  padding: 4px 14px;
-  background: rgba(77, 208, 225, 0.12);
-  border-radius: 20px;
-}
-
-/* ── Stats Strip ──────────────────────────────────────────── */
-.stats-strip {
+/* ── Stats Glass Row ──────────────────────────────────────── */
+.stats-glass-row {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 1px;
-  background: rgba(255, 255, 255, 0.06);
-  border-radius: 20px;
-  overflow: hidden;
-  border: 1px solid rgba(255, 255, 255, 0.07);
+  grid-template-columns: repeat(5, 1fr);
+  gap: 16px;
+}
+
+@media (max-width: 959px) {
+  .stats-glass-row { grid-template-columns: repeat(3, 1fr); }
 }
 
 @media (max-width: 599px) {
-  .stats-strip { grid-template-columns: repeat(2, 1fr); }
+  .stats-glass-row { grid-template-columns: repeat(2, 1fr); }
 }
 
-.stat-item {
-  background: rgba(255, 255, 255, 0.03);
-  padding: 32px 20px;
+.stat-glass-card {
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.72);
+  backdrop-filter: blur(16px) saturate(150%);
+  -webkit-backdrop-filter: blur(16px) saturate(150%);
+  border: 1px solid rgba(255, 255, 255, 0.55);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.06), 0 1px 4px rgba(0, 0, 0, 0.04);
+  padding: 28px 16px;
   text-align: center;
-  transition: background 0.2s ease;
+  transition: transform 0.22s ease, box-shadow 0.22s ease;
 }
 
-.stat-item:hover {
-  background: rgba(77, 208, 225, 0.06);
+.stat-glass-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.09);
 }
 
-.stat-item-number {
-  font-size: clamp(1.6rem, 3vw, 2.5rem);
+.stat-glass-number {
+  font-size: clamp(1.4rem, 2.8vw, 2.2rem);
   line-height: 1;
   overflow-wrap: break-word;
   word-break: break-all;
   margin-bottom: 8px;
 }
 
-.stat-item-label {
-  font-size: 0.9rem;
-  margin-bottom: 5px;
+.stat-glass-label {
+  font-size: 0.88rem;
+  font-weight: 600;
+  margin-bottom: 4px;
   letter-spacing: 0.01em;
 }
 
-.stat-item-desc {
-  font-size: 0.73rem;
-  color: rgba(255, 255, 255, 0.38);
+.stat-glass-desc {
+  font-size: 0.72rem;
+  color: rgba(0, 0, 0, 0.45);
   line-height: 1.35;
 }
 
-/* ── Coverage Cards ───────────────────────────────────────── */
-.coverage-card {
+/* ── Taxonomy Cards ───────────────────────────────────────── */
+.taxonomy-card {
   border-radius: 18px;
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid rgba(255, 255, 255, 0.09);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  transition: background 0.22s ease, border-color 0.22s ease;
+  background: rgba(255, 255, 255, 0.72);
+  backdrop-filter: blur(16px) saturate(150%);
+  -webkit-backdrop-filter: blur(16px) saturate(150%);
+  border: 1px solid rgba(255, 255, 255, 0.55);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.06), 0 1px 4px rgba(0, 0, 0, 0.04);
+  transition: transform 0.22s ease, box-shadow 0.22s ease;
 }
 
-.coverage-card:hover {
-  background: rgba(77, 208, 225, 0.06);
-  border-color: rgba(77, 208, 225, 0.28);
+.taxonomy-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.09);
 }
 
-.coverage-species-badge {
-  width: 44px;
-  height: 44px;
+.taxonomy-icon-badge {
+  width: 40px;
+  height: 40px;
   border-radius: 12px;
   display: flex;
   align-items: center;
@@ -618,57 +607,58 @@ const dbStats = [
   flex-shrink: 0;
 }
 
-.coverage-badge--human { background: linear-gradient(135deg, #0D7377, #14919B); }
-.coverage-badge--mouse { background: linear-gradient(135deg, #004d40, #26A69A); }
-
-.coverage-genome-ref {
-  font-size: 0.78rem;
-  color: rgba(255, 255, 255, 0.45);
-  margin-top: 2px;
+.taxonomy-species-row {
+  padding: 10px 0;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
 }
 
-.coverage-stats-row {
-  display: flex;
-  align-items: center;
-  gap: 0;
-  padding: 16px 0;
-  border-top: 1px solid rgba(255, 255, 255, 0.07);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+.taxonomy-species-row:last-of-type {
+  border-bottom: none;
 }
 
-.coverage-stat {
-  flex: 1;
-  text-align: center;
-}
-
-.coverage-stat-num {
-  font-size: clamp(1.2rem, 2.2vw, 1.9rem);
-  font-weight: 900;
-  line-height: 1.05;
-  overflow-wrap: break-word;
-  word-break: break-all;
-}
-
-.coverage-stat-lbl {
-  font-size: 0.70rem;
-  color: rgba(255, 255, 255, 0.42);
-  margin-top: 4px;
+.taxonomy-site-sublabel {
+  font-size: 0.65rem;
+  color: rgba(0, 0, 0, 0.38);
   text-transform: uppercase;
-  letter-spacing: 0.06em;
+  letter-spacing: 0.05em;
 }
 
-.coverage-stat-divider {
-  width: 1px;
-  height: 40px;
-  background: rgba(255, 255, 255, 0.09);
-  flex-shrink: 0;
+.taxonomy-footer {
+  border-top: 1px solid rgba(0, 0, 0, 0.06);
 }
 
-.coverage-chip {
-  border-color: rgba(255, 255, 255, 0.18) !important;
-  color: rgba(255, 255, 255, 0.62) !important;
+.taxonomy-chip {
+  border-color: rgba(0, 0, 0, 0.18) !important;
+  color: rgba(0, 0, 0, 0.54) !important;
   font-size: 0.70rem !important;
 }
+
+/* Dark mode overrides */
+.v-theme--apaAtlasDarkTheme .stat-glass-card,
+.v-theme--apaAtlasDarkTheme .taxonomy-card {
+  background: rgba(24, 28, 37, 0.82);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.28);
 }
 
+.v-theme--apaAtlasDarkTheme .stat-glass-desc {
+  color: rgba(255, 255, 255, 0.45);
+}
+
+.v-theme--apaAtlasDarkTheme .taxonomy-species-row {
+  border-bottom-color: rgba(255, 255, 255, 0.07);
+}
+
+.v-theme--apaAtlasDarkTheme .taxonomy-footer {
+  border-top-color: rgba(255, 255, 255, 0.07);
+}
+
+.v-theme--apaAtlasDarkTheme .taxonomy-site-sublabel {
+  color: rgba(255, 255, 255, 0.35);
+}
+
+.v-theme--apaAtlasDarkTheme .taxonomy-chip {
+  border-color: rgba(255, 255, 255, 0.18) !important;
+  color: rgba(255, 255, 255, 0.54) !important;
+}
 </style>
