@@ -51,112 +51,127 @@
       </v-container>
     </section>
     
-    <section class="info-section py-12 bg-grey-lighten-5">
+    <section class="info-section py-16">
       <v-container>
-        <h2 class="text-h4 text-center mb-8">What is Isoform-Level APA?</h2>
+        <div class="text-center mb-12">
+          <div class="section-eyebrow mb-2">What is APA?</div>
+          <h2 class="text-h4 font-weight-bold mb-3">Isoform-Level Alternative Polyadenylation</h2>
+          <p class="text-body-1 text-grey-darken-1" style="max-width: 800px; margin: 0 auto;">
+            <strong>Alternative Polyadenylation (APA)</strong> is a post-transcriptional regulatory mechanism 
+            that generates multiple mRNA isoforms from a single gene by selecting different polyadenylation 
+            sites in the 3' untranslated region (UTR).
+          </p>
+        </div>
         
-        <v-row justify="center">
-          <v-col cols="12" lg="10">
-            <v-card class="pa-6" variant="outlined">
-              <p class="text-body-1 mb-6">
-                <strong>Alternative Polyadenylation (APA)</strong> is a post-transcriptional regulatory mechanism 
-                that generates multiple mRNA isoforms from a single gene by selecting different polyadenylation 
-                sites in the 3' untranslated region (UTR). This results in transcripts with different 3' end points.
-              </p>
-              
-              <v-row class="my-6">
-                <!-- Left Panel: Transcript Structure -->
-                <v-col cols="12" md="7">
-                  <div class="apa-diagram pa-5 rounded-lg">
-                    <!-- Transcript label -->
-                    <div class="text-caption text-grey mb-3">Transcript Structure</div>
-                    
-                    <!-- Short Isoform -->
-                    <div class="isoform mb-4">
-                      <div class="isoform-label text-caption mb-2">
-                        <v-chip size="x-small" color="primary" class="mr-2">Proximal PAS</v-chip>
-                        <span>Short isoform (3' UTR shortening)</span>
-                      </div>
-                      <div class="transcript-row align-center">
-                        <div class="exon-box">Exon 1</div>
-                        <div class="intron-line"></div>
-                        <div class="exon-box">Exon 2</div>
-                        <div class="intron-line"></div>
-                        <div class="exon-box">Exon 3</div>
-                        <div class="utr-box short"></div>
-                        <div class="pas-marker">▼</div>
-                      </div>
-                    </div>
-                    
-                    <!-- Long Isoform -->
-                    <div class="isoform">
-                      <div class="isoform-label text-caption mb-2">
-                        <v-chip size="x-small" color="error" class="mr-2">Distal PAS</v-chip>
-                        <span>Long isoform (3' UTR lengthening)</span>
-                      </div>
-                      <div class="transcript-row align-center">
-                        <div class="exon-box">Exon 1</div>
-                        <div class="intron-line"></div>
-                        <div class="exon-box">Exon 2</div>
-                        <div class="intron-line"></div>
-                        <div class="exon-box">Exon 3</div>
-                        <div class="utr-box long"></div>
-                        <div class="pas-marker">▼</div>
-                      </div>
-                    </div>
-                    
-                    <!-- Legend -->
-                    <div class="diagram-legend mt-4">
-                      <div class="d-flex align-center ga-4">
-                        <div class="d-flex align-center">
-                          <div class="legend-exon"></div>
-                          <span class="text-caption ml-2">Coding Exon</span>
-                        </div>
-                        <div class="d-flex align-center">
-                          <div class="legend-utr"></div>
-                          <span class="text-caption ml-2">3' UTR</span>
-                        </div>
-                      </div>
-                    </div>
+        <v-row justify="center" align="stretch" class="mb-6">
+          <!-- Left Panel: Transcript Structure -->
+          <v-col cols="12" lg="7" class="d-flex flex-column">
+            <div class="apa-diagram-card flex-grow-1 pa-6">
+              <div class="d-flex justify-space-between align-center mb-6">
+                <h3 class="text-h6 font-weight-bold">Transcript Structure</h3>
+                <div class="diagram-legend">
+                  <div class="legend-item">
+                    <div class="legend-color-box bg-teal-gradient"></div>
+                    <span>CDS Exon</span>
                   </div>
-                </v-col>
-                
-                <!-- Right Panel: Why APA Matters -->
-                <v-col cols="12" md="5">
-                  <div class="why-apa-section pa-5 rounded-lg h-100">
-                    <h4 class="text-h6 mb-4">Why APA Matters</h4>
-                    
-                    <div class="why-item mb-4">
-                      <v-icon icon="mdi-check-circle" color="primary" size="small" class="mr-2"></v-icon>
-                      <span class="text-body-2">Regulates mRNA stability and translation efficiency</span>
-                    </div>
-                    
-                    <div class="why-item mb-4">
-                      <v-icon icon="mdi-check-circle" color="primary" size="small" class="mr-2"></v-icon>
-                      <span class="text-body-2">Impacts miRNA binding sites in 3' UTR</span>
-                    </div>
-                    
-                    <div class="why-item mb-4">
-                      <v-icon icon="mdi-check-circle" color="primary" size="small" class="mr-2"></v-icon>
-                      <span class="text-body-2">Influences protein localization signals</span>
-                    </div>
-                    
-                    <div class="why-item mb-0">
-                      <v-icon icon="mdi-check-circle" color="primary" size="small" class="mr-2"></v-icon>
-                      <span class="text-body-2">Dysregulated in cancer and other diseases</span>
-                    </div>
+                  <div class="legend-item">
+                    <div class="legend-color-box bg-utr-gradient"></div>
+                    <span>3' UTR</span>
                   </div>
-                </v-col>
-              </v-row>
-              
-              <!-- Key Insight - Separate Frame -->
-              <div class="key-insight-section mt-6">
-                <v-alert type="info" variant="tonal" class="mb-0 pa-4">
-                  <strong>Key Insight:</strong> Both isoforms share the same coding sequence (CDS) 
-                  but differ in their 3' UTR length, affecting post-transcriptional regulation.
-                </v-alert>
+                </div>
               </div>
-            </v-card>
+              
+              <div class="diagram-track-container">
+                <!-- Short Isoform -->
+                <div class="diagram-track mb-8">
+                  <div class="d-flex align-center justify-space-between mb-3">
+                    <span class="text-subtitle-2 font-weight-bold">Proximal PAS</span>
+                    <v-chip size="x-small" color="primary" variant="tonal">Short Isoform</v-chip>
+                  </div>
+                  <div class="diagram-visual">
+                    <div class="diagram-spine"></div>
+                    <div class="diagram-exon"></div>
+                    <div class="diagram-intron"></div>
+                    <div class="diagram-exon"></div>
+                    <div class="diagram-intron"></div>
+                    <div class="diagram-exon"></div>
+                    <div class="diagram-utr short"></div>
+                    <div class="diagram-pas-marker">▼</div>
+                  </div>
+                </div>
+                
+                <!-- Long Isoform -->
+                <div class="diagram-track">
+                  <div class="d-flex align-center justify-space-between mb-3">
+                    <span class="text-subtitle-2 font-weight-bold">Distal PAS</span>
+                    <v-chip size="x-small" color="error" variant="tonal">Long Isoform</v-chip>
+                  </div>
+                  <div class="diagram-visual">
+                    <div class="diagram-spine"></div>
+                    <div class="diagram-exon"></div>
+                    <div class="diagram-intron"></div>
+                    <div class="diagram-exon"></div>
+                    <div class="diagram-intron"></div>
+                    <div class="diagram-exon"></div>
+                    <div class="diagram-utr long"></div>
+                    <div class="diagram-pas-marker">▼</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </v-col>
+          
+          <!-- Right Panel: Why APA Matters (2x2 Grid) -->
+          <v-col cols="12" lg="5" class="d-flex flex-column">
+            <h3 class="text-h6 font-weight-bold mb-4 px-2">Why APA Matters</h3>
+            <v-row dense class="flex-grow-1">
+              <v-col cols="12" sm="6" lg="6">
+                <div class="why-mini-card h-100 pa-4">
+                  <v-icon icon="mdi-chart-line" color="primary" size="28" class="mb-3"></v-icon>
+                  <div class="text-subtitle-2 font-weight-bold mb-1">Translation</div>
+                  <div class="text-caption text-grey-darken-1">Regulates mRNA stability and translation efficiency</div>
+                </div>
+              </v-col>
+              <v-col cols="12" sm="6" lg="6">
+                <div class="why-mini-card h-100 pa-4">
+                  <v-icon icon="mdi-magnet" color="primary" size="28" class="mb-3"></v-icon>
+                  <div class="text-subtitle-2 font-weight-bold mb-1">miRNA Binding</div>
+                  <div class="text-caption text-grey-darken-1">Impacts miRNA binding sites in the 3' UTR</div>
+                </div>
+              </v-col>
+              <v-col cols="12" sm="6" lg="6">
+                <div class="why-mini-card h-100 pa-4">
+                  <v-icon icon="mdi-map-marker-radius" color="primary" size="28" class="mb-3"></v-icon>
+                  <div class="text-subtitle-2 font-weight-bold mb-1">Localization</div>
+                  <div class="text-caption text-grey-darken-1">Influences protein localization signals</div>
+                </div>
+              </v-col>
+              <v-col cols="12" sm="6" lg="6">
+                <div class="why-mini-card h-100 pa-4">
+                  <v-icon icon="mdi-hospital-building" color="error" size="28" class="mb-3"></v-icon>
+                  <div class="text-subtitle-2 font-weight-bold mb-1">Disease Impact</div>
+                  <div class="text-caption text-grey-darken-1">Dysregulated in cancer and other diseases</div>
+                </div>
+              </v-col>
+            </v-row>
+          </v-col>
+        </v-row>
+
+        <!-- Key Insight Callout -->
+        <v-row justify="center">
+          <v-col cols="12">
+            <div class="insight-callout pa-5 d-flex align-start mt-2">
+              <div class="insight-icon mr-4">
+                <v-icon icon="mdi-lightbulb-on" color="primary" size="32"></v-icon>
+              </div>
+              <div>
+                <h4 class="text-subtitle-1 font-weight-bold mb-1" style="color: #0D7377">Key Insight</h4>
+                <p class="text-body-2 text-grey-darken-1 mb-0">
+                  Both isoforms share the same coding sequence (CDS) but differ in their 3' UTR length, 
+                  profoundly affecting post-transcriptional regulation.
+                </p>
+              </div>
+            </div>
           </v-col>
         </v-row>
       </v-container>
@@ -313,92 +328,130 @@ const dbStats = [
   box-shadow: 0 8px 40px rgba(0, 0, 0, 0.18), 0 2px 8px rgba(0, 0, 0, 0.10) !important;
 }
 
-/* ── APA Diagram ──────────────────────────────────────────── */
-.apa-diagram {
-  background: rgba(248, 250, 252, 0.80);
-  backdrop-filter: blur(8px);
-  border: 1px solid rgba(0, 0, 0, 0.07);
-  border-radius: 12px;
-}
-
-.isoform { position: relative; }
-
-.isoform-label {
-  display: flex;
-  align-items: center;
-  min-height: 24px;
-}
-
-.transcript-row {
-  display: flex;
-  align-items: center;
+/* ── Info Section Redesign ────────────────────────────────── */
+.info-section {
+  background: rgb(var(--v-theme-background));
   position: relative;
 }
 
-.exon-box {
-  background: linear-gradient(180deg, #0D7377 0%, #14919B 100%);
-  color: white;
-  padding: 8px 24px;
-  font-size: 13.5px;
-  font-weight: 600;
-  min-width: 70px;
-  text-align: center;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
+/* Glassmorphism Cards */
+.apa-diagram-card, .why-mini-card {
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.72);
+  backdrop-filter: blur(16px) saturate(150%);
+  -webkit-backdrop-filter: blur(16px) saturate(150%);
+  border: 1px solid rgba(255, 255, 255, 0.55);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.06), 0 1px 4px rgba(0, 0, 0, 0.04);
+  transition: transform 0.22s ease, box-shadow 0.22s ease;
+}
+
+.why-mini-card:hover, .apa-diagram-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.09);
+}
+
+.v-theme--apaAtlasDarkTheme .apa-diagram-card,
+.v-theme--apaAtlasDarkTheme .why-mini-card {
+  background: rgba(24, 28, 37, 0.82);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.28);
+}
+
+/* Diagram Specifics */
+.diagram-legend {
+  display: flex;
+  gap: 16px;
+  font-size: 0.75rem;
+  color: #666;
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.legend-color-box {
+  width: 12px;
+  height: 12px;
+  border-radius: 3px;
+}
+
+.bg-teal-gradient { background: linear-gradient(135deg, #0D7377, #14919B); }
+.bg-utr-gradient { background: linear-gradient(90deg, #E94560, #FF8A65); }
+
+.diagram-track-container {
+  position: relative;
+  padding-left: 12px;
+  border-left: 2px dashed rgba(13, 115, 119, 0.2);
+}
+
+.diagram-visual {
+  display: flex;
+  align-items: center;
+  position: relative;
+  height: 24px;
+}
+
+.diagram-spine {
+  width: 12px;
+  height: 2px;
+  background: rgba(13, 115, 119, 0.5);
+  margin-left: -12px;
+}
+
+.diagram-exon {
+  height: 16px;
+  width: 48px;
+  background: linear-gradient(135deg, #0D7377, #14919B);
+  border-radius: 4px;
+  box-shadow: 0 2px 4px rgba(13, 115, 119, 0.2);
   z-index: 2;
 }
 
-.intron-line {
-  flex: 1;
+.diagram-intron {
   height: 2px;
-  background: #0D7377;
-  min-width: 35px;
-  max-width: 60px;
+  width: 32px;
+  background: #14919B;
 }
 
-.utr-box {
+.diagram-utr {
   height: 10px;
-  background: #D64545;
-  display: flex;
-  align-items: center;
+  background: linear-gradient(90deg, #E94560, #FF8A65);
+  border-radius: 0 4px 4px 0;
+  box-shadow: 0 2px 4px rgba(233, 69, 96, 0.2);
+  z-index: 1;
 }
 
-.utr-box.short { width: 30px; }
-.utr-box.long  { width: 100px; }
+.diagram-utr.short { width: 40px; }
+.diagram-utr.long { width: 140px; }
 
-.pas-marker {
-  color: #D64545;
-  font-size: 13.5px;
-  font-weight: bold;
+.diagram-pas-marker {
+  color: #E94560;
+  font-size: 14px;
   margin-left: 2px;
+  margin-top: -12px;
+  text-shadow: 0 2px 4px rgba(233, 69, 96, 0.3);
 }
 
-.diagram-legend {
-  border-top: 1px solid rgba(0, 0, 0, 0.08);
-  padding-top: 12px;
-}
-
-.legend-exon {
-  width: 20px;
-  height: 10px;
-  background: linear-gradient(180deg, #0D7377 0%, #14919B 100%);
-}
-
-.legend-utr {
-  width: 20px;
-  height: 10px;
-  background: #D64545;
-}
-
-.why-apa-section {
-  background: rgba(248, 250, 252, 0.80);
+/* Insight Callout */
+.insight-callout {
+  background: linear-gradient(90deg, rgba(13, 115, 119, 0.08) 0%, rgba(20, 145, 155, 0.03) 100%);
+  border-left: 4px solid #0D7377;
+  border-radius: 0 16px 16px 0;
   backdrop-filter: blur(8px);
-  border: 1px solid rgba(0, 0, 0, 0.07);
-  border-radius: 12px;
 }
 
-.why-item {
-  display: flex;
-  align-items: flex-start;
+.v-theme--apaAtlasDarkTheme .insight-callout {
+  background: linear-gradient(90deg, rgba(13, 115, 119, 0.15) 0%, rgba(20, 145, 155, 0.05) 100%);
+}
+
+.v-theme--apaAtlasDarkTheme .insight-callout h4 {
+  color: #4DD0E1 !important;
+}
+
+.v-theme--apaAtlasDarkTheme .diagram-legend {
+  color: #aaa;
 }
 
 /* ── Sections layout ──────────────────────────────────────── */
