@@ -54,21 +54,21 @@
     <section class="info-section py-16">
       <v-container>
         <div class="text-center mb-12">
-          <div class="section-eyebrow mb-2">What is APA?</div>
-          <h2 class="text-h4 font-weight-bold mb-3">Isoform-Level Alternative Polyadenylation</h2>
-          <p class="text-body-1 text-grey-darken-1" style="max-width: 800px; margin: 0 auto;">
-            <strong>Alternative Polyadenylation (APA)</strong> is a post-transcriptional regulatory mechanism 
-            that generates multiple mRNA isoforms from a single gene by selecting different polyadenylation 
-            sites in the 3' untranslated region (UTR).
+          <div class="section-eyebrow mb-2">What is Isoform-Level APA?</div>
+          <h2 class="text-h4 font-weight-bold mb-3">One Gene · Multiple 3′ Ends</h2>
+          <p class="text-body-1 text-grey-darken-1" style="max-width: 720px; margin: 0 auto;">
+            A single gene produces multiple mRNA isoforms by selecting distinct 
+            <strong>polyadenylation sites (PAS)</strong> in the 3′ UTR. These isoforms share the same 
+            coding sequence but differ in 3′ UTR length — and therefore in their post-transcriptional regulatory landscape.
           </p>
         </div>
         
         <v-row justify="center" align="stretch" class="mb-6">
           <!-- Left Panel: Transcript Structure -->
-          <v-col cols="12" lg="7" class="d-flex flex-column">
+          <v-col cols="12" lg="6" class="d-flex flex-column col-diagram">
             <div class="apa-diagram-card flex-grow-1 pa-6">
               <div class="d-flex justify-space-between align-center mb-6">
-                <h3 class="text-h6 font-weight-bold">Transcript Structure</h3>
+                <h3 class="text-h6 font-weight-bold">Same Gene · Two Distinct 3′ Ends</h3>
                 <div class="diagram-legend">
                   <div class="legend-item">
                     <div class="legend-color-box bg-teal-gradient"></div>
@@ -80,165 +80,200 @@
                   </div>
                 </div>
               </div>
-              
+
               <div class="diagram-track-container">
                 <!-- Short Isoform -->
                 <div class="diagram-track mb-8">
-                  <div class="d-flex align-center justify-space-between mb-3">
+                  <div class="mb-3">
                     <span class="text-subtitle-2 font-weight-bold">Proximal PAS</span>
-                    <v-chip size="x-small" color="primary" variant="tonal">Short Isoform</v-chip>
                   </div>
-                  <div class="diagram-visual">
-                    <div class="diagram-spine"></div>
-                    <div class="diagram-exon"></div>
-                    <div class="diagram-intron"></div>
-                    <div class="diagram-exon"></div>
-                    <div class="diagram-intron"></div>
-                    <div class="diagram-exon"></div>
-                    <div class="diagram-utr short"></div>
-                    <div class="diagram-pas-marker">▼</div>
+                  <div class="d-flex align-center gap-3">
+                    <div class="diagram-visual flex-grow-1">
+                      <div class="diagram-spine"></div>
+                      <div class="diagram-exon"></div>
+                      <div class="diagram-intron"></div>
+                      <div class="diagram-exon"></div>
+                      <div class="diagram-intron"></div>
+                      <div class="diagram-exon"></div>
+                      <div class="diagram-utr short"></div>
+                      <div class="diagram-pas-marker">▼</div>
+                    </div>
+                    <v-chip size="x-small" color="primary" variant="tonal" class="flex-shrink-0">Short Isoform</v-chip>
                   </div>
                 </div>
-                
+
                 <!-- Long Isoform -->
                 <div class="diagram-track">
-                  <div class="d-flex align-center justify-space-between mb-3">
+                  <div class="mb-3">
                     <span class="text-subtitle-2 font-weight-bold">Distal PAS</span>
-                    <v-chip size="x-small" color="error" variant="tonal">Long Isoform</v-chip>
                   </div>
-                  <div class="diagram-visual">
-                    <div class="diagram-spine"></div>
-                    <div class="diagram-exon"></div>
-                    <div class="diagram-intron"></div>
-                    <div class="diagram-exon"></div>
-                    <div class="diagram-intron"></div>
-                    <div class="diagram-exon"></div>
-                    <div class="diagram-utr long"></div>
-                    <div class="diagram-pas-marker">▼</div>
+                  <div class="d-flex align-center gap-3">
+                    <div class="diagram-visual flex-grow-1">
+                      <div class="diagram-spine"></div>
+                      <div class="diagram-exon"></div>
+                      <div class="diagram-intron"></div>
+                      <div class="diagram-exon"></div>
+                      <div class="diagram-intron"></div>
+                      <div class="diagram-exon"></div>
+                      <div class="diagram-utr long"></div>
+                      <div class="diagram-pas-marker">▼</div>
+                    </div>
+                    <v-chip size="x-small" color="error" variant="tonal" class="flex-shrink-0">Long Isoform</v-chip>
                   </div>
                 </div>
+              </div>
+
+              <div class="diagram-note mt-6 pt-5">
+                <p class="text-caption text-grey-darken-1 mb-0">
+                  Both isoforms encode the same protein. The longer 3′ UTR of the distal isoform,
+                  however, harbors additional miRNA target sites and RNA-binding protein (RBP) motifs
+                  that govern mRNA stability, localization, and translational output — regulatory
+                  information invisible to gene-level expression analysis.
+                </p>
               </div>
             </div>
           </v-col>
           
           <!-- Right Panel: Why APA Matters (2x2 Grid) -->
-          <v-col cols="12" lg="5" class="d-flex flex-column">
-            <h3 class="text-h6 font-weight-bold mb-4 px-2">Why APA Matters</h3>
+          <v-col cols="12" lg="6" class="d-flex flex-column col-why">
+            <h3 class="text-h6 font-weight-bold mb-4 px-2">Why Isoform-Level APA Matters</h3>
             <v-row dense class="flex-grow-1">
               <v-col cols="12" sm="6" lg="6">
                 <div class="why-mini-card h-100 pa-4">
                   <v-icon icon="mdi-chart-line" color="primary" size="28" class="mb-3"></v-icon>
-                  <div class="text-subtitle-2 font-weight-bold mb-1">Translation</div>
-                  <div class="text-caption text-grey-darken-1">Regulates mRNA stability and translation efficiency</div>
+                  <div class="text-subtitle-2 font-weight-bold mb-1">mRNA Stability</div>
+                  <div class="text-caption text-grey-darken-1">Longer 3′ UTRs expose AU-rich elements that tune mRNA half-life and translation rate</div>
                 </div>
               </v-col>
               <v-col cols="12" sm="6" lg="6">
                 <div class="why-mini-card h-100 pa-4">
                   <v-icon icon="mdi-magnet" color="primary" size="28" class="mb-3"></v-icon>
-                  <div class="text-subtitle-2 font-weight-bold mb-1">miRNA Binding</div>
-                  <div class="text-caption text-grey-darken-1">Impacts miRNA binding sites in the 3' UTR</div>
+                  <div class="text-subtitle-2 font-weight-bold mb-1">miRNA Escape</div>
+                  <div class="text-caption text-grey-darken-1">Short isoforms lose miRNA binding sites, shielding oncogenes from repression in cancer</div>
                 </div>
               </v-col>
               <v-col cols="12" sm="6" lg="6">
                 <div class="why-mini-card h-100 pa-4">
                   <v-icon icon="mdi-map-marker-radius" color="primary" size="28" class="mb-3"></v-icon>
-                  <div class="text-subtitle-2 font-weight-bold mb-1">Localization</div>
-                  <div class="text-caption text-grey-darken-1">Influences protein localization signals</div>
+                  <div class="text-subtitle-2 font-weight-bold mb-1">Subcellular Targeting</div>
+                  <div class="text-caption text-grey-darken-1">3′ UTR sequences direct mRNAs to specific compartments — dendrites, stress granules, and beyond</div>
                 </div>
               </v-col>
               <v-col cols="12" sm="6" lg="6">
                 <div class="why-mini-card h-100 pa-4">
                   <v-icon icon="mdi-hospital-building" color="error" size="28" class="mb-3"></v-icon>
-                  <div class="text-subtitle-2 font-weight-bold mb-1">Disease Impact</div>
-                  <div class="text-caption text-grey-darken-1">Dysregulated in cancer and other diseases</div>
+                  <div class="text-subtitle-2 font-weight-bold mb-1">Disease Relevance</div>
+                  <div class="text-caption text-grey-darken-1">APA dysregulation is a hallmark of cancer, neurodegeneration, and immune disorders</div>
                 </div>
               </v-col>
             </v-row>
           </v-col>
         </v-row>
 
-        <!-- Key Insight Callout -->
-        <v-row justify="center">
-          <v-col cols="12">
-            <div class="insight-callout pa-5 d-flex align-start mt-2">
-              <div class="insight-icon mr-4">
-                <v-icon icon="mdi-lightbulb-on" color="primary" size="32"></v-icon>
-              </div>
-              <div>
-                <h4 class="text-subtitle-1 font-weight-bold mb-1" style="color: #0D7377">Key Insight</h4>
-                <p class="text-body-2 text-grey-darken-1 mb-0">
-                  Both isoforms share the same coding sequence (CDS) but differ in their 3' UTR length, 
-                  profoundly affecting post-transcriptional regulation.
-                </p>
-              </div>
-            </div>
-          </v-col>
-        </v-row>
       </v-container>
     </section>
-    
+
+    <!-- ── Section Divider ──────────────────────────────────── -->
+    <div class="section-divider" aria-hidden="true"></div>
+
     <!-- Database at a Glance -->
     <section class="glance-section py-16">
       <v-container>
-        <div class="text-center mb-12">
-          <div class="section-eyebrow mb-2">Live Database</div>
-          <h2 class="text-h4 font-weight-bold mb-3">The Database at a Glance</h2>
-          <p class="text-body-1 text-grey-darken-1" style="max-width: 560px; margin: 0 auto;">
+
+        <!-- Header -->
+        <div class="text-center mb-14">
+          <div class="section-eyebrow-light mb-2">Live Database</div>
+          <h2 class="text-h4 font-weight-bold text-white mb-3">The Database at a Glance</h2>
+          <p class="glance-subtitle mb-0" style="max-width: 560px; margin: 0 auto;">
             Curated from high-throughput sequencing experiments across human and mouse transcriptomes.
           </p>
         </div>
 
-        <v-row justify="center" class="mb-10">
-          <v-col cols="6" sm="3" v-for="stat in dbStats" :key="stat.label">
-            <div class="stat-glance-card text-center pa-6">
-              <div class="stat-icon-ring mb-4" :style="{ background: stat.ringColor }">
-                <v-icon :icon="stat.icon" size="28" :color="stat.color"></v-icon>
+        <!-- Stats Strip: unified dark grid -->
+        <div class="stats-strip mb-12">
+          <div v-for="stat in dbStats" :key="stat.label" class="stat-item">
+            <div class="stat-item-number font-weight-black" :style="{ color: stat.lightColor }">
+              {{ stat.displayValue }}
+            </div>
+            <div class="stat-item-label text-white font-weight-medium">{{ stat.label }}</div>
+            <div class="stat-item-desc">{{ stat.desc }}</div>
+          </div>
+        </div>
+
+        <!-- Coverage Cards -->
+        <v-row justify="center" class="ga-5">
+          <!-- Human -->
+          <v-col cols="12" md="6">
+            <div class="coverage-card pa-6">
+              <div class="d-flex align-center ga-3 mb-6">
+                <div class="coverage-species-badge coverage-badge--human">
+                  <v-icon icon="mdi-human" size="22" color="white"></v-icon>
+                </div>
+                <div>
+                  <div class="text-h6 font-weight-bold text-white">Homo sapiens</div>
+                  <div class="coverage-genome-ref">GRCh38 · Bulk RNA-seq</div>
+                </div>
               </div>
-              <div class="stat-number font-weight-black" :style="{ color: stat.color }">
-                {{ stat.displayValue }}
+              <div class="coverage-stats-row mb-6">
+                <div class="coverage-stat">
+                  <div class="coverage-stat-num" style="color:#4DD0E1">77,784</div>
+                  <div class="coverage-stat-lbl">APA Sites</div>
+                </div>
+                <div class="coverage-stat-divider"></div>
+                <div class="coverage-stat">
+                  <div class="coverage-stat-num" style="color:#80CBC4">3</div>
+                  <div class="coverage-stat-lbl">Cell Lines</div>
+                </div>
+                <div class="coverage-stat-divider"></div>
+                <div class="coverage-stat">
+                  <div class="coverage-stat-num" style="color:#B2EBF2">~3.2</div>
+                  <div class="coverage-stat-lbl">Sites / Gene</div>
+                </div>
               </div>
-              <div class="stat-label text-body-2 text-grey-darken-1 mt-1">{{ stat.label }}</div>
+              <div class="d-flex flex-wrap ga-2">
+                <v-chip size="x-small" variant="outlined" class="coverage-chip">A549</v-chip>
+                <v-chip size="x-small" variant="outlined" class="coverage-chip">HepG2</v-chip>
+                <v-chip size="x-small" variant="outlined" class="coverage-chip">K562</v-chip>
+              </div>
+            </div>
+          </v-col>
+
+          <!-- Mouse -->
+          <v-col cols="12" md="6">
+            <div class="coverage-card pa-6">
+              <div class="d-flex align-center ga-3 mb-6">
+                <div class="coverage-species-badge coverage-badge--mouse">
+                  <v-icon icon="mdi-rodent" size="22" color="white"></v-icon>
+                </div>
+                <div>
+                  <div class="text-h6 font-weight-bold text-white">Mus musculus</div>
+                  <div class="coverage-genome-ref">GRCm39 · Bulk RNA-seq</div>
+                </div>
+              </div>
+              <div class="coverage-stats-row mb-6">
+                <div class="coverage-stat">
+                  <div class="coverage-stat-num" style="color:#4DD0E1">8,496</div>
+                  <div class="coverage-stat-lbl">APA Sites</div>
+                </div>
+                <div class="coverage-stat-divider"></div>
+                <div class="coverage-stat">
+                  <div class="coverage-stat-num" style="color:#80CBC4">1</div>
+                  <div class="coverage-stat-lbl">Tissue</div>
+                </div>
+                <div class="coverage-stat-divider"></div>
+                <div class="coverage-stat">
+                  <div class="coverage-stat-num" style="color:#B2EBF2">~3.5</div>
+                  <div class="coverage-stat-lbl">Sites / Gene</div>
+                </div>
+              </div>
+              <div class="d-flex flex-wrap ga-2">
+                <v-chip size="x-small" variant="outlined" class="coverage-chip">Liver</v-chip>
+                <v-chip size="x-small" variant="outlined" class="coverage-chip">GRCm39</v-chip>
+              </div>
             </div>
           </v-col>
         </v-row>
 
-        <!-- Species Coverage -->
-        <v-row justify="center" class="ga-4">
-          <v-col cols="12" md="5">
-            <div class="species-card pa-6 d-flex align-center ga-5">
-              <div class="species-avatar species-human">
-                <v-icon icon="mdi-human" size="36" color="white"></v-icon>
-              </div>
-              <div class="flex-grow-1">
-                <div class="text-overline text-grey mb-1">Homo sapiens · GRCh38</div>
-                <div class="text-h5 font-weight-bold">Human</div>
-                <div class="text-body-2 text-grey-darken-1 mt-1">
-                  <strong class="text-primary">77,784</strong> APA sites across 3 cell lines
-                </div>
-              </div>
-              <div class="species-badge">
-                <v-chip color="primary" variant="tonal" size="small">3 samples</v-chip>
-              </div>
-            </div>
-          </v-col>
-          <v-col cols="12" md="5">
-            <div class="species-card pa-6 d-flex align-center ga-5">
-              <div class="species-avatar species-mouse">
-                <v-icon icon="mdi-rodent" size="36" color="white"></v-icon>
-              </div>
-              <div class="flex-grow-1">
-                <div class="text-overline text-grey mb-1">Mus musculus · GRCm39</div>
-                <div class="text-h5 font-weight-bold">Mouse</div>
-                <div class="text-body-2 text-grey-darken-1 mt-1">
-                  <strong class="text-primary">8,496</strong> APA sites from liver tissue
-                </div>
-              </div>
-              <div class="species-badge">
-                <v-chip color="secondary" variant="tonal" size="small">1 sample</v-chip>
-              </div>
-            </div>
-          </v-col>
-        </v-row>
       </v-container>
     </section>
 
@@ -274,10 +309,10 @@ const performSearch = () => {
 
 // Database at a Glance — static values from live DB
 const dbStats = [
-  { label: 'Genes', displayValue: '23,933', icon: 'mdi-map-marker-path', color: '#0D7377', ringColor: 'rgba(13,115,119,0.12)' },
-  { label: 'Transcripts', displayValue: '54,937', icon: 'mdi-format-list-bulleted', color: '#14919B', ringColor: 'rgba(20,145,155,0.12)' },
-  { label: 'APA Sites', displayValue: '86,280', icon: 'mdi-map-marker-multiple', color: '#E94560', ringColor: 'rgba(233,69,96,0.12)' },
-  { label: 'Samples', displayValue: '4', icon: 'mdi-flask', color: '#5C6BC0', ringColor: 'rgba(92,107,192,0.12)' },
+  { label: 'Genes',       displayValue: '23,933', desc: 'protein-coding & lncRNA loci',   icon: 'mdi-map-marker-path',       color: '#0D7377', lightColor: '#4DD0E1', ringColor: 'rgba(13,115,119,0.12)' },
+  { label: 'Transcripts', displayValue: '54,937', desc: 'annotated isoforms',              icon: 'mdi-format-list-bulleted',  color: '#14919B', lightColor: '#80CBC4', ringColor: 'rgba(20,145,155,0.12)' },
+  { label: 'APA Sites',   displayValue: '86,280', desc: 'polyadenylation sites mapped',    icon: 'mdi-map-marker-multiple',   color: '#E94560', lightColor: '#FF8A80', ringColor: 'rgba(233,69,96,0.12)' },
+  { label: 'Samples',     displayValue: '4',      desc: 'cell lines & tissue types',       icon: 'mdi-flask',                 color: '#5C6BC0', lightColor: '#9FA8DA', ringColor: 'rgba(92,107,192,0.12)' },
 ]
 
 </script>
@@ -454,97 +489,186 @@ const dbStats = [
   color: #aaa;
 }
 
-/* ── Sections layout ──────────────────────────────────────── */
-.glance-section {
-  background: rgb(var(--v-theme-background));
+.diagram-note {
+  border-top: 1px solid rgba(13, 115, 119, 0.18);
 }
 
-/* ── Section eyebrow ──────────────────────────────────────── */
-.section-eyebrow {
+/* 6.4/12 = 53.33% — fractional column width for the diagram panel */
+@media (min-width: 1280px) {
+  .col-diagram {
+    flex: 0 0 53.33%;
+    max-width: 53.33%;
+  }
+  .col-why {
+    flex: 0 0 46.67%;
+    max-width: 46.67%;
+  }
+}
+
+.v-theme--apaAtlasDarkTheme .diagram-note {
+  border-top-color: rgba(77, 208, 225, 0.18);
+}
+
+/* ── Section Divider ──────────────────────────────────────── */
+.section-divider {
+  height: 1px;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(13, 115, 119, 0.35) 20%,
+    rgba(20, 145, 155, 0.55) 50%,
+    rgba(13, 115, 119, 0.35) 80%,
+    transparent 100%
+  );
+}
+
+/* ── Glance Section (dark panel) ──────────────────────────── */
+.glance-section {
+  background: linear-gradient(160deg, #061518 0%, #091d28 55%, #0b1828 100%);
+  position: relative;
+}
+
+.glance-subtitle {
+  color: rgba(255, 255, 255, 0.55);
+  font-size: 1rem;
+  line-height: 1.6;
+}
+
+/* Eyebrow variant for dark backgrounds */
+.section-eyebrow-light {
   display: inline-block;
   font-size: 0.80rem;
   font-weight: 700;
   letter-spacing: 0.13em;
   text-transform: uppercase;
-  color: #0D7377;
+  color: #4DD0E1;
   padding: 4px 14px;
-  background: rgba(13, 115, 119, 0.09);
+  background: rgba(77, 208, 225, 0.12);
   border-radius: 20px;
 }
 
-/* ── Stat cards (glassmorphism) ───────────────────────────── */
-.stat-glance-card {
+/* ── Stats Strip ──────────────────────────────────────────── */
+.stats-strip {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1px;
+  background: rgba(255, 255, 255, 0.06);
   border-radius: 20px;
-  background: rgba(255, 255, 255, 0.72);
-  backdrop-filter: blur(16px) saturate(150%);
-  -webkit-backdrop-filter: blur(16px) saturate(150%);
-  border: 1px solid rgba(255, 255, 255, 0.55);
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.06), 0 1px 4px rgba(0, 0, 0, 0.04);
-  transition: transform 0.22s ease, box-shadow 0.22s ease;
-}
-
-.stat-glance-card:hover {
-  transform: translateY(-5px);
-  box-shadow: 0 14px 36px rgba(0, 0, 0, 0.10);
-}
-
-.v-theme--apaAtlasDarkTheme .stat-glance-card {
-  background: rgba(24, 28, 37, 0.82);
-  border: 1px solid rgba(255, 255, 255, 0.07);
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.28);
-}
-
-.stat-icon-ring {
-  width: 56px;
-  height: 56px;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  margin: 0 auto;
-}
-
-.stat-number {
-  font-size: 2.3rem;
-  line-height: 1.1;
-}
-
-.stat-label {
-  font-size: 0.92rem;
-}
-
-/* ── Species cards ────────────────────────────────────────── */
-.species-card {
-  border-radius: 20px;
-  background: rgba(255, 255, 255, 0.72);
-  backdrop-filter: blur(16px) saturate(150%);
-  -webkit-backdrop-filter: blur(16px) saturate(150%);
-  border: 1px solid rgba(255, 255, 255, 0.55);
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.06);
-  transition: box-shadow 0.22s ease, transform 0.22s ease;
-}
-
-.species-card:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.09);
-}
-
-.v-theme--apaAtlasDarkTheme .species-card {
-  background: rgba(24, 28, 37, 0.82);
+  overflow: hidden;
   border: 1px solid rgba(255, 255, 255, 0.07);
 }
 
-.species-avatar {
-  width: 64px;
-  height: 64px;
-  border-radius: 16px;
+@media (max-width: 599px) {
+  .stats-strip { grid-template-columns: repeat(2, 1fr); }
+}
+
+.stat-item {
+  background: rgba(255, 255, 255, 0.03);
+  padding: 32px 20px;
+  text-align: center;
+  transition: background 0.2s ease;
+}
+
+.stat-item:hover {
+  background: rgba(77, 208, 225, 0.06);
+}
+
+.stat-item-number {
+  font-size: clamp(1.6rem, 3vw, 2.5rem);
+  line-height: 1;
+  overflow-wrap: break-word;
+  word-break: break-all;
+  margin-bottom: 8px;
+}
+
+.stat-item-label {
+  font-size: 0.9rem;
+  margin-bottom: 5px;
+  letter-spacing: 0.01em;
+}
+
+.stat-item-desc {
+  font-size: 0.73rem;
+  color: rgba(255, 255, 255, 0.38);
+  line-height: 1.35;
+}
+
+/* ── Coverage Cards ───────────────────────────────────────── */
+.coverage-card {
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  transition: background 0.22s ease, border-color 0.22s ease;
+}
+
+.coverage-card:hover {
+  background: rgba(77, 208, 225, 0.06);
+  border-color: rgba(77, 208, 225, 0.28);
+}
+
+.coverage-species-badge {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
   display: flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
 }
 
-.species-human { background: linear-gradient(135deg, #0D7377, #14919B); }
-.species-mouse  { background: linear-gradient(135deg, #26A69A, #00695C); }
+.coverage-badge--human { background: linear-gradient(135deg, #0D7377, #14919B); }
+.coverage-badge--mouse { background: linear-gradient(135deg, #004d40, #26A69A); }
+
+.coverage-genome-ref {
+  font-size: 0.78rem;
+  color: rgba(255, 255, 255, 0.45);
+  margin-top: 2px;
+}
+
+.coverage-stats-row {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  padding: 16px 0;
+  border-top: 1px solid rgba(255, 255, 255, 0.07);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+}
+
+.coverage-stat {
+  flex: 1;
+  text-align: center;
+}
+
+.coverage-stat-num {
+  font-size: clamp(1.2rem, 2.2vw, 1.9rem);
+  font-weight: 900;
+  line-height: 1.05;
+  overflow-wrap: break-word;
+  word-break: break-all;
+}
+
+.coverage-stat-lbl {
+  font-size: 0.70rem;
+  color: rgba(255, 255, 255, 0.42);
+  margin-top: 4px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.coverage-stat-divider {
+  width: 1px;
+  height: 40px;
+  background: rgba(255, 255, 255, 0.09);
+  flex-shrink: 0;
+}
+
+.coverage-chip {
+  border-color: rgba(255, 255, 255, 0.18) !important;
+  color: rgba(255, 255, 255, 0.62) !important;
+  font-size: 0.70rem !important;
+}
+}
 
 </style>
