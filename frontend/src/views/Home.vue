@@ -357,6 +357,26 @@ const taxonomyGroups = [
   box-shadow: 0 8px 40px rgba(0, 0, 0, 0.18), 0 2px 8px rgba(0, 0, 0, 0.10) !important;
 }
 
+/* ── Section Eyebrow ──────────────────────────────────────── */
+.section-eyebrow {
+  display: inline-block;
+  font-size: 0.80rem;
+  font-weight: 700;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+  color: #0D7377;
+  padding: 4px 14px;
+  background: rgba(13, 115, 119, 0.09);
+  border-radius: 6px;
+  border: 1px solid rgba(13, 115, 119, 0.18);
+}
+
+.v-theme--apaAtlasDarkTheme .section-eyebrow {
+  color: #4DD0E1;
+  background: rgba(77, 208, 225, 0.10);
+  border-color: rgba(77, 208, 225, 0.22);
+}
+
 /* ── Info Section Redesign ────────────────────────────────── */
 .info-section {
   background: rgb(var(--v-theme-background));
