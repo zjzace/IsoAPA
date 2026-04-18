@@ -183,10 +183,7 @@
         <!-- Header -->
         <div class="text-center mb-12">
           <div class="section-eyebrow mb-2">The Database at a Glance</div>
-          <h2 class="text-h4 font-weight-bold mb-3">Curated APA Data at Scale</h2>
-          <p class="text-body-1 text-grey-darken-1 mb-0" style="max-width: 560px; margin: 0 auto;">
-            High-throughput sequencing data integrated across species, samples, and isoforms — with coverage expanding continuously.
-          </p>
+          <h2 class="text-h4 font-weight-bold mb-3">Isoform-Resolved Polyadenylome Atlas</h2>
         </div>
 
         <!-- Stats: 5 glassmorphism cards -->
