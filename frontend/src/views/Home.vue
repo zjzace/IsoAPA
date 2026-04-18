@@ -367,7 +367,7 @@ const taxonomyGroups = [
   color: #0D7377;
   padding: 4px 14px;
   background: rgba(13, 115, 119, 0.09);
-  border-radius: 6px;
+  border-radius: 20px;
   border: 1px solid rgba(13, 115, 119, 0.18);
 }
 
