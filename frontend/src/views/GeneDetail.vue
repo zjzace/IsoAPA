@@ -193,55 +193,148 @@
                   <div class="panel-title-text">Transcript Details</div>
                   <div class="panel-subtitle-text">PA sites and sample coverage per transcript isoform</div>
                 </div>
-                <v-chip size="x-small" color="primary" variant="tonal" class="ml-2">
-                  {{ geneData.transcripts.length }}
-                </v-chip>
               </div>
             </div>
 
             <!-- Table -->
             <div class="tx-table-container">
               <table class="tx-table">
-                <thead>
-                  <tr>
-                    <th class="tx-th" style="width: 30%;">Transcript</th>
-                    <th class="tx-th" style="width: 10%; text-align: center;">PA Sites</th>
-                     <th class="tx-th">Site Ranges</th>
-                  </tr>
-                </thead>
+                 <thead>
+                   <tr>
+                     <th class="tx-th tx-th-sticky" style="width: 40px; text-align: center;"></th>
+                     <th class="tx-th tx-th-sticky" style="width: 210px;">Transcript</th>
+                     <th class="tx-th tx-th-sticky" style="width: 115px;">Biotype</th>
+                     <th class="tx-th tx-th-sticky" style="width: 115px; text-align: center;">PA Sites</th>
+                     <th class="tx-th tx-th-sticky" style="width: 155px; text-align: center;">Samples</th>
+                     <th class="tx-th tx-th-sticky" style="padding-left: 32px;">Dominant PA Site</th>
+                   </tr>
+                 </thead>
                 <tbody>
-                  <tr
-                    v-for="tx in geneData.transcripts"
-                    :key="tx.transcript_id"
-                    class="tx-row"
-                  >
-                    <!-- Transcript ID -->
-                    <td class="tx-td">
-                      <router-link
-                        :to="{ name: 'LocusDetail', params: { transcriptId: tx.transcript_id } }"
-                        class="tx-id-link"
-                      >{{ tx.transcript_id }}</router-link>
-                    </td>
-
-                     <!-- PA site count -->
-                      <td class="tx-td" style="text-align: center;">
-                        <span class="tx-count-badge">{{ tx.apa_site_count }}</span>
+                  <template v-for="tx in geneData.transcripts" :key="tx.transcript_id">
+                    <tr
+                       class="tx-row"
+                       :class="{ 'tx-row-expanded': expandedTxIds.includes(tx.transcript_id) }"
+                       @click="toggleExpand(tx.transcript_id)"
+                      style="cursor: pointer;"
+                    >
+                      <!-- Expand Chevron -->
+                      <td class="tx-td tx-chevron-cell">
+                         <v-icon size="20" class="tx-chevron" :class="{ 'tx-chevron-open': expandedTxIds.includes(tx.transcript_id) }">mdi-chevron-right</v-icon>
                       </td>
 
-                      <!-- Site ranges -->
-                      <td class="tx-td">
-                        <div class="tx-pos-list">
-                          <span
-                            v-for="site in tx.apa_sites"
-                            :key="site.unified_id"
-                            class="tx-pos-tag"
-                            :title="site.unified_id"
-                          >{{ siteRange(site.unified_id) }}</span>
-                        </div>
+                      <!-- Transcript ID -->
+                      <td class="tx-td" @click.stop>
+                        <router-link
+                          :to="{ name: 'LocusDetail', params: { transcriptId: tx.transcript_id } }"
+                          class="tx-id-link"
+                        >{{ tx.transcript_id }}</router-link>
                       </td>
-                  </tr>
+
+                       <!-- Biotype Badge -->
+                       <td class="tx-td">
+                         <span class="tx-biotype-badge" :class="getBiotypeClass(tx.apa_sites[0]?.transcript_biotype)">
+                           {{ formatBiotype(tx.apa_sites[0]?.transcript_biotype) }}
+                         </span>
+                       </td>
+
+                       <!-- PA site count -->
+                       <td class="tx-td" style="text-align: center; white-space: nowrap;">
+                         <span class="tx-count-badge">{{ tx.apa_site_count }}</span>
+                       </td>
+
+                       <!-- Sample coverage count -->
+                       <td class="tx-td" style="text-align: center; white-space: nowrap;">
+                         <div class="tx-sample-count" v-if="tx.samples?.length">
+                           <v-icon size="14" class="mr-1">mdi-flask</v-icon>
+                           {{ tx.samples.length }} sample{{ tx.samples.length !== 1 ? 's' : '' }}
+                         </div>
+                         <span class="tx-no-samples" v-else>-</span>
+                       </td>
+
+                      <!-- Dominant PA site -->
+                       <td class="tx-td" style="padding-left: 32px;">
+                         <span class="tx-dominant-site-tag" v-if="dominantSite(tx)" :title="dominantSite(tx)?.unified_id">
+                           <v-icon size="12" class="mr-1" color="amber-darken-2">mdi-star</v-icon>
+                           <span class="tx-dominant-site-id">{{ dominantSite(tx)?.unified_id }}</span>
+                         </span>
+                         <span v-else class="tx-no-samples">-</span>
+                       </td>
+                    </tr>
+                    
+                    <!-- Expanded row -->
+                     <tr v-if="expandedTxIds.includes(tx.transcript_id)" class="tx-expanded-row-container">
+                      <td colspan="6" class="tx-expanded-td">
+                        <Transition name="tx-expand" appear>
+                          <div class="tx-expanded-content">
+                            <table class="tx-inner-table">
+                               <thead>
+                                 <tr>
+                                    <th class="tx-inner-th">Site ID</th>
+                                    <th class="tx-inner-th tx-inner-th-abundance">
+                                      <div class="tx-inner-th-row">
+                                        Mean Abundance
+                                        <v-menu location="bottom end" :close-on-content-click="true" max-width="320">
+                                          <template #activator="{ props }">
+                                            <v-icon
+                                              v-bind="props"
+                                              size="13"
+                                              class="tx-info-icon"
+                                              @click.stop
+                                            >mdi-help-circle-outline</v-icon>
+                                          </template>
+                                          <v-card class="tx-info-popover" elevation="0" rounded="lg">
+                                            <v-card-text class="tx-info-popover-text">
+                                              Arithmetic mean of the relative polyadenylation usage of this PA site on this transcript across all samples in which it was detected.
+                                            </v-card-text>
+                                          </v-card>
+                                        </v-menu>
+                                      </div>
+                                    </th>
+                                    <th class="tx-inner-th">Samples</th>
+                                 </tr>
+                               </thead>
+                              <tbody>
+                                <tr v-for="site in tx.apa_sites" :key="site.unified_id" class="tx-inner-row">
+                                    <td class="tx-inner-td">
+                                      <span class="tx-site-id-tag" :title="site.unified_id">{{ site.unified_id }}</span>
+                                    </td>
+                                   <td class="tx-inner-td">
+                                    <div class="tx-abundance-wrapper">
+                                      <div class="tx-abundance-bar">
+                                        <div class="tx-abundance-fill" :style="{ width: (meanSiteAbundance(site) / maxTxAbundance(tx)) * 80 + 'px' }"></div>
+                                      </div>
+                                      <span class="tx-abundance-val">{{ (meanSiteAbundance(site) * 100).toFixed(1) }}%</span>
+                                    </div>
+                                  </td>
+                                   <td class="tx-inner-td">
+                                     <div class="tx-sample-chips">
+                                       <span
+                                         v-for="s in visibleSamples(site)"
+                                         :key="s.sample_name"
+                                         class="tx-sample-pill"
+                                       >{{ s.sample_name }}</span>
+                                         <button
+                                           v-if="(site.sample_details?.length ?? 0) > 6 && !expandedSampleSites.includes(site.unified_id)"
+                                           class="tx-sample-more-btn"
+                                           @click.stop="toggleSampleExpand(site.unified_id)"
+                                         >+{{ (site.sample_details?.length ?? 0) - 6 }} more</button>
+                                         <button
+                                           v-if="(site.sample_details?.length ?? 0) > 6 && expandedSampleSites.includes(site.unified_id)"
+                                           class="tx-sample-more-btn tx-sample-more-btn--collapse"
+                                           @click.stop="toggleSampleExpand(site.unified_id)"
+                                         >− show less</button>
+                                     </div>
+                                   </td>
+                                </tr>
+                              </tbody>
+                            </table>
+                          </div>
+                        </Transition>
+                      </td>
+                    </tr>
+                  </template>
                   <tr v-if="geneData.transcripts.length === 0">
-                    <td colspan="4" class="tx-empty">No transcripts found</td>
+                    <td colspan="6" class="tx-empty">No transcripts found</td>
                   </tr>
                 </tbody>
               </table>
@@ -351,13 +444,82 @@ const fetchGeneSummary = async (geneSymbol) => {
 
 const totalAPASites = computed(() => {
   if (!geneData.value) return 0
-  return geneData.value.transcripts.reduce((sum, t) => sum + t.apa_sites.length, 0)
+  const ids = new Set()
+  for (const t of geneData.value.transcripts) {
+    for (const s of t.apa_sites) ids.add(s.unified_id)
+  }
+  return ids.size
 })
 
 const siteRange = (unifiedId) => {
   const m = unifiedId?.match(/:(\d+)-(\d+):/)
   if (!m) return unifiedId ?? ''
   return `${Number(m[1]).toLocaleString()}–${Number(m[2]).toLocaleString()}`
+}
+
+// Reactive arrays — Vue 3 tracks .push(), .splice(), .includes() reliably
+const expandedTxIds = ref([])
+
+const toggleExpand = (txId) => {
+  const idx = expandedTxIds.value.indexOf(txId)
+  if (idx >= 0) {
+    expandedTxIds.value.splice(idx, 1)
+  } else {
+    expandedTxIds.value.push(txId)
+  }
+}
+
+const expandedSampleSites = ref([])
+
+const toggleSampleExpand = (siteId) => {
+  const idx = expandedSampleSites.value.indexOf(siteId)
+  if (idx >= 0) {
+    expandedSampleSites.value.splice(idx, 1)
+  } else {
+    expandedSampleSites.value.push(siteId)
+  }
+}
+
+const visibleSamples = (site) => {
+  if (!site.sample_details) return []
+  if (expandedSampleSites.value.includes(site.unified_id)) return site.sample_details
+  return site.sample_details.slice(0, 6)
+}
+
+
+
+const dominantSite = (tx) => {
+  if (!tx.apa_sites || tx.apa_sites.length === 0) return null
+  return tx.apa_sites.reduce((prev, current) =>
+    (prev.sample_details?.length ?? 0) >= (current.sample_details?.length ?? 0) ? prev : current
+  )
+}
+
+const meanSiteAbundance = (site) => {
+  if (!site.sample_details || site.sample_details.length === 0) return 0
+  const sum = site.sample_details.reduce((acc, s) => acc + (s.site_abundance ?? 0), 0)
+  return sum / site.sample_details.length
+}
+
+const maxTxAbundance = (tx) => {
+  if (!tx.apa_sites || tx.apa_sites.length === 0) return 1
+  const max = Math.max(...tx.apa_sites.map(s => meanSiteAbundance(s)))
+  return max > 0 ? max : 1
+}
+
+const formatBiotype = (biotype) => {
+  if (!biotype) return 'unknown'
+  if (biotype === 'protein_coding') return 'mRNA'
+  if (biotype === 'lncRNA' || biotype === 'lnc_RNA' || biotype === 'lncrna') return 'lncRNA'
+  // General fallback: replace underscores with spaces, keep original casing
+  return biotype.replace(/_/g, ' ')
+}
+
+const getBiotypeClass = (biotype) => {
+  if (!biotype) return 'tx-biotype-grey'
+  if (biotype === 'protein_coding') return 'tx-biotype-teal'
+  if (biotype === 'lncRNA' || biotype === 'lnc_RNA' || biotype === 'lncrna' || biotype === 'processed_transcript') return 'tx-biotype-amber'
+  return 'tx-biotype-grey'
 }
 
 onMounted(async () => {
@@ -576,13 +738,21 @@ code {
 /* ── Transcript table ────────────────────────────────────────────── */
 .tx-table-container {
   overflow-x: auto;
+  max-height: 600px;
 }
 
 .tx-table {
   width: 100%;
+  min-width: 860px;
   border-collapse: collapse;
   font-family: 'Roboto', sans-serif;
   font-size: 14.5px;
+}
+
+.tx-th-sticky {
+  position: sticky;
+  top: 0;
+  z-index: 2;
 }
 
 .tx-th {
@@ -593,7 +763,8 @@ code {
   letter-spacing: 0.4px;
   text-transform: uppercase;
   color: rgba(0, 0, 0, 0.60);
-  background: rgba(13, 115, 119, 0.04);
+  background: rgba(240, 245, 245, 0.95);
+  backdrop-filter: blur(8px);
   border-bottom: 1px solid rgba(13, 115, 119, 0.10);
   white-space: nowrap;
   font-family: 'Roboto', sans-serif;
@@ -604,7 +775,7 @@ code {
   transition: background 0.12s ease;
 }
 
-.tx-row:hover {
+.tx-row:hover, .tx-row-expanded {
   background: rgba(13, 115, 119, 0.04);
 }
 
@@ -618,12 +789,31 @@ code {
   color: rgba(0, 0, 0, 0.82);
 }
 
+.tx-chevron-cell {
+  text-align: center;
+  padding: 11px 8px;
+}
+
+.tx-chevron {
+  color: rgba(0, 0, 0, 0.38);
+  transition: transform 0.2s ease, color 0.2s ease;
+}
+
+.tx-row:hover .tx-chevron {
+  color: #0D7377;
+}
+
+.tx-chevron-open {
+  transform: rotate(90deg);
+  color: #0D7377;
+}
+
 .tx-id-link {
   font-weight: 600;
   font-size: 14.5px;
   color: #0D7377;
   text-decoration: none;
-  font-family: 'Roboto Mono', 'Courier New', monospace;
+  font-family: 'Roboto', sans-serif;
   display: inline-flex;
   align-items: center;
 }
@@ -631,6 +821,33 @@ code {
 .tx-id-link:hover {
   color: #14919B;
   text-decoration: underline;
+}
+
+.tx-biotype-badge {
+  display: inline-block;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 4px;
+  white-space: nowrap;
+}
+
+.tx-biotype-teal {
+  background: rgba(13, 115, 119, 0.1);
+  color: #0D7377;
+  border: 1px solid rgba(13, 115, 119, 0.2);
+}
+
+.tx-biotype-amber {
+  background: rgba(255, 152, 0, 0.1);
+  color: #f57c00;
+  border: 1px solid rgba(255, 152, 0, 0.2);
+}
+
+.tx-biotype-grey {
+  background: rgba(0, 0, 0, 0.06);
+  color: rgba(0, 0, 0, 0.6);
+  border: 1px solid rgba(0, 0, 0, 0.1);
 }
 
 .tx-count-badge {
@@ -646,7 +863,20 @@ code {
   border-radius: 12px;
   font-size: 13px;
   font-weight: 700;
-  font-family: 'Inter', sans-serif;
+  font-family: 'Roboto', sans-serif;
+}
+
+.tx-sample-count {
+  font-size: 13px;
+  color: rgba(0, 0, 0, 0.65);
+  display: inline-flex;
+  align-items: center;
+  white-space: nowrap;
+}
+
+.tx-no-samples {
+  color: rgba(0, 0, 0, 0.3);
+  font-size: 13px;
 }
 
 .tx-sample-chips {
@@ -664,7 +894,7 @@ code {
   font-size: 12.5px;
   font-weight: 500;
   padding: 2px 9px;
-  font-family: 'Inter', sans-serif;
+  font-family: 'Roboto', sans-serif;
   white-space: nowrap;
 }
 
@@ -675,17 +905,91 @@ code {
 }
 
 .tx-pos-tag {
-  display: inline-block;
+  display: inline-flex;
+  align-items: center;
   background: rgba(13, 115, 119, 0.06);
   color: rgba(0, 0, 0, 0.70);
   border: 1px solid rgba(13, 115, 119, 0.15);
   border-radius: 6px;
   font-size: 12.5px;
-  font-family: 'Inter', 'Roboto Mono', monospace;
+  font-family: 'Roboto Mono', monospace;
   font-weight: 500;
   padding: 2px 8px;
   white-space: nowrap;
   cursor: default;
+}
+
+.tx-pos-tag-inner {
+  font-size: 12px;
+}
+
+/* Dominant PA site tag in primary row */
+.tx-dominant-site-tag {
+  display: inline-flex;
+  align-items: center;
+  max-width: 100%;
+  gap: 4px;
+}
+
+.tx-dominant-site-id {
+  font-family: 'Roboto', sans-serif;
+  font-size: 14.5px;
+  font-weight: 600;
+  color: #0D7377;
+  white-space: nowrap;
+  display: inline-block;
+  vertical-align: middle;
+}
+
+/* Site ID tag in inner table */
+.tx-site-id-tag {
+  display: inline-block;
+  font-family: 'Roboto', sans-serif;
+  font-size: 12.5px;
+  font-weight: 500;
+  color: #0D7377;
+  background: rgba(13, 115, 119, 0.10);
+  border: 1px solid rgba(13, 115, 119, 0.22);
+  border-radius: 10px;
+  padding: 2px 9px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 320px;
+  cursor: default;
+}
+
+/* Sample "+N more" / "show less" toggle button in inner table */
+.tx-sample-more-btn {
+  display: inline-block;
+  font-size: 12px;
+  font-weight: 600;
+  font-family: 'Roboto', sans-serif;
+  color: #0D7377;
+  background: rgba(13, 115, 119, 0.08);
+  border: 1px solid rgba(13, 115, 119, 0.22);
+  border-radius: 10px;
+  padding: 2px 9px;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+  white-space: nowrap;
+  line-height: 1.5;
+}
+
+.tx-sample-more-btn:hover {
+  background: rgba(13, 115, 119, 0.16);
+  color: #0a5c60;
+}
+
+.tx-sample-more-btn--collapse {
+  background: rgba(0, 0, 0, 0.05);
+  color: rgba(0, 0, 0, 0.50);
+  border-color: rgba(0, 0, 0, 0.15);
+}
+
+.tx-sample-more-btn--collapse:hover {
+  background: rgba(0, 0, 0, 0.09);
+  color: rgba(0, 0, 0, 0.70);
 }
 
 .tx-empty {
@@ -693,6 +997,133 @@ code {
   text-align: center;
   color: rgba(0, 0, 0, 0.38);
   font-size: 14.5px;
+}
+
+/* Expanded row */
+.tx-expanded-row-container {
+  background: rgba(250, 252, 252, 0.6);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.055);
+}
+
+.tx-expanded-td {
+  padding: 0;
+}
+
+.tx-expanded-content {
+  padding: 16px 24px 24px 48px;
+}
+
+.tx-expand-enter-active, .tx-expand-leave-active {
+  transition: opacity 0.2s ease, transform 0.2s ease;
+}
+.tx-expand-enter-from, .tx-expand-leave-to {
+  opacity: 0;
+  transform: translateY(-4px);
+}
+
+.tx-inner-table {
+  width: 100%;
+  border-collapse: collapse;
+  background: rgba(255, 255, 255, 0.6);
+  border: 1px solid rgba(13, 115, 119, 0.1);
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
+}
+
+.tx-inner-th {
+  padding: 8px 12px;
+  text-align: left;
+  font-size: 12px;
+  font-weight: 600;
+  color: rgba(0, 0, 0, 0.55);
+  background: rgba(13, 115, 119, 0.03);
+  border-bottom: 1px solid rgba(13, 115, 119, 0.08);
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+.tx-inner-th-abundance {
+  white-space: nowrap;
+}
+
+.tx-inner-th-row {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.tx-info-icon {
+  color: rgba(13, 115, 119, 0.55);
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: color 0.15s ease;
+  vertical-align: middle;
+}
+
+.tx-info-icon:hover {
+  color: #0D7377;
+}
+
+.tx-info-popover {
+  width: 320px;
+  background: rgba(255, 255, 255, 0.60) !important;
+  backdrop-filter: blur(16px) saturate(180%);
+  -webkit-backdrop-filter: blur(16px) saturate(180%);
+  border: 1px solid rgba(13, 115, 119, 0.20) !important;
+  box-shadow: 0 8px 32px rgba(13, 115, 119, 0.10), 0 2px 8px rgba(0, 0, 0, 0.08) !important;
+}
+
+.tx-info-popover-text {
+  font-family: 'Roboto', sans-serif;
+  font-size: 13px;
+  line-height: 1.65;
+  color: rgba(0, 0, 0, 0.78);
+  padding: 14px 16px !important;
+  text-align: justify;
+}
+
+.tx-inner-row {
+  border-bottom: 1px solid rgba(0, 0, 0, 0.04);
+}
+
+.tx-inner-row:last-child {
+  border-bottom: none;
+}
+
+.tx-inner-td {
+  padding: 8px 12px;
+  vertical-align: middle;
+  font-size: 13.5px;
+  color: rgba(0, 0, 0, 0.8);
+}
+
+.tx-abundance-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.tx-abundance-bar {
+  width: 80px;
+  height: 6px;
+  background: rgba(0, 0, 0, 0.06);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.tx-abundance-fill {
+  height: 100%;
+  background: #0D7377;
+  border-radius: 3px;
+  transition: width 0.3s ease;
+}
+
+.tx-abundance-val {
+  font-size: 12px;
+  color: rgba(0, 0, 0, 0.6);
+  font-family: 'Roboto', sans-serif;
+  width: 40px;
 }
 
 /* ── Gene Summary definition list ───────────────────────────────── */
@@ -733,7 +1164,7 @@ code {
 .gs-dd {
   display: table-cell;
   padding: 10px 16px;
-  font-size: 14.5px;
+  font-size: 12.5px;
   color: rgba(0, 0, 0, 0.80);
   vertical-align: middle;
   line-height: 1.55;
@@ -741,7 +1172,7 @@ code {
 
 .gs-summary-text {
   margin: 0;
-  font-size: 14.5px;
+  font-size: 12.5px;
   line-height: 1.75;
   color: rgba(0, 0, 0, 0.72);
 }
@@ -779,7 +1210,7 @@ code {
 
 .gs-id-code {
   color: #0D7377;
-  font-family: 'Roboto Mono', 'Courier New', monospace;
+  font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
   font-size: 13.5px;
   font-weight: 600;
 }
@@ -892,8 +1323,103 @@ code {
   border-bottom-color: rgba(255, 255, 255, 0.05) !important;
 }
 
-.v-theme--apaAtlasDarkTheme .tx-row:hover {
+.v-theme--apaAtlasDarkTheme .tx-chevron {
+  color: rgba(255, 255, 255, 0.38);
+}
+
+.v-theme--apaAtlasDarkTheme .tx-row:hover .tx-chevron {
+  color: #2AA8AE;
+}
+
+.v-theme--apaAtlasDarkTheme .tx-chevron-open {
+  color: #2AA8AE;
+}
+
+.v-theme--apaAtlasDarkTheme .tx-biotype-teal {
+  background: rgba(42, 168, 174, 0.1);
+  color: #2AA8AE;
+  border-color: rgba(42, 168, 174, 0.2);
+}
+
+.v-theme--apaAtlasDarkTheme .tx-biotype-amber {
+  background: rgba(255, 152, 0, 0.1);
+  color: #ffb74d;
+  border-color: rgba(255, 152, 0, 0.2);
+}
+
+.v-theme--apaAtlasDarkTheme .tx-biotype-grey {
+  background: rgba(255, 255, 255, 0.05);
+  color: rgba(255, 255, 255, 0.5);
+  border-color: rgba(255, 255, 255, 0.1);
+}
+
+.v-theme--apaAtlasDarkTheme .tx-info-icon {
+  color: rgba(42, 168, 174, 0.6);
+}
+
+.v-theme--apaAtlasDarkTheme .tx-info-icon:hover {
+  color: #2AA8AE;
+}
+
+.v-theme--apaAtlasDarkTheme .tx-info-popover {
+  background: rgba(16, 22, 32, 0.52) !important;
+  backdrop-filter: blur(20px) saturate(160%);
+  -webkit-backdrop-filter: blur(20px) saturate(160%);
+  border-color: rgba(42, 168, 174, 0.28) !important;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.40), 0 2px 8px rgba(42, 168, 174, 0.08) !important;
+}
+
+.v-theme--apaAtlasDarkTheme .tx-info-popover-text {
+  color: rgba(255, 255, 255, 0.82);
+}
+
+.v-theme--apaAtlasDarkTheme .tx-sample-count {
+  color: rgba(255, 255, 255, 0.55);
+}
+
+.v-theme--apaAtlasDarkTheme .tx-no-samples {
+  color: rgba(255, 255, 255, 0.25);
+}
+
+.v-theme--apaAtlasDarkTheme .tx-row:hover,
+.v-theme--apaAtlasDarkTheme .tx-row-expanded {
   background: rgba(42, 168, 174, 0.05);
+}
+
+.v-theme--apaAtlasDarkTheme .tx-expanded-row-container {
+  background: rgba(24, 28, 37, 0.4);
+  border-bottom-color: rgba(255, 255, 255, 0.05);
+}
+
+.v-theme--apaAtlasDarkTheme .tx-inner-table {
+  background: rgba(24, 28, 37, 0.82);
+  border-color: rgba(42, 168, 174, 0.15);
+}
+
+.v-theme--apaAtlasDarkTheme .tx-inner-th {
+  color: rgba(255, 255, 255, 0.5);
+  background: rgba(42, 168, 174, 0.06);
+  border-bottom-color: rgba(42, 168, 174, 0.1);
+}
+
+.v-theme--apaAtlasDarkTheme .tx-inner-row {
+  border-bottom-color: rgba(255, 255, 255, 0.05);
+}
+
+.v-theme--apaAtlasDarkTheme .tx-inner-td {
+  color: rgba(255, 255, 255, 0.78);
+}
+
+.v-theme--apaAtlasDarkTheme .tx-abundance-bar {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.v-theme--apaAtlasDarkTheme .tx-abundance-fill {
+  background: #2AA8AE;
+}
+
+.v-theme--apaAtlasDarkTheme .tx-abundance-val {
+  color: rgba(255, 255, 255, 0.6);
 }
 
 .v-theme--apaAtlasDarkTheme .tx-id-link {
@@ -916,6 +1442,38 @@ code {
   background: rgba(42, 168, 174, 0.07);
   color: rgba(255, 255, 255, 0.65);
   border-color: rgba(42, 168, 174, 0.18);
+}
+
+.v-theme--apaAtlasDarkTheme .tx-dominant-site-id {
+  color: #2AA8AE;
+}
+
+.v-theme--apaAtlasDarkTheme .tx-site-id-tag {
+  background: rgba(42, 168, 174, 0.10);
+  color: #2AA8AE;
+  border-color: rgba(42, 168, 174, 0.22);
+}
+
+.v-theme--apaAtlasDarkTheme .tx-sample-more-btn {
+  color: #2AA8AE;
+  background: rgba(42, 168, 174, 0.10);
+  border-color: rgba(42, 168, 174, 0.25);
+}
+
+.v-theme--apaAtlasDarkTheme .tx-sample-more-btn:hover {
+  background: rgba(42, 168, 174, 0.18);
+  color: #4DD0E1;
+}
+
+.v-theme--apaAtlasDarkTheme .tx-sample-more-btn--collapse {
+  background: rgba(255, 255, 255, 0.05);
+  color: rgba(255, 255, 255, 0.40);
+  border-color: rgba(255, 255, 255, 0.12);
+}
+
+.v-theme--apaAtlasDarkTheme .tx-sample-more-btn--collapse:hover {
+  background: rgba(255, 255, 255, 0.09);
+  color: rgba(255, 255, 255, 0.65);
 }
 
 .v-theme--apaAtlasDarkTheme .gs-dt {

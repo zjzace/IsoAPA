@@ -121,14 +121,18 @@
               <v-data-table
                 :headers="tableHeaders"
                 :items="flattenedTableData"
-                :items-per-page="10"
+                :items-per-page="-1"
+                hide-default-footer
                 class="elegant-table"
                 item-value="unified_id"
                 v-model:expanded="seqOpen"
-                :row-props="({ item }) => seqOpen.includes(item.unified_id) ? { class: 'row-seq-expanded' } : {}"
+                :row-props="({ item }) => ({
+                  class: seqOpen.includes(item.unified_id) ? 'row-seq-expanded ld-row-clickable' : 'ld-row-clickable',
+                  onClick: () => toggleSeqPanel(item.unified_id)
+                })"
               >
                 <template v-slot:item.unified_id="{ item }">
-                  <code class="code-plain">{{ item.unified_id }}</code>
+                  <span class="ld-site-id-tag">{{ item.unified_id }}</span>
                 </template>
 
                 <template v-slot:item.mode_site_position="{ item }">
@@ -182,17 +186,54 @@
                   </div>
                 </template>
 
-                <template v-slot:item.actions="{ item }">
-                  <v-btn
-                    size="small"
-                    :variant="seqOpen.includes(item.unified_id) ? 'flat' : 'tonal'"
-                    :color="seqOpen.includes(item.unified_id) ? 'primary' : 'primary'"
-                    @click.stop="toggleSeqPanel(item.unified_id)"
-                    class="seq-toggle-btn"
-                  >
-                    <v-icon start size="14">mdi-card-search-outline</v-icon>
-                    {{ seqOpen.includes(item.unified_id) ? 'Hide' : 'Detail' }}
-                  </v-btn>
+                <template v-slot:item.expand="{ item }">
+                  <v-icon
+                    size="18"
+                    class="ld-chevron"
+                    :class="{ 'ld-chevron-open': seqOpen.includes(item.unified_id) }"
+                  >mdi-chevron-right</v-icon>
+                </template>
+
+                <template v-slot:header.site_abundance="{ column }">
+                  <div class="ld-header-cell-row">
+                    {{ column.title }}
+                    <v-menu location="bottom end" :close-on-content-click="true" max-width="320">
+                      <template #activator="{ props }">
+                        <v-icon
+                          v-bind="props"
+                          size="13"
+                          class="tx-info-icon"
+                          @click.stop
+                        >mdi-help-circle-outline</v-icon>
+                      </template>
+                      <v-card class="tx-info-popover" elevation="0" rounded="lg">
+                        <v-card-text class="tx-info-popover-text">
+                          Arithmetic mean of the relative polyadenylation usage of this PA site on this transcript across all samples in which it was detected.
+                        </v-card-text>
+                      </v-card>
+                    </v-menu>
+                  </div>
+                </template>
+
+                <template v-slot:header.mode_site_position="{ column }">
+                  <div class="ld-header-cell-row">
+                    {{ column.title }}
+                    <v-menu location="bottom end" :close-on-content-click="true" max-width="355">
+                      <template #activator="{ props }">
+                        <v-icon
+                          v-bind="props"
+                          size="13"
+                          class="tx-info-icon"
+                          @click.stop
+                        >mdi-help-circle-outline</v-icon>
+                      </template>
+                      <v-card class="tx-info-popover" elevation="0" rounded="lg">
+                        <v-card-text class="tx-info-popover-text">
+                          The modal genomic coordinate of this PA site — the single nucleotide position most frequently observed as the cleavage-and-polyadenylation point across all supporting reads and samples.
+                        </v-card-text>
+                      </v-card>
+                    </v-menu>
+                  </div>
                 </template>
 
                 <template v-slot:expanded-row="{ item }">
@@ -216,12 +257,11 @@
                                   <span class="sample-type-text">{{ sd.sample_type ? sd.sample_type.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase()) : '' }}</span>
                                 </div>
                                 <div class="sample-abundance-bar">
-                                  <v-progress-linear
+                                   <v-progress-linear
                                     :model-value="(sd.site_abundance || 0) * 100"
                                     color="primary"
                                     height="6"
                                     rounded
-                                    bg-color="rgba(0,0,0,0.06)"
                                     class="sample-bar-track"
                                   ></v-progress-linear>
                                   <span class="sample-pct-text">{{ ((sd.site_abundance || 0) * 100).toFixed(1) }}%</span>
@@ -478,12 +518,12 @@ const seqNtStyle = (nt, idx, data) => {
 }
 
 const tableHeaders = [
+  { title: '', key: 'expand', sortable: false, width: 48 },
   { title: 'Site ID', key: 'unified_id', sortable: true },
   { title: 'Rep. Position', key: 'mode_site_position', sortable: true },
   { title: 'PAS Motif', key: 'pas_motif', sortable: true },
-  { title: 'Samples', key: 'sample_count', sortable: true },
-  { title: 'Avg Abundance', key: 'site_abundance', sortable: true },
-  { title: '', key: 'actions', sortable: false, width: 100 }
+  { title: 'Samples', key: 'sample_count', sortable: true, width: 88 },
+  { title: 'Mean Abundance', key: 'site_abundance', sortable: true, width: 150 },
 ]
 
 const sampleSiteChartOptions = {
@@ -1460,8 +1500,39 @@ code {
   color: rgba(0, 0, 0, 0.48);
 }
 
-/* ── Detail toggle button ────────────────────────────────────────── */
-.seq-toggle-btn { font-size: 13.5px; }
+/* ── Site ID tag (outer table) ───────────────────────────────────── */
+.ld-site-id-tag {
+  display: inline-block;
+  font-family: 'Roboto', sans-serif;
+  font-weight: 500;
+  color: #0D7377;
+  background: rgba(13, 115, 119, 0.10);
+  border: 1px solid rgba(13, 115, 119, 0.22);
+  border-radius: 10px;
+  padding: 2px 9px;
+  white-space: nowrap;
+  cursor: default;
+}
+
+/* ── Row expand chevron ──────────────────────────────────────────── */
+.ld-row-clickable {
+  cursor: pointer;
+}
+
+.ld-chevron {
+  color: rgba(13, 115, 119, 0.45);
+  transition: color 0.15s ease, transform 0.2s ease;
+  display: block;
+}
+
+.ld-row-clickable:hover .ld-chevron {
+  color: #0D7377;
+}
+
+.ld-chevron-open {
+  transform: rotate(90deg);
+  color: #0D7377;
+}
 
 /* ── Expanded row container ──────────────────────────────────────── */
 .seq-expanded-row td {
@@ -1481,7 +1552,7 @@ code {
 .detail-panel-inner {
   box-sizing: border-box;
   width: 100%;
-  padding: 4px 20px 4px;
+  padding: 12px 24px 16px;
   display: flex;
   flex-direction: column;
 }
@@ -1557,21 +1628,20 @@ code {
 .sample-abundance-bar {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
+  width: 100%;
   min-width: 0;
 }
 
 .sample-bar-track { flex: 1; min-width: 0; }
 
 .sample-pct-text {
-  font-size: 13px;
-  font-weight: 600;
+  font-size: 0.875rem;
+  font-weight: 500;
   color: rgba(0, 0, 0, 0.55);
-  min-width: 44px;
-  margin-left: 4px;
-  text-align: right;
-  font-family: 'Roboto Mono', monospace;
+  width: 44px;
   flex-shrink: 0;
+  font-family: 'Roboto', sans-serif;
 }
 
 /* ── Sequence viewer ─────────────────────────────────────────────── */
@@ -1855,5 +1925,82 @@ code {
 
 .v-theme--apaAtlasDarkTheme .sample-pct-text {
   color: rgba(255, 255, 255, 0.55);
+}
+
+.v-theme--apaAtlasDarkTheme .ld-chevron {
+  color: rgba(42, 168, 174, 0.5);
+}
+
+.v-theme--apaAtlasDarkTheme .ld-row-clickable:hover .ld-chevron {
+  color: #2AA8AE;
+}
+
+.v-theme--apaAtlasDarkTheme .ld-chevron-open {
+  color: #2AA8AE;
+}
+
+.v-theme--apaAtlasDarkTheme .ld-site-id-tag {
+  background: rgba(42, 168, 174, 0.10);
+  color: #2AA8AE;
+  border-color: rgba(42, 168, 174, 0.22);
+}
+
+/* ── Mean Abundance header with popover ─────────────────────────── */
+.ld-header-cell-row {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  white-space: nowrap;
+}
+
+.tx-info-icon {
+  color: rgba(13, 115, 119, 0.55);
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: color 0.15s ease;
+  vertical-align: middle;
+}
+
+.tx-info-icon:hover {
+  color: #0D7377;
+}
+
+.tx-info-popover {
+  width: 100%;
+  background: rgba(255, 255, 255, 0.60) !important;
+  backdrop-filter: blur(16px) saturate(180%);
+  -webkit-backdrop-filter: blur(16px) saturate(180%);
+  border: 1px solid rgba(13, 115, 119, 0.20) !important;
+  box-shadow: 0 8px 32px rgba(13, 115, 119, 0.10), 0 2px 8px rgba(0, 0, 0, 0.08) !important;
+}
+
+.tx-info-popover-text {
+  font-family: 'Roboto', sans-serif;
+  font-size: 13px;
+  line-height: 1.65;
+  color: rgba(0, 0, 0, 0.78);
+  padding: 14px 16px !important;
+  text-align: justify;
+}
+
+/* Dark theme */
+.v-theme--apaAtlasDarkTheme .tx-info-icon {
+  color: rgba(42, 168, 174, 0.6);
+}
+
+.v-theme--apaAtlasDarkTheme .tx-info-icon:hover {
+  color: #2AA8AE;
+}
+
+.v-theme--apaAtlasDarkTheme .tx-info-popover {
+  background: rgba(16, 22, 32, 0.52) !important;
+  backdrop-filter: blur(20px) saturate(160%);
+  -webkit-backdrop-filter: blur(20px) saturate(160%);
+  border-color: rgba(42, 168, 174, 0.28) !important;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.40), 0 2px 8px rgba(42, 168, 174, 0.08) !important;
+}
+
+.v-theme--apaAtlasDarkTheme .tx-info-popover-text {
+  color: rgba(255, 255, 255, 0.82);
 }
 </style>

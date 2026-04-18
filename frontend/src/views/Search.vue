@@ -188,7 +188,7 @@ const headers = [
   { title: 'Gene Name', key: 'gene_name', sortable: true },
   { title: 'Transcript ID', key: 'transcript_id', sortable: true },
   { title: 'Chromosome', key: 'chromosome', sortable: false },
-  { title: 'APA Sites', key: 'apa_site_count', sortable: true },
+  { title: 'PA Sites', key: 'apa_site_count', sortable: true },
   { title: 'Samples', key: 'samples', sortable: false },
   { title: 'Species', key: 'species', sortable: true },
 ]

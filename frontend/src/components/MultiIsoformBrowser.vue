@@ -453,8 +453,8 @@ const renderRuler = () => {
   const trackWidth = containerWidth.value - margin.left - margin.right
 
   const sampleLabel = formatCoordinate((domain[0] + domain[1]) / 2)
-  const labelPx = sampleLabel.length * 7.0
-  const minSpacingPx = labelPx + 20
+  const labelPx = measureTextWidth(sampleLabel, 12, '500')
+  const minSpacingPx = labelPx + 40
 
   const maxTicks = Math.max(2, Math.floor(trackWidth / minSpacingPx))
 
