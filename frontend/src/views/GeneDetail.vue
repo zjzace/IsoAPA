@@ -31,11 +31,11 @@
           <div class="gene-meta-row">
             <div class="gene-meta-item gene-meta-item--centered">
               <span class="gene-meta-label">Chromosome</span>
-              <span class="gene-meta-value" style="font-weight: 700;">{{ geneData.chromosome }}</span>
+              <v-chip size="small" variant="tonal" color="primary" class="gene-meta-chip">{{ geneData.chromosome }}</v-chip>
             </div>
             <div class="gene-meta-item gene-meta-item--centered">
               <span class="gene-meta-label">Strand</span>
-              <span class="gene-meta-value" style="font-weight: 700;">{{ geneData.strand }}</span>
+              <v-chip size="small" variant="tonal" color="secondary" class="gene-meta-chip">{{ geneData.strand }}</v-chip>
             </div>
             <div class="gene-meta-item">
               <span class="gene-meta-label">Total Transcripts</span>
@@ -648,6 +648,11 @@ code {
   font-size: 14px;
   font-weight: 700;
   color: #0D7377;
+}
+
+.gene-meta-chip :deep(.v-chip__content) {
+  font-size: 14px;
+  font-weight: 500;
 }
 
 /* ── Outer section card ──────────────────────────────────────────── */
