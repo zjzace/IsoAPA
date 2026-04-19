@@ -73,7 +73,7 @@
               density="compact"
               hide-details
               class="filter-field"
-              :menu-props="{ class: 'search-select-menu', width: filterSelectWidth || undefined }"
+              :menu-props="{ class: 'search-select-menu', width: filterSelectWidth || undefined, offset: 1 }"
               @update:model-value="debouncedSearch"
             ></v-select>
           </div>
@@ -93,7 +93,7 @@
               density="compact"
               hide-details
               class="filter-field"
-              :menu-props="{ class: 'search-select-menu', width: filterSelectWidth || undefined }"
+              :menu-props="{ class: 'search-select-menu', width: filterSelectWidth || undefined, offset: 1 }"
               @update:model-value="debouncedSearch"
             ></v-select>
           </div>
@@ -679,7 +679,7 @@ watch(() => route.query, (newQuery) => {
      scoped styles cannot reach them — this block is intentionally unscoped. -->
 <style>
 .search-select-menu {
-  margin-top: -1px;
+  margin-left: -1px;
 }
 .search-select-menu .v-overlay__content {
   min-width: unset !important;
