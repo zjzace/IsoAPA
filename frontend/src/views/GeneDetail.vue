@@ -891,7 +891,7 @@ code {
   color: #0D7377;
   border: 1px solid rgba(13, 115, 119, 0.22);
   border-radius: 10px;
-  font-size: 12.5px;
+  font-size: 13px;
   font-weight: 500;
   padding: 2px 9px;
   font-family: 'Roboto', sans-serif;
@@ -945,7 +945,7 @@ code {
 .tx-site-id-tag {
   display: inline-block;
   font-family: 'Roboto', sans-serif;
-  font-size: 12.5px;
+  font-size: 13px;
   font-weight: 500;
   color: #0D7377;
   background: rgba(13, 115, 119, 0.10);
@@ -962,7 +962,7 @@ code {
 /* Sample "+N more" / "show less" toggle button in inner table */
 .tx-sample-more-btn {
   display: inline-block;
-  font-size: 12px;
+  font-size: 12.5px;
   font-weight: 600;
   font-family: 'Roboto', sans-serif;
   color: #0D7377;
@@ -1034,7 +1034,7 @@ code {
 .tx-inner-th {
   padding: 8px 12px;
   text-align: left;
-  font-size: 12px;
+  font-size: 12.5px;
   font-weight: 600;
   color: rgba(0, 0, 0, 0.55);
   background: rgba(13, 115, 119, 0.03);
@@ -1094,7 +1094,7 @@ code {
 .tx-inner-td {
   padding: 8px 12px;
   vertical-align: middle;
-  font-size: 13.5px;
+  font-size: 14px;
   color: rgba(0, 0, 0, 0.8);
 }
 
@@ -1120,7 +1120,7 @@ code {
 }
 
 .tx-abundance-val {
-  font-size: 12px;
+  font-size: 12.5px;
   color: rgba(0, 0, 0, 0.6);
   font-family: 'Roboto', sans-serif;
   width: 40px;

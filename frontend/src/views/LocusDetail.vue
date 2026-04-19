@@ -1179,7 +1179,7 @@ code {
 
 .elegant-table :deep(.v-data-table__th) {
   background: rgba(13, 115, 119, 0.04) !important;
-  font-size: 13px !important;
+  font-size: 12px !important;
   font-weight: 600 !important;
   letter-spacing: 0.4px;
   text-transform: uppercase;
@@ -1195,7 +1195,7 @@ code {
   color: rgba(0, 0, 0, 0.82);
   border-bottom: 1px solid rgba(0, 0, 0, 0.055) !important;
   font-family: 'Roboto', sans-serif;
-  font-size: 14.5px;
+  font-size: 13px;
 }
 
 /* When row is expanded: suppress the full-width td borders */
@@ -1258,7 +1258,7 @@ code {
 }
 
 .heatmap-corner-text {
-  font-size: 10px;
+  font-size: 10.5px;
   font-family: 'Roboto', sans-serif;
   font-weight: 700;
   color: rgba(0, 0, 0, 0.38);
@@ -1330,7 +1330,7 @@ code {
 }
 
 .heatmap-site-id {
-  font-size: 12px;
+  font-size: 11.5px;
   font-family: 'Roboto', sans-serif;
   font-weight: 500;
   color: rgba(0, 0, 0, 0.80);
@@ -1386,7 +1386,7 @@ code {
 }
 
 .heatmap-cell-pct {
-  font-size: 12.5px;
+  font-size: 11.5px;
   font-weight: 700;
   font-family: 'Roboto', sans-serif;
   line-height: 1;
@@ -1571,7 +1571,7 @@ code {
 .detail-section-label {
   display: flex;
   align-items: center;
-  font-size: 11.5px;
+  font-size: 12px;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.6px;
@@ -1614,10 +1614,15 @@ code {
   min-width: 0;
 }
 
-.sample-name-chip { flex-shrink: 0; }
+.sample-name-chip {
+  flex-shrink: 0;
+  font-size: 11.5px !important;
+  font-family: 'Roboto', sans-serif !important;
+}
 
 .sample-type-text {
-  font-size: 12.5px;
+  font-size: 11px;
+  font-family: 'Roboto', sans-serif;
   color: rgba(0, 0, 0, 0.38);
   font-style: italic;
   white-space: nowrap;
@@ -1636,7 +1641,7 @@ code {
 .sample-bar-track { flex: 1; min-width: 0; }
 
 .sample-pct-text {
-  font-size: 0.875rem;
+  font-size: 11.5px;
   font-weight: 500;
   color: rgba(0, 0, 0, 0.55);
   width: 44px;
@@ -1657,9 +1662,9 @@ code {
   display: inline-flex;
   align-items: center;
   line-height: 1;
-  font-size: 12.5px;
+  font-size: 11.5px;
   font-weight: 600;
-  padding: 5px 10px;
+  padding: 4px 9px;
   border-radius: 12px;
   background: rgba(0, 0, 0, 0.06);
   color: rgba(0, 0, 0, 0.65);
@@ -1687,11 +1692,11 @@ code {
   box-sizing: border-box;
   width: 100%;
   font-family: 'Roboto Mono', 'Courier New', monospace;
-  font-size: 14px;
+  font-size: 12px;
   line-height: 1.6;
   letter-spacing: 0.05em;
-  word-break: break-all;
-  overflow-wrap: break-word;
+  white-space: nowrap;
+  overflow-x: auto;
   border-top: 1px solid rgba(0, 0, 0, 0.08);
   padding: 8px 0 2px;
 }
