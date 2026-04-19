@@ -1,234 +1,199 @@
 <template>
   <div class="download-page">
-    <v-container class="py-8">
-      <div class="text-center mb-8">
-        <h1 class="text-h3 font-weight-bold mb-2">
-          <v-icon icon="mdi-download" size="40" color="primary" class="mr-3"></v-icon>
-          Download Data
-        </h1>
-        <p class="text-h6 text-grey">Export ApaAtlas data in your preferred format</p>
+    <!-- 1. Hero -->
+    <section class="hero-section">
+      <div class="hero-bg"></div>
+      <v-container class="hero-content">
+        <h1 class="text-h3 font-weight-bold text-white mb-2">Download ApaAtlas Data</h1>
+        <p class="text-h6 text-white mb-6 opacity-90">Bulk export of isoform-level polyadenylation datasets</p>
+        
+        <div class="d-flex flex-wrap gap-4">
+          <v-chip class="mr-2" variant="outlined" color="white" style="background: rgba(255,255,255,0.9);">
+            <strong style="color: #0D7377;">235K+ PA Sites</strong>
+          </v-chip>
+          <v-chip class="mr-2" variant="outlined" color="white" style="background: rgba(255,255,255,0.9);">
+            <strong style="color: #0D7377;">3 Datasets</strong>
+          </v-chip>
+          <v-chip variant="outlined" color="white" style="background: rgba(255,255,255,0.9);">
+            <strong style="color: #0D7377;">Multiple Species</strong>
+          </v-chip>
+        </div>
+      </v-container>
+    </section>
+
+    <!-- 2. Main content -->
+    <v-container class="py-12">
+      <!-- A. Dataset Cards -->
+      <div class="section-eyebrow mb-2">Choose Dataset</div>
+      <div class="dataset-cards-row mb-8">
+        <div 
+          v-for="item in datasets" 
+          :key="item.id"
+          class="dataset-card" 
+          :class="{ 'dataset-card--selected': selectedDataset?.id === item.id }" 
+          @click="selectDataset(item)"
+        >
+          <div class="dataset-card-icon" :style="{ background: item.gradient }">
+            <v-icon :icon="item.icon" size="28" color="white"></v-icon>
+          </div>
+          <div class="dataset-card-title">{{ item.title }}</div>
+          <div class="dataset-card-desc">{{ item.description }}</div>
+          <div class="dataset-card-meta">
+            <v-chip size="x-small" variant="tonal" color="primary">{{ item.countLabel }}</v-chip>
+            <v-chip size="x-small" variant="outlined" class="ml-1" v-for="fmt in item.formats" :key="fmt">{{ fmt.toUpperCase() }}</v-chip>
+          </div>
+        </div>
       </div>
 
-      <v-row justify="center">
-        <v-col cols="12" lg="10">
-          <!-- Download Cards -->
-          <v-row>
-            <v-col cols="12" md="4" v-for="item in downloadOptions" :key="item.id">
-              <v-card 
-                class="download-card h-100" 
-                variant="outlined"
-                @click="selectDownload(item)"
-                :class="{ 'selected': selectedDownload?.id === item.id }"
-                hover
-              >
-                <v-card-text class="text-center pa-6">
-                  <v-avatar :color="item.color" size="72" class="mb-4">
-                    <v-icon :icon="item.icon" size="36"></v-icon>
-                  </v-avatar>
-                  <h3 class="text-h5 font-weight-bold mb-2">{{ item.title }}</h3>
-                  <p class="text-body-2 text-grey">{{ item.description }}</p>
-                  <div class="mt-4">
-                    <v-chip size="small" class="mr-1" v-for="fmt in item.formats" :key="fmt">
-                      {{ fmt.toUpperCase() }}
-                    </v-chip>
-                  </div>
-                </v-card-text>
-              </v-card>
-            </v-col>
-          </v-row>
-
-          <!-- Download Options Panel -->
-          <v-expand-transition>
-            <v-card v-if="selectedDownload" variant="outlined" class="mt-8 pa-6">
-              <h3 class="text-h5 font-weight-bold mb-4">
-                <v-icon :icon="selectedDownload.icon" class="mr-2"></v-icon>
-                Download {{ selectedDownload.title }}
-              </h3>
-
-              <v-row>
-                <v-col cols="12" md="6">
-                  <v-select
-                    v-model="filters.species"
-                    :items="speciesOptions"
-                    label="Filter by Species"
-                    variant="outlined"
-                    density="compact"
-                    clearable
-                    hide-details
-                    prepend-inner-icon="mdi-earth"
-                  ></v-select>
-                </v-col>
-                <v-col cols="12" md="6" v-if="selectedDownload.id !== 'genes'">
-                  <v-select
-                    v-model="filters.sample"
-                    :items="sampleOptions"
-                    label="Filter by Sample"
-                    variant="outlined"
-                    density="compact"
-                    clearable
-                    hide-details
-                    prepend-inner-icon="mdi-flask"
-                  ></v-select>
-                </v-col>
-                <v-col cols="12" md="6" v-if="selectedDownload.id === 'apa-sites'">
-                  <v-text-field
-                    v-model="filters.geneName"
-                    label="Filter by Gene Name"
-                    variant="outlined"
-                    density="compact"
-                    clearable
-                    hide-details
-                    prepend-inner-icon="mdi-gene"
-                  ></v-text-field>
-                </v-col>
-                <v-col cols="12" md="6">
-                  <v-select
-                    v-model="filters.format"
-                    :items="selectedDownload.formats"
-                    label="Export Format"
-                    variant="outlined"
-                    density="compact"
-                    hide-details
-                    prepend-inner-icon="mdi-file-delimited"
-                  ></v-select>
-                </v-col>
-              </v-row>
-
-              <div class="d-flex align-center justify-space-between mt-6 pa-4 bg-grey-lighten-4 rounded">
-                <div>
-                  <div class="text-body-2 text-grey">Estimated records</div>
-                  <div class="text-h6 font-weight-bold">{{ estimatedRecords }}</div>
-                </div>
-                <v-btn 
-                  color="primary" 
-                  size="large" 
-                  @click="downloadData"
-                  :loading="downloading"
-                >
-                  <v-icon start>mdi-download</v-icon>
-                  Download
-                </v-btn>
-              </div>
-            </v-card>
-          </v-expand-transition>
-
-          <!-- API Documentation -->
-          <v-card variant="outlined" class="mt-8 pa-6">
-            <h3 class="text-h5 font-weight-bold mb-4">
-              <v-icon icon="mdi-code-braces" class="mr-2"></v-icon>
-              Programmatic Access (API)
-            </h3>
-            <p class="text-body-1 mb-4">
-              You can also download data programmatically using our REST API:
-            </p>
-            
-            <v-tabs v-model="apiTab" color="primary">
-              <v-tab value="curl">cURL</v-tab>
-              <v-tab value="python">Python</v-tab>
-              <v-tab value="r">R</v-tab>
-            </v-tabs>
-
-            <v-tabs-window v-model="apiTab" class="mt-4">
-              <v-tabs-window-item value="curl">
-                <v-sheet color="grey-darken-4" class="pa-4" style="overflow-x: auto;">
-                  <pre class="text-body-2 text-white">{{ apiExamples.curl }}</pre>
-                </v-sheet>
-              </v-tabs-window-item>
-              <v-tabs-window-item value="python">
-                <v-sheet color="grey-darken-4" class="pa-4" style="overflow-x: auto;">
-                  <pre class="text-body-2 text-white">{{ apiExamples.python }}</pre>
-                </v-sheet>
-              </v-tabs-window-item>
-              <v-tabs-window-item value="r">
-                <v-sheet color="grey-darken-4" class="pa-4" style="overflow-x: auto;">
-                  <pre class="text-body-2 text-white">{{ apiExamples.r }}</pre>
-                </v-sheet>
-              </v-tabs-window-item>
-            </v-tabs-window>
-
-            <v-btn 
-              color="primary" 
-              variant="tonal" 
-              class="mt-4"
-              @click="copyApiCommand"
+      <!-- B. Scope + Format -->
+      <div class="section-eyebrow mb-2">Filter & Format</div>
+      <div class="scope-panel">
+        <div class="scope-group">
+          <div class="scope-label">
+            <v-icon icon="mdi-earth" size="16" class="mr-1"></v-icon>
+            Species Scope
+          </div>
+          <div class="scope-chips-row">
+            <button class="scope-chip" :class="{ active: !selectedSpecies }" @click="selectedSpecies = null">
+              <v-icon icon="mdi-database" size="14" class="mr-1"></v-icon>
+              Whole Dataset
+            </button>
+            <button
+              v-for="sp in speciesList"
+              :key="sp.id"
+              class="scope-chip"
+              :class="{ active: selectedSpecies === sp.name }"
+              @click="selectedSpecies = sp.name"
             >
-              <v-icon start>mdi-content-copy</v-icon>
-              Copy Command
-            </v-btn>
-          </v-card>
+              {{ sp.name }}
+              <span class="scope-chip-latin" v-if="sp.latin_name">{{ sp.latin_name }}</span>
+            </button>
+          </div>
+        </div>
 
-          <!-- Data Schema -->
-          <v-card variant="outlined" class="mt-8 pa-6">
-            <h3 class="text-h5 font-weight-bold mb-4">
-              <v-icon icon="mdi-table" class="mr-2"></v-icon>
-              Data Schema
-            </h3>
-            
-            <v-tabs v-model="schemaTab" color="primary">
-              <v-tab value="apa-sites">APA Sites</v-tab>
-              <v-tab value="genes">Genes</v-tab>
-              <v-tab value="transcripts">Transcripts</v-tab>
-            </v-tabs>
+        <div class="scope-divider"></div>
 
-            <v-tabs-window v-model="schemaTab" class="mt-4">
-              <v-tabs-window-item value="apa-sites">
-                <v-table density="compact" class="schema-table">
-                  <thead>
-                    <tr>
-                      <th>Field</th>
-                      <th>Type</th>
-                      <th>Description</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <tr v-for="field in schemas.apaSites" :key="field.name">
-                      <td><code>{{ field.name }}</code></td>
-                      <td>{{ field.type }}</td>
-                      <td>{{ field.desc }}</td>
-                    </tr>
-                  </tbody>
-                </v-table>
-              </v-tabs-window-item>
-              <v-tabs-window-item value="genes">
-                <v-table density="compact" class="schema-table">
-                  <thead>
-                    <tr>
-                      <th>Field</th>
-                      <th>Type</th>
-                      <th>Description</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <tr v-for="field in schemas.genes" :key="field.name">
-                      <td><code>{{ field.name }}</code></td>
-                      <td>{{ field.type }}</td>
-                      <td>{{ field.desc }}</td>
-                    </tr>
-                  </tbody>
-                </v-table>
-              </v-tabs-window-item>
-              <v-tabs-window-item value="transcripts">
-                <v-table density="compact" class="schema-table">
-                  <thead>
-                    <tr>
-                      <th>Field</th>
-                      <th>Type</th>
-                      <th>Description</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <tr v-for="field in schemas.transcripts" :key="field.name">
-                      <td><code>{{ field.name }}</code></td>
-                      <td>{{ field.type }}</td>
-                      <td>{{ field.desc }}</td>
-                    </tr>
-                  </tbody>
-                </v-table>
-              </v-tabs-window-item>
-            </v-tabs-window>
-          </v-card>
-        </v-col>
-      </v-row>
+        <div class="scope-group">
+          <div class="scope-label">
+            <v-icon icon="mdi-file-delimited" size="16" class="mr-1"></v-icon>
+            Format
+          </div>
+          <div class="scope-chips-row">
+            <template v-if="selectedDataset && selectedDataset.formats.length === 1">
+              <button class="scope-chip active" style="cursor:default;">
+                {{ selectedDataset.formats[0].toUpperCase() }}
+              </button>
+            </template>
+            <template v-else>
+              <button
+                v-for="fmt in (selectedDataset ? selectedDataset.formats : ['csv','tsv'])"
+                :key="fmt"
+                class="scope-chip"
+                :class="{ active: selectedFormat === fmt }"
+                @click="selectedFormat = fmt"
+              >
+                {{ fmt.toUpperCase() }}
+              </button>
+            </template>
+          </div>
+        </div>
+      </div>
+
+      <!-- C. Download Action Panel -->
+      <div v-if="selectedDataset" class="download-action-panel">
+        <div class="download-action-info">
+          <div class="download-action-eyebrow">Ready to Download</div>
+          <div class="download-action-title">
+            {{ selectedDataset.title }}
+            <span v-if="selectedSpecies" class="download-action-species"> · {{ selectedSpecies }}</span>
+          </div>
+          <div class="download-action-meta">
+            <v-chip size="small" variant="tonal" color="primary" class="mr-2">{{ selectedFormat.toUpperCase() }}</v-chip>
+            <span class="text-grey text-caption">{{ selectedDataset.countLabel }}</span>
+          </div>
+        </div>
+        <v-btn
+          size="x-large"
+          class="download-btn"
+          :href="downloadUrl"
+          :download="downloadFilename"
+        >
+          <v-icon start icon="mdi-download"></v-icon>
+          Download
+        </v-btn>
+      </div>
+
+      <!-- D. API Access -->
+      <div class="section-eyebrow mb-2">Programmatic Access</div>
+      <div class="api-card">
+        <div class="api-card-header">
+          <div>
+            <div class="section-eyebrow mb-1">Programmatic Access</div>
+            <h3 class="api-card-title">Download via API</h3>
+            <p class="api-card-subtitle">Commands update automatically when you change the dataset or scope above.</p>
+          </div>
+        </div>
+
+        <div class="lang-tabs">
+          <button
+            v-for="lang in ['curl','python','r']"
+            :key="lang"
+            class="lang-tab"
+            :class="{ active: apiLang === lang }"
+            @click="apiLang = lang"
+          >
+            {{ langLabel(lang) }}
+          </button>
+        </div>
+
+        <div class="code-block">
+          <pre class="code-text"><code>{{ currentCommand }}</code></pre>
+          <button class="copy-btn" @click="copyCommand">
+            <v-icon :icon="copied ? 'mdi-check' : 'mdi-content-copy'" size="18"></v-icon>
+            {{ copied ? 'Copied!' : 'Copy' }}
+          </button>
+        </div>
+      </div>
+
+      <!-- E. Schema (collapsed) -->
+      <div class="schema-section">
+        <button class="schema-toggle-btn" @click="schemaOpen = !schemaOpen">
+          <v-icon :icon="schemaOpen ? 'mdi-chevron-up' : 'mdi-chevron-down'" size="20" class="mr-2"></v-icon>
+          {{ schemaOpen ? 'Hide Data Schema' : 'View Data Schema' }}
+        </button>
+
+        <v-expand-transition>
+          <div v-if="schemaOpen" class="schema-content mt-6">
+            <div class="lang-tabs">
+              <button 
+                v-for="s in schemas" 
+                :key="s.id" 
+                class="lang-tab" 
+                :class="{ active: schemaTab === s.id }" 
+                @click="schemaTab = s.id"
+              >
+                {{ s.title }}
+              </button>
+            </div>
+            <div class="schema-table-wrapper">
+              <v-table density="compact" class="elegant-table">
+                <thead>
+                  <tr>
+                    <th>Field</th><th>Type</th><th>Description</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr v-for="f in currentSchema" :key="f.name">
+                    <td><code class="field-badge">{{ f.name }}</code></td>
+                    <td><span class="type-badge">{{ f.type }}</span></td>
+                    <td class="text-grey-darken-1">{{ f.desc }}</td>
+                  </tr>
+                </tbody>
+              </v-table>
+            </div>
+          </div>
+        </v-expand-transition>
+      </div>
     </v-container>
   </div>
 </template>
@@ -237,204 +202,529 @@
 import { ref, computed, onMounted } from 'vue'
 import { apiService } from '@/services/api'
 
-const selectedDownload = ref(null)
-const downloading = ref(false)
-const apiTab = ref('curl')
+const speciesList = ref([])
+const selectedDataset = ref(null)
+const selectedSpecies = ref(null)
+const selectedFormat = ref('csv')
+const apiLang = ref('curl')
+const copied = ref(false)
+const schemaOpen = ref(false)
 const schemaTab = ref('apa-sites')
 
-const filters = ref({
-  species: null,
-  sample: null,
-  geneName: '',
-  format: 'csv'
-})
-
-const speciesOptions = ref([])
-const sampleOptions = ref([])
-
-const downloadOptions = [
+const datasets = [
   {
     id: 'apa-sites',
-    title: 'APA Sites',
-    description: 'All polyadenylation sites with positions, abundances, and sample information',
-    icon: 'mdi-map-marker',
-    color: 'primary',
-    formats: ['csv', 'tsv', 'txt']
+    title: 'PA Sites',
+    description: 'Polyadenylation sites with genomic positions, read counts, and relative abundances per isoform',
+    icon: 'mdi-map-marker-multiple',
+    gradient: 'linear-gradient(135deg, #0D7377, #14919B)',
+    countLabel: '235K+ records',
+    formats: ['csv', 'tsv'],
   },
   {
-    id: 'genes',
-    title: 'Genes',
-    description: 'Gene information including chromosome, strand, and APA site counts',
-    icon: 'mdi-gene',
-    color: 'secondary',
-    formats: ['csv', 'tsv', 'txt']
+    id: 'bed',
+    title: 'Genome Browser Track',
+    description: 'PA sites in BED6 format — ready to load into IGV, UCSC Genome Browser, or JBrowse for visualization',
+    icon: 'mdi-dna',
+    gradient: 'linear-gradient(135deg, #2E7D32, #388E3C)',
+    countLabel: 'BED6 format',
+    formats: ['bed'],
   },
   {
-    id: 'transcripts',
-    title: 'Transcripts',
-    description: 'Transcript records with APA site counts and associated genes',
-    icon: 'mdi-rna',
-    color: 'tertiary',
-    formats: ['csv', 'tsv', 'txt']
-  }
+    id: 'abundance-matrix',
+    title: 'Sample Abundance Matrix',
+    description: 'PA site × sample read-count matrix (TSV) for differential APA analysis with DaPars, QAPA, or DEXSeq',
+    icon: 'mdi-table-large',
+    gradient: 'linear-gradient(135deg, #5C6BC0, #7986CB)',
+    countLabel: 'Sites × Samples',
+    formats: ['tsv'],
+  },
 ]
 
-const estimatedRecords = computed(() => {
-  // This would ideally fetch from API
-  return '~10,000+'
-})
-
-const selectDownload = (item) => {
-  selectedDownload.value = item
-  filters.value.format = item.formats[0]
+const selectDataset = (item) => {
+  selectedDataset.value = item
+  selectedFormat.value = item.formats[0]
 }
 
-const downloadData = async () => {
-  downloading.value = true
+const BASE_URL = '/api/v1'
+
+const downloadUrl = computed(() => {
+  if (!selectedDataset.value) return ''
+  const params = new URLSearchParams()
+  if (selectedSpecies.value) params.set('species', selectedSpecies.value)
+  if (selectedDataset.value.formats.length > 1) params.set('format', selectedFormat.value)
+  const query = params.toString()
+  return `${BASE_URL}/download/${selectedDataset.value.id}${query ? '?' + query : ''}`
+})
+
+const downloadFilename = computed(() => {
+  if (!selectedDataset.value) return ''
+  const sp = selectedSpecies.value ? `_${selectedSpecies.value.toLowerCase().replace(/\s+/g, '_')}` : ''
+  return `apaatlas_${selectedDataset.value.id}${sp}.${selectedFormat.value}`
+})
+
+const buildQueryString = () => {
+  const parts = []
+  if (selectedDataset.value?.formats.length > 1) parts.push(`format=${selectedFormat.value}`)
+  if (selectedSpecies.value) parts.push(`species=${encodeURIComponent(selectedSpecies.value)}`)
+  return parts.length ? '?' + parts.join('&') : ''
+}
+
+const curlCommand = computed(() => {
+  const dataset = selectedDataset.value?.id || 'apa-sites'
+  const qs = buildQueryString()
+  const filename = downloadFilename.value || `apaatlas_${dataset}.${selectedFormat.value}`
+  return `curl -o "${filename}" \\\n  "http://your-server/api/v1/download/${dataset}${qs}"`
+})
+
+const pythonCommand = computed(() => {
+  const dataset = selectedDataset.value?.id || 'apa-sites'
+  const filename = downloadFilename.value || `apaatlas_${dataset}.${selectedFormat.value}`
+  const paramLines = []
+  if (selectedDataset.value?.formats.length > 1) paramLines.push(`    "format": "${selectedFormat.value}",`)
+  if (selectedSpecies.value) paramLines.push(`    "species": "${selectedSpecies.value}",`)
+  const paramBlock = paramLines.length ? `\nparams = {\n${paramLines.join('\n')}\n}\n` : '\nparams = {}\n'
+  return `import requests\n\nurl = "http://your-server/api/v1/download/${dataset}"${paramBlock}\nr = requests.get(url, params=params)\nwith open("${filename}", "wb") as f:\n    f.write(r.content)`
+})
+
+const rCommand = computed(() => {
+  const dataset = selectedDataset.value?.id || 'apa-sites'
+  const filename = downloadFilename.value || `apaatlas_${dataset}.${selectedFormat.value}`
+  const paramLines = []
+  if (selectedDataset.value?.formats.length > 1) paramLines.push(`    format = "${selectedFormat.value}",`)
+  if (selectedSpecies.value) paramLines.push(`    species = "${selectedSpecies.value}",`)
+  const paramBlock = paramLines.length ? `\nparams <- list(\n${paramLines.join('\n')}\n)\n` : '\nparams <- list()\n'
+  return `library(httr)\n\nurl <- "http://your-server/api/v1/download/${dataset}"${paramBlock}\nresponse <- GET(url, query = params)\nwriteBin(content(response, "raw"), "${filename}")`
+})
+
+const currentCommand = computed(() => {
+  if (apiLang.value === 'curl') return curlCommand.value
+  if (apiLang.value === 'python') return pythonCommand.value
+  return rCommand.value
+})
+
+const langLabel = (lang) => ({ curl: 'cURL', python: 'Python', r: 'R' }[lang])
+
+const copyCommand = async () => {
   try {
-    let url = `/api/v1/download/${selectedDownload.value.id}`
-    const params = new URLSearchParams()
-    
-    if (filters.value.species) params.append('species', filters.value.species)
-    if (filters.value.sample) params.append('sample', filters.value.sample)
-    if (filters.value.geneName) params.append('gene_name', filters.value.geneName)
-    params.append('format', filters.value.format)
-    
-    const response = await fetch(`${url}?${params.toString()}`)
-    const blob = await response.blob()
-    const filename = `${selectedDownload.value.id}.${filters.value.format}`
-    
-    const link = document.createElement('a')
-    link.href = window.URL.createObjectURL(blob)
-    link.download = filename
-    link.click()
+    await navigator.clipboard.writeText(currentCommand.value)
+    copied.value = true
+    setTimeout(() => { copied.value = false }, 2000)
   } catch (err) {
-    console.error('Download failed:', err)
-  } finally {
-    downloading.value = false
+    console.error('Failed to copy text: ', err)
   }
 }
 
-const apiExamples = {
-  curl: `# Download APA Sites
-curl -o apa_sites.csv "http://localhost:8000/api/v1/download/apa-sites?format=csv"
-
-# Download Genes
-curl -o genes.csv "http://localhost:8000/api/v1/download/genes?format=csv"
-
-# With filters
-curl -o hep_apa_sites.csv "http://localhost:8000/api/v1/download/apa-sites?species=Human&format=csv"`,
-  
-  python: `import requests
-
-# Download APA Sites
-url = "http://localhost:8000/api/v1/download/apa-sites"
-params = {"format": "csv", "species": "Human"}
-response = requests.get(url, params=params)
-
-with open("apa_sites.csv", "wb") as f:
-    f.write(response.content)`,
-  
-  r: `# Download using httr
-library(httr)
-
-url <- "http://localhost:8000/api/v1/download/apa-sites"
-params <- list(format = "csv", species = "Human")
-
-response <- GET(url, query = params)
-writeBin(content(response, "raw"), "apa_sites.csv")`
-}
-
-const schemas = {
-  apaSites: [
+const schemas = [
+  { id: 'apa-sites', title: 'PA Sites', fields: [
     { name: 'gene_name', type: 'string', desc: 'Official gene symbol' },
     { name: 'gene_id', type: 'string', desc: 'Ensembl Gene ID' },
     { name: 'transcript_id', type: 'string', desc: 'Ensembl Transcript ID' },
     { name: 'unified_id', type: 'string', desc: 'APA site identifier' },
-    { name: 'mode_site_position', type: 'integer', desc: 'Genomic position of APA site' },
-    { name: 'site_count', type: 'integer', desc: 'Number of reads at site' },
-    { name: 'site_abundance', type: 'float', desc: 'Relative abundance (0-1)' },
+    { name: 'mode_site_position', type: 'integer', desc: 'Genomic position of the PA site' },
+    { name: 'site_count', type: 'integer', desc: 'Number of reads supporting this site' },
+    { name: 'site_abundance', type: 'float', desc: 'Relative abundance (0–1) within the transcript' },
     { name: 'species', type: 'string', desc: 'Species name' },
-    { name: 'sample', type: 'string', desc: 'Sample/cell line name' }
-  ],
-  genes: [
-    { name: 'gene_name', type: 'string', desc: 'Official gene symbol' },
-    { name: 'gene_id', type: 'string', desc: 'Ensembl Gene ID' },
-    { name: 'chromosome', type: 'string', desc: 'Chromosome number' },
-    { name: 'strand', type: 'string', desc: '+ or -' },
-    { name: 'species', type: 'string', desc: 'Species name' },
-    { name: 'transcript_count', type: 'integer', desc: 'Number of transcripts' },
-    { name: 'apa_site_count', type: 'integer', desc: 'Total APA sites' }
-  ],
-  transcripts: [
-    { name: 'gene_name', type: 'string', desc: 'Official gene symbol' },
-    { name: 'gene_id', type: 'string', desc: 'Ensembl Gene ID' },
+    { name: 'sample', type: 'string', desc: 'Sample / cell line name' },
+  ]},
+  { id: 'bed', title: 'Genome Browser BED', fields: [
+    { name: 'chrom', type: 'string', desc: 'Chromosome in UCSC format (e.g. chr1)' },
+    { name: 'chromStart', type: 'integer', desc: '0-based start position of the PA site' },
+    { name: 'chromEnd', type: 'integer', desc: '1-based end position (half-open interval)' },
+    { name: 'name', type: 'string', desc: 'gene_name|transcript_id|site_id' },
+    { name: 'score', type: 'integer', desc: 'Read support (0–1000, capped per BED spec)' },
+    { name: 'strand', type: 'string', desc: '+ or –' },
+  ]},
+  { id: 'abundance-matrix', title: 'Abundance Matrix', fields: [
+    { name: 'site_id', type: 'string', desc: 'APA site identifier' },
     { name: 'transcript_id', type: 'string', desc: 'Ensembl Transcript ID' },
-    { name: 'chromosome', type: 'string', desc: 'Chromosome number' },
-    { name: 'strand', type: 'string', desc: '+ or -' },
+    { name: 'gene_name', type: 'string', desc: 'Official gene symbol' },
+    { name: 'chromosome', type: 'string', desc: 'Chromosome' },
+    { name: 'strand', type: 'string', desc: '+ or –' },
+    { name: 'position', type: 'integer', desc: 'Genomic position of the PA site' },
     { name: 'species', type: 'string', desc: 'Species name' },
-    { name: 'apa_site_count', type: 'integer', desc: 'Number of APA sites' }
-  ]
-}
+    { name: '[sample_name]', type: 'integer', desc: 'One column per sample — read count at this PA site' },
+  ]},
+]
 
-const copyApiCommand = () => {
-  const command = apiExamples[apiTab.value]
-  navigator.clipboard.writeText(command)
-}
+const currentSchema = computed(() => schemas.find(s => s.id === schemaTab.value)?.fields || [])
 
 onMounted(async () => {
   try {
     const species = await apiService.getSpecies()
-    speciesOptions.value = species.map(s => s.name)
-    
-    const samples = await apiService.getSamples()
-    sampleOptions.value = samples.map(s => s.name)
+    // Depending on API response, it might be an array of strings or objects. Handling both:
+    if (species && species.length > 0) {
+      if (typeof species[0] === 'string') {
+        speciesList.value = species.map(s => ({ id: s, name: s }))
+      } else {
+        speciesList.value = species
+      }
+    }
   } catch (err) {
-    console.error('Failed to load options:', err)
+    console.error('Failed to load species:', err)
   }
 })
-
 </script>
 
 <style scoped>
 .download-page {
   min-height: 100vh;
-  background: rgb(var(--v-theme-background));
+  background-color: #f8fafc;
 }
 
-.download-card {
+.hero-section {
+  position: relative;
+  min-height: 300px;
+  display: flex;
+  align-items: center;
+  overflow: hidden;
+}
+.hero-bg {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, #0a4f53 0%, #0D7377 40%, #1a2744 100%);
+  background-size: 300% 300%;
+  animation: gradientShift 18s ease infinite;
+}
+.hero-bg::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse 80% 60% at 60% 40%, rgba(20,145,155,0.18) 0%, transparent 70%);
+}
+@keyframes gradientShift {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+.hero-content {
+  position: relative;
+  z-index: 1;
+  padding: 48px 0 56px;
+}
+
+.section-eyebrow {
+  display: inline-block;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #14919B;
+  margin-bottom: 4px;
+}
+
+.dataset-cards-row {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 20px;
+  margin-bottom: 32px;
+}
+@media (max-width: 767px) {
+  .dataset-cards-row { grid-template-columns: 1fr; }
+}
+.dataset-card {
+  background: rgba(255, 255, 255, 0.80);
+  backdrop-filter: blur(16px) saturate(150%);
+  -webkit-backdrop-filter: blur(16px) saturate(150%);
+  border: 1px solid rgba(255, 255, 255, 0.55);
+  border-radius: 20px;
+  padding: 28px 24px;
   cursor: pointer;
-  transition: all 0.3s ease;
-  border: 2px solid transparent !important;
+  transition: transform 0.25s ease, box-shadow 0.25s ease, border-color 0.25s ease;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.06);
+  position: relative;
+  overflow: hidden;
+}
+.dataset-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 12px 32px rgba(13,115,119,0.12);
+}
+.dataset-card--selected {
+  border: 2px solid #14919B !important;
+  box-shadow: 0 0 0 4px rgba(20,145,155,0.12), 0 12px 32px rgba(13,115,119,0.16) !important;
+  background: rgba(240, 253, 250, 0.90) !important;
+}
+.dataset-card-icon {
+  width: 52px;
+  height: 52px;
+  border-radius: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 16px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+}
+.dataset-card-title {
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: #1e293b;
+  margin-bottom: 8px;
+}
+.dataset-card-desc {
+  font-size: 0.82rem;
+  color: #64748b;
+  line-height: 1.5;
+  margin-bottom: 16px;
+}
+.dataset-card-meta {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
 }
 
-.download-card:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
+.scope-panel {
+  background: rgba(255,255,255,0.80);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255,255,255,0.55);
+  border-radius: 18px;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.05);
+  padding: 20px 28px;
+  display: flex;
+  align-items: flex-start;
+  gap: 32px;
+  flex-wrap: wrap;
+  margin-bottom: 32px;
+}
+.scope-group { display: flex; flex-direction: column; gap: 10px; }
+.scope-label {
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: #94a3b8;
+  display: flex;
+  align-items: center;
+}
+.scope-chips-row { display: flex; flex-wrap: wrap; gap: 8px; }
+.scope-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 7px 16px;
+  border-radius: 9999px;
+  font-size: 0.85rem;
+  font-weight: 500;
+  border: 1px solid #e2e8f0;
+  background: white;
+  color: #475569;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  gap: 4px;
+}
+.scope-chip:hover {
+  border-color: #14919B;
+  color: #0D7377;
+}
+.scope-chip.active {
+  background: linear-gradient(135deg, #0D7377, #14919B);
+  border-color: #14919B;
+  color: white;
+  box-shadow: 0 3px 10px rgba(13,115,119,0.25);
+}
+.scope-chip-latin {
+  font-style: italic;
+  font-size: 0.75rem;
+  opacity: 0.75;
+  margin-left: 2px;
+}
+.scope-chip.active .scope-chip-latin { opacity: 0.85; }
+.scope-divider {
+  width: 1px;
+  background: #e2e8f0;
+  align-self: stretch;
+  min-height: 40px;
+}
+@media (max-width: 600px) { .scope-divider { display: none; } }
+
+.download-action-panel {
+  background: rgba(240, 253, 250, 0.95);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 2px solid rgba(20,145,155,0.25);
+  border-radius: 18px;
+  padding: 28px 32px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  margin-bottom: 32px;
+  box-shadow: 0 8px 32px rgba(13,115,119,0.10);
+  flex-wrap: wrap;
+}
+.download-action-eyebrow {
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: #14919B;
+  margin-bottom: 6px;
+}
+.download-action-title {
+  font-size: 1.4rem;
+  font-weight: 800;
+  color: #1e293b;
+  margin-bottom: 10px;
+}
+.download-action-species {
+  color: #14919B;
+}
+.download-btn {
+  background: linear-gradient(135deg, #0D7377, #14919B) !important;
+  color: white !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.05em !important;
+  border-radius: 14px !important;
+  padding: 0 32px !important;
+  box-shadow: 0 6px 20px rgba(13,115,119,0.30) !important;
+  transition: transform 0.2s ease, box-shadow 0.2s ease !important;
+  flex-shrink: 0;
+}
+.download-btn:hover {
+  transform: translateY(-2px) !important;
+  box-shadow: 0 10px 28px rgba(13,115,119,0.40) !important;
 }
 
-.download-card.selected {
-  border-color: rgb(var(--v-theme-primary)) !important;
-  background: rgba(var(--v-theme-primary), 0.04);
+.api-card {
+  background: rgba(255,255,255,0.80);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255,255,255,0.55);
+  border-radius: 20px;
+  padding: 32px;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.06);
+  margin-bottom: 32px;
 }
-
-code {
-  background: rgba(0, 0, 0, 0.05);
-  padding: 2px 6px;
-  border-radius: 4px;
-  font-size: 0.95em;
+.api-card-title {
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: #1e293b;
+  margin-bottom: 4px;
 }
-
-pre {
+.api-card-subtitle {
+  font-size: 0.85rem;
+  color: #64748b;
+  margin-bottom: 0;
+}
+.api-card-header {
+  margin-bottom: 24px;
+}
+.lang-tabs {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 0;
+  border-bottom: 1px solid #e2e8f0;
+  padding-bottom: 0;
+}
+.lang-tab {
+  padding: 10px 20px;
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: #94a3b8;
+  background: none;
+  border: none;
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+  transition: color 0.2s, border-color 0.2s;
+}
+.lang-tab:hover { color: #0D7377; }
+.lang-tab.active {
+  color: #0D7377;
+  border-bottom-color: #14919B;
+}
+.code-block {
+  position: relative;
+  background: #0f172a;
+  border-radius: 0 0 12px 12px;
+  padding: 24px;
+  border: 1px solid #1e293b;
+  border-top: none;
+}
+.code-text {
+  color: #e2e8f0;
+  font-family: 'JetBrains Mono', 'Fira Code', 'Courier New', monospace;
+  font-size: 0.85rem;
+  line-height: 1.7;
   white-space: pre-wrap;
-  word-wrap: break-word;
+  word-break: break-all;
+  margin: 0;
+}
+.copy-btn {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  background: rgba(255,255,255,0.08);
+  border: 1px solid rgba(255,255,255,0.15);
+  border-radius: 8px;
+  color: #94a3b8;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.copy-btn:hover {
+  background: rgba(20,145,155,0.25);
+  color: #14919B;
+  border-color: #14919B;
 }
 
-.schema-table {
-  background: transparent !important;
+.schema-section {
+  background: rgba(255,255,255,0.80);
+  backdrop-filter: blur(16px);
+  border: 1px solid rgba(255,255,255,0.55);
+  border-radius: 20px;
+  padding: 24px 32px;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.06);
 }
-
-.schema-table th {
-  background: rgba(var(--v-theme-surface-variant), 0.3) !important;
+.schema-toggle-btn {
+  display: flex;
+  align-items: center;
+  background: none;
+  border: none;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: #0D7377;
+  cursor: pointer;
+  padding: 0;
 }
+.schema-toggle-btn:hover { text-decoration: underline; }
+.schema-table-wrapper {
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  overflow: hidden;
+  margin-top: 0;
+}
+.field-badge {
+  background: #f0fdfa;
+  color: #0D7377;
+  padding: 2px 8px;
+  border-radius: 6px;
+  font-size: 0.82rem;
+  border: 1px solid rgba(13,115,119,0.2);
+  font-family: monospace;
+}
+.type-badge {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: #5C6BC0;
+  background: #eef2ff;
+  padding: 2px 8px;
+  border-radius: 4px;
+}
+.elegant-table { background: transparent !important; }
+.elegant-table :deep(th) {
+  background: #f8fafc !important;
+  font-size: 0.8rem !important;
+  font-weight: 700 !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.06em !important;
+  color: #64748b !important;
+}
+.elegant-table :deep(td) { border-bottom: 1px solid #f1f5f9 !important; }
+.elegant-table :deep(tr:hover td) { background: #f0fdfa !important; }
 </style>

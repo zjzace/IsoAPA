@@ -913,6 +913,134 @@ def download_transcripts(
     )
 
 
+@router.get("/download/bed")
+def download_bed(
+    species: Optional[str] = None,
+    db: Session = Depends(get_db),
+):
+    """Download PA sites as BED6 format for genome browser visualization (IGV, UCSC, JBrowse)."""
+    query = (
+        db.query(
+            Gene.chromosome,
+            APASite.mode_site_position,
+            APASite.unified_id,
+            APASite.site_count,
+            Gene.strand,
+            Gene.gene_name,
+            Transcript.transcript_id,
+        )
+        .select_from(APASite)
+        .join(Transcript, APASite.transcript_id == Transcript.id)
+        .join(Gene, Transcript.gene_id == Gene.id)
+        .join(Species, APASite.species_id == Species.id)
+    )
+
+    if species:
+        query = query.filter(Species.name.ilike(f"%{species}%"))
+
+    results = query.all()
+
+    output = io.StringIO()
+    output.write(
+        'track name="ApaAtlas_PA_Sites" description="ApaAtlas Polyadenylation Sites" useScore=1\n'
+    )
+
+    for row in results:
+        chrom = row.chromosome or "chrUnknown"
+        if not chrom.lower().startswith("chr"):
+            chrom = f"chr{chrom}"
+        site_pos = int(row.mode_site_position) if row.mode_site_position else 0
+        chrom_start = max(0, site_pos - 1)  # BED is 0-based
+        chrom_end = site_pos               # half-open end
+        name = f"{row.gene_name}|{row.transcript_id}|{row.unified_id}"
+        score = min(int(row.site_count) if row.site_count else 0, 1000)
+        strand = row.strand if row.strand in ("+", "-") else "."
+        output.write(f"{chrom}\t{chrom_start}\t{chrom_end}\t{name}\t{score}\t{strand}\n")
+
+    output.seek(0)
+    sp_suffix = f"_{species.lower().replace(' ', '_')}" if species else ""
+    filename = f"apaatlas_pa_sites{sp_suffix}.bed"
+
+    return StreamingResponse(
+        iter([output.getvalue()]),
+        media_type="text/plain",
+        headers={"Content-Disposition": f"attachment; filename={filename}"},
+    )
+
+
+@router.get("/download/abundance-matrix")
+def download_abundance_matrix(
+    species: Optional[str] = None,
+    db: Session = Depends(get_db),
+):
+    """Download PA site × sample abundance matrix (TSV) for differential APA analysis."""
+    sample_query = db.query(Sample.name).join(Species)
+    if species:
+        sample_query = sample_query.filter(Species.name.ilike(f"%{species}%"))
+    sample_names = sorted({row[0] for row in sample_query.all()})
+
+    query = (
+        db.query(
+            APASite.unified_id,
+            Transcript.transcript_id,
+            Gene.gene_name,
+            Gene.chromosome,
+            Gene.strand,
+            APASite.mode_site_position,
+            APASite.sample_data,
+            Species.name.label("species"),
+        )
+        .select_from(APASite)
+        .join(Transcript, APASite.transcript_id == Transcript.id)
+        .join(Gene, Transcript.gene_id == Gene.id)
+        .join(Species, APASite.species_id == Species.id)
+    )
+
+    if species:
+        query = query.filter(Species.name.ilike(f"%{species}%"))
+
+    results = query.all()
+
+    output = io.StringIO()
+    header_cols = [
+        "site_id", "transcript_id", "gene_name",
+        "chromosome", "strand", "position", "species",
+    ] + sample_names
+    output.write("\t".join(header_cols) + "\n")
+
+    for row in results:
+        sample_counts: dict = {s: 0 for s in sample_names}
+        if row.sample_data:
+            try:
+                for sd in json.loads(row.sample_data):
+                    sname = sd.get("sample_name", "")
+                    if sname in sample_counts:
+                        sample_counts[sname] = int(sd.get("site_count", 0) or 0)
+            except Exception:
+                pass
+
+        row_vals = [
+            row.unified_id or "",
+            row.transcript_id or "",
+            row.gene_name or "",
+            row.chromosome or "",
+            row.strand or "",
+            str(row.mode_site_position or ""),
+            row.species or "",
+        ] + [str(sample_counts[s]) for s in sample_names]
+        output.write("\t".join(row_vals) + "\n")
+
+    output.seek(0)
+    sp_suffix = f"_{species.lower().replace(' ', '_')}" if species else ""
+    filename = f"apaatlas_abundance_matrix{sp_suffix}.tsv"
+
+    return StreamingResponse(
+        iter([output.getvalue()]),
+        media_type="text/tab-separated-values",
+        headers={"Content-Disposition": f"attachment; filename={filename}"},
+    )
+
+
 # ---------------------------------------------------------------------------
 # FASTA index cache
 # ---------------------------------------------------------------------------
