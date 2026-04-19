@@ -21,7 +21,7 @@
         </div>
 
         <!-- Filter inputs -->
-        <div class="filter-grid">
+        <div class="filter-grid" ref="filterGridRef">
           <div class="filter-card">
             <div class="filter-inner-label" :class="{ 'label-hidden': !!filters.gene_name }">
               <span class="filter-col-icon" style="background: linear-gradient(135deg,#0D7377,#14919B)">
@@ -73,7 +73,7 @@
               density="compact"
               hide-details
               class="filter-field"
-              :menu-props="{ class: 'search-select-menu' }"
+              :menu-props="{ class: 'search-select-menu', width: filterSelectWidth || undefined }"
               @update:model-value="debouncedSearch"
             ></v-select>
           </div>
@@ -93,7 +93,7 @@
               density="compact"
               hide-details
               class="filter-field"
-              :menu-props="{ class: 'search-select-menu' }"
+              :menu-props="{ class: 'search-select-menu', width: filterSelectWidth || undefined }"
               @update:model-value="debouncedSearch"
             ></v-select>
           </div>
@@ -196,12 +196,20 @@
 </template>
 
 <script setup>
-import { ref, reactive, onMounted, watch } from 'vue'
+import { ref, reactive, onMounted, onUnmounted, watch } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { apiService } from '@/services/api'
 
 const router = useRouter()
 const route = useRoute()
+
+const filterGridRef = ref(null)
+const filterSelectWidth = ref(0)
+
+const measureFilterCard = () => {
+  const card = filterGridRef.value?.querySelector('.filter-card--select')
+  if (card) filterSelectWidth.value = card.offsetWidth
+}
 
 const loading = ref(false)
 const results = ref([])
@@ -357,6 +365,12 @@ onMounted(async () => {
   }
   
   search()
+  measureFilterCard()
+  window.addEventListener('resize', measureFilterCard)
+})
+
+onUnmounted(() => {
+  window.removeEventListener('resize', measureFilterCard)
 })
 
 watch(() => route.query, (newQuery) => {
