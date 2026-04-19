@@ -42,10 +42,10 @@
               <span class="gene-meta-value gene-meta-accent">{{ geneData.transcripts.length }}</span>
             </div>
             <div class="gene-meta-item">
-              <span class="gene-meta-label">Total PA Sites</span>
+              <span class="gene-meta-label">PA Sites</span>
               <span class="gene-meta-value gene-meta-accent">{{ totalAPASites }}</span>
             </div>
-            <div class="gene-meta-item" v-if="speciesInfo">
+            <div class="gene-meta-item" style="align-items: flex-start;" v-if="speciesInfo">
               <span class="gene-meta-label">Species</span>
               <span class="gene-meta-value">
                 {{ speciesInfo.name }}
@@ -619,6 +619,7 @@ code {
 .gene-meta-item {
   display: flex;
   flex-direction: column;
+  align-items: center;
   gap: 2px;
 }
 
@@ -644,7 +645,7 @@ code {
 }
 
 .gene-meta-accent {
-  font-size: 18px;
+  font-size: 15px;
   font-weight: 700;
   color: #0D7377;
 }
