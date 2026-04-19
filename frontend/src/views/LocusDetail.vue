@@ -49,11 +49,11 @@
             </div>
             <div class="gene-meta-item">
               <span class="gene-meta-label">Chromosome</span>
-              <v-chip size="small" variant="tonal" color="primary">{{ locusData.gene.chromosome }}</v-chip>
+              <v-chip size="small" variant="tonal" color="primary" class="gene-meta-chip">{{ locusData.gene.chromosome }}</v-chip>
             </div>
             <div class="gene-meta-item">
               <span class="gene-meta-label">Strand</span>
-              <v-chip size="small" variant="tonal" color="secondary">{{ locusData.gene.strand }}</v-chip>
+              <v-chip size="small" variant="tonal" color="secondary" class="gene-meta-chip">{{ locusData.gene.strand }}</v-chip>
             </div>
             <div class="gene-meta-item">
               <span class="gene-meta-label">PA Sites</span>
@@ -62,7 +62,7 @@
             <div class="gene-meta-item" v-if="locusData.transcript.transcript_biotype">
               <span class="gene-meta-label">Biotype</span>
               <span class="gene-meta-value">
-                <v-chip size="small" variant="tonal" color="teal">{{ locusData.transcript.transcript_biotype }}</v-chip>
+                <v-chip size="small" variant="tonal" color="teal" class="gene-meta-chip">{{ locusData.transcript.transcript_biotype }}</v-chip>
               </span>
             </div>
             <div class="gene-meta-item" style="align-items: flex-start;" v-if="locusData.apa_sites[0]?.species">
@@ -970,7 +970,7 @@ code {
 
 
 .gene-meta-label {
-  font-size: 12.5px;
+  font-size: 13px;
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.5px;
@@ -978,7 +978,7 @@ code {
 }
 
 .gene-meta-value {
-  font-size: 15px;
+  font-size: 14px;
   font-weight: 500;
   color: rgba(0,0,0,0.80);
   display: flex;
@@ -987,9 +987,14 @@ code {
 }
 
 .gene-meta-accent {
-  font-size: 15px;
+  font-size: 14px;
   font-weight: 700;
   color: #0D7377;
+}
+
+.gene-meta-chip :deep(.v-chip__content) {
+  font-size: 13.5px;
+  font-weight: 500;
 }
 
 .gene-id-link {
