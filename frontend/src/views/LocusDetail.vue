@@ -987,7 +987,7 @@ code {
 }
 
 .gene-meta-accent {
-  font-size: 18px;
+  font-size: 15px;
   font-weight: 700;
   color: #0D7377;
 }
@@ -1552,7 +1552,7 @@ code {
 .detail-panel-inner {
   box-sizing: border-box;
   width: 100%;
-  padding: 12px 24px 16px 48px;
+  padding: 12px 24px 16px 66px;
   display: flex;
   flex-direction: column;
 }
@@ -1692,7 +1692,7 @@ code {
   box-sizing: border-box;
   width: 100%;
   font-family: 'Roboto Mono', 'Courier New', monospace;
-  font-size: 13.5px;
+  font-size: 13px;
   line-height: 1.6;
   letter-spacing: 0.05em;
   white-space: nowrap;
