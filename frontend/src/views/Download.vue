@@ -234,7 +234,7 @@
 </template>
 
 <script setup>
-import { ref, computed, watch } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { apiService } from '@/services/api'
 
 const selectedDownload = ref(null)
@@ -394,7 +394,6 @@ onMounted(async () => {
   }
 })
 
-import { onMounted } from 'vue'
 </script>
 
 <style scoped>

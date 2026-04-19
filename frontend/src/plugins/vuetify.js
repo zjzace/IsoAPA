@@ -20,23 +20,6 @@ const apaAtlasTheme = {
   }
 }
 
-const apaAtlasDarkTheme = {
-  dark: true,
-  colors: {
-    background: '#0F1117',
-    surface: '#181C25',
-    'surface-variant': '#1E2432',
-    primary: '#2AA8AE',
-    'primary-darken-1': '#0D7377',
-    secondary: '#3DBFC9',
-    accent: '#6B8FBF',
-    error: '#E05555',
-    info: '#4D8FCC',
-    success: '#4DAA80',
-    warning: '#D9922A',
-  }
-}
-
 export default createVuetify({
   components,
   directives,
@@ -44,7 +27,6 @@ export default createVuetify({
     defaultTheme: 'apaAtlasTheme',
     themes: {
       apaAtlasTheme,
-      apaAtlasDarkTheme,
     }
   },
   defaults: {

@@ -368,12 +368,6 @@ const taxonomyGroups = [
   border: 1px solid rgba(13, 115, 119, 0.18);
 }
 
-.v-theme--apaAtlasDarkTheme .section-eyebrow {
-  color: #4DD0E1;
-  background: rgba(77, 208, 225, 0.10);
-  border-color: rgba(77, 208, 225, 0.22);
-}
-
 /* ── Info Section Redesign ────────────────────────────────── */
 .info-section {
   background: rgb(var(--v-theme-background));
@@ -394,13 +388,6 @@ const taxonomyGroups = [
 .why-mini-card:hover, .apa-diagram-card:hover {
   transform: translateY(-4px);
   box-shadow: 0 10px 28px rgba(0, 0, 0, 0.09);
-}
-
-.v-theme--apaAtlasDarkTheme .apa-diagram-card,
-.v-theme--apaAtlasDarkTheme .why-mini-card {
-  background: rgba(24, 28, 37, 0.82);
-  border: 1px solid rgba(255, 255, 255, 0.07);
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.28);
 }
 
 /* Diagram Specifics */
@@ -480,26 +467,6 @@ const taxonomyGroups = [
   text-shadow: 0 2px 4px rgba(233, 69, 96, 0.3);
 }
 
-/* Insight Callout */
-.insight-callout {
-  background: linear-gradient(90deg, rgba(13, 115, 119, 0.08) 0%, rgba(20, 145, 155, 0.03) 100%);
-  border-left: 4px solid #0D7377;
-  border-radius: 0 16px 16px 0;
-  backdrop-filter: blur(8px);
-}
-
-.v-theme--apaAtlasDarkTheme .insight-callout {
-  background: linear-gradient(90deg, rgba(13, 115, 119, 0.15) 0%, rgba(20, 145, 155, 0.05) 100%);
-}
-
-.v-theme--apaAtlasDarkTheme .insight-callout h4 {
-  color: #4DD0E1 !important;
-}
-
-.v-theme--apaAtlasDarkTheme .diagram-legend {
-  color: #aaa;
-}
-
 .diagram-note {
   border-top: 1px solid rgba(13, 115, 119, 0.18);
 }
@@ -514,10 +481,6 @@ const taxonomyGroups = [
     flex: 0 0 46.67%;
     max-width: 46.67%;
   }
-}
-
-.v-theme--apaAtlasDarkTheme .diagram-note {
-  border-top-color: rgba(77, 208, 225, 0.18);
 }
 
 /* ── Section Divider ──────────────────────────────────────── */
@@ -648,34 +611,5 @@ const taxonomyGroups = [
   border-color: rgba(0, 0, 0, 0.18) !important;
   color: rgba(0, 0, 0, 0.54) !important;
   font-size: 0.70rem !important;
-}
-
-/* Dark mode overrides */
-.v-theme--apaAtlasDarkTheme .stat-glass-card,
-.v-theme--apaAtlasDarkTheme .taxonomy-card {
-  background: rgba(24, 28, 37, 0.82);
-  border: 1px solid rgba(255, 255, 255, 0.07);
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.28);
-}
-
-.v-theme--apaAtlasDarkTheme .stat-glass-desc {
-  color: rgba(255, 255, 255, 0.45);
-}
-
-.v-theme--apaAtlasDarkTheme .taxonomy-species-row {
-  border-bottom-color: rgba(255, 255, 255, 0.07);
-}
-
-.v-theme--apaAtlasDarkTheme .taxonomy-footer {
-  border-top-color: rgba(255, 255, 255, 0.07);
-}
-
-.v-theme--apaAtlasDarkTheme .taxonomy-site-sublabel {
-  color: rgba(255, 255, 255, 0.35);
-}
-
-.v-theme--apaAtlasDarkTheme .taxonomy-chip {
-  border-color: rgba(255, 255, 255, 0.18) !important;
-  color: rgba(255, 255, 255, 0.54) !important;
 }
 </style>

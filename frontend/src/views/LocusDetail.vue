@@ -439,21 +439,8 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
-import { Bar } from 'vue-chartjs'
-import { 
-  Chart as ChartJS, 
-  BarElement, 
-  CategoryScale, 
-  LinearScale, 
-  Tooltip, 
-  Legend,
-  Title 
-} from 'chart.js'
 import { apiService } from '@/services/api'
-import UTRIsoformDiagram from '@/components/UTRIsoformDiagram.vue'
 import ApaGenomeBrowser from '@/components/ApaGenomeBrowser.vue'
-
-ChartJS.register(BarElement, CategoryScale, LinearScale, Tooltip, Legend, Title)
 
 const route = useRoute()
 
@@ -461,8 +448,6 @@ const loading = ref(true)
 const error = ref(null)
 const locusData = ref(null)
 const transcriptStructure = ref(null)
-const selectedSiteId = ref(null)
-const selectedSample = ref(null)
 
 
 // ── Sequence context panel ─────────────────────────────────────────────────
@@ -526,131 +511,12 @@ const tableHeaders = [
   { title: 'Mean Abundance', key: 'site_abundance', sortable: true, width: 150 },
 ]
 
-const sampleSiteChartOptions = {
-  responsive: true,
-  maintainAspectRatio: true,
-  plugins: {
-    legend: { display: false },
-    tooltip: {
-      callbacks: {
-        label: function(context) {
-          return 'Abundance: ' + (context.raw * 100).toFixed(1) + '%'
-        }
-      }
-    }
-  },
-  scales: {
-    y: {
-      beginAtZero: true,
-      max: 1,
-      title: { display: true, text: 'Abundance' },
-      ticks: {
-        callback: function(value) {
-          return (value * 100).toFixed(0) + '%'
-        }
-      }
-    },
-    x: {
-      title: { display: true, text: 'PA Site' },
-      ticks: {
-        maxRotation: 45,
-        minRotation: 45
-      }
-    }
-  }
-}
-
-const barChartOptions = {
-  responsive: true,
-  maintainAspectRatio: true,
-  plugins: {
-    legend: { display: false },
-    title: {
-      display: true,
-      text: 'Site Abundance by Sample',
-      font: { size: 14, weight: 'normal' }
-    }
-  },
-  scales: {
-    y: {
-      beginAtZero: true,
-      max: 1,
-      title: { display: true, text: 'Abundance' },
-      ticks: {
-        callback: function(value) {
-          return (value * 100).toFixed(0) + '%'
-        }
-      }
-    },
-    x: {
-      title: { display: true, text: 'Sample' }
-    }
-  }
-}
-
-const siteIdOptions = computed(() => {
-  if (!locusData.value) return []
-  return locusData.value.apa_sites.map(site => ({
-    value: site.unified_id,
-    label: site.unified_id.substring(0, 20) + (site.unified_id.length > 20 ? '...' : ''),
-    position: site.mode_site_position,
-    samples: site.sample_details?.length || 0
-  }))
-})
-
-const sampleOptions = computed(() => {
-  if (!locusData.value) return []
-  return (locusData.value.samples || []).map(s => s?.name ?? s)
-})
-
 const displayBiotype = computed(() => {
   const raw = locusData.value?.apa_sites?.[0]?.transcript_biotype
   if (!raw) return null
   if (raw === 'protein_coding') return 'mRNA'
   if (raw.toLowerCase().includes('lnc')) return 'lncRNA'
   return raw
-})
-
-const sampleSiteAbundanceData = computed(() => {
-  if (!locusData.value || !selectedSample.value) return null
-  
-  const sites = locusData.value.apa_sites
-  if (sites.length === 0) return null
-  
-  const labels = []
-  const data = []
-  const colors = ['#0D7377', '#14919B', '#323232', '#E94560', '#FF6B6B', '#4ECDC4', '#5C6BC0', '#AB47BC']
-  
-  sites.forEach((site, index) => {
-    // Shorten unified_id for label
-    const shortId = site.unified_id.length > 15 
-      ? site.unified_id.substring(0, 15) + '...' 
-      : site.unified_id
-    labels.push(shortId)
-    
-    // Find abundance for selected sample
-    const sampleDetail = site.sample_details?.find(sd => sd.sample_name === selectedSample.value)
-    data.push(sampleDetail?.site_abundance || 0)
-  })
-  
-  if (labels.length === 0) return null
-  
-  // Dynamic bar width: fixed for few sites, auto for many
-  const siteCount = labels.length
-  const barPercentage = siteCount <= 3 ? 0.4 : 0.7
-  const categoryPercentage = siteCount <= 3 ? 0.5 : 0.8
-  
-  return {
-    labels,
-    datasets: [{
-      label: 'Abundance',
-      data,
-      backgroundColor: colors.slice(0, sites.length),
-      borderRadius: 6,
-      barPercentage,
-      categoryPercentage
-    }]
-  }
 })
 
 const flattenedTableData = computed(() => {
@@ -673,45 +539,6 @@ const flattenedTableData = computed(() => {
     }
   })
 })
-
-const ucscBrowserLink = computed(() => {
-  if (!locusData.value) return ''
-  const gene = locusData.value.gene
-  const chromosome = gene.chromosome
-  const apaSites = locusData.value.apa_sites
-  if (apaSites.length === 0) return ''
-  
-  const positions = apaSites.map(s => s.mode_site_position)
-  const minPos = Math.min(...positions) - 5000
-  const maxPos = Math.max(...positions) + 5000
-  
-  const assembly = 'hg38'
-  return `https://genome.ucsc.edu/cgi-bin/hgTracks?db=${assembly}&position=chr${chromosome}:${minPos}-${maxPos}`
-})
-
-const ensemblBrowserLink = computed(() => {
-  if (!locusData.value) return ''
-  const gene = locusData.value.gene
-  return `https://www.ensembl.org/Homo_sapiens/Gene/Summary?g=${gene.gene_id}`
-})
-
-const geneStructureData = computed(() => {
-  if (!locusData.value) return null
-  
-  return {
-    gene_name: locusData.value.gene.gene_name,
-    transcript_id: locusData.value.transcript.transcript_id,
-    exons: []
-  }
-})
-
-const selectAPASiteById = (siteId) => {
-  selectedSiteId.value = siteId
-}
-
-const onSiteSelected = (site) => {
-  selectedSiteId.value = site?.value || null
-}
 
 // ── Heatmap ────────────────────────────────────────────────────────────────
 
@@ -786,11 +613,6 @@ const heatmapLabel = (siteId, sample) => {
   return (entry.abundance * 100).toFixed(0) + '%'
 }
 
-const heatmapCount = (siteId, sample) => {
-  const entry = heatmapLookup.value[siteId]?.[sample]
-  return entry ? entry.count : 0
-}
-
 // ── Heatmap visual helpers ──────────────────────────────────────────────────
 
 const HEATMAP_SAMPLE_COLORS = [
@@ -811,12 +633,6 @@ const BADGE_GRADIENTS = [
 const heatmapBadgeStyle = (idx) => {
   const [c1, c2] = BADGE_GRADIENTS[idx % BADGE_GRADIENTS.length]
   return { background: `linear-gradient(135deg, ${c1}, ${c2})` }
-}
-
-// Show site ID truncated; full ID visible in tooltip
-const formatSiteId = (id) => {
-  if (!id) return '—'
-  return id.length > 24 ? id.substring(0, 22) + '…' : id
 }
 
 // ── Heatmap cross-hair hover state ─────────────────────────────────────────
@@ -851,35 +667,6 @@ const PAS_TYPE_META = {
 }
 const pasTypeMeta = (type) => PAS_TYPE_META[type] ?? PAS_TYPE_META.none
 
-const abundanceBarChartData = computed(() => {
-  if (!locusData.value || !selectedSiteId.value) return null
-  
-  const site = locusData.value.apa_sites.find(s => s.unified_id === selectedSiteId.value)
-  if (!site || !site.sample_details) return null
-  
-  const labels = site.sample_details.map(sd => sd.sample_name)
-  const data = site.sample_details.map(sd => sd.site_abundance)
-  
-  if (labels.length === 0) return null
-  
-  // Dynamic bar width: fixed for few samples, auto for many
-  const sampleCount = labels.length
-  const barPercentage = sampleCount <= 3 ? 0.5 : 0.8
-  const categoryPercentage = sampleCount <= 3 ? 0.6 : 0.8
-  
-  return {
-    labels,
-    datasets: [{
-      label: 'Abundance',
-      data,
-      backgroundColor: ['#0D7377', '#14919B', '#323232', '#E94560', '#FF6B6B', '#4ECDC4'],
-      borderRadius: 6,
-      barPercentage,
-      categoryPercentage
-    }]
-  }
-})
-
 onMounted(async () => {
   const transcriptId = route.params.transcriptId
   
@@ -890,13 +677,6 @@ onMounted(async () => {
     // Fetch locus data first — this is required for the page
     const locusResponse = await apiService.getLocusDetail(transcriptId)
     locusData.value = locusResponse
-
-    if (locusData.value.apa_sites && locusData.value.apa_sites.length > 0) {
-      selectedSiteId.value = locusData.value.apa_sites[0].unified_id
-    }
-    if (locusData.value.samples && locusData.value.samples.length > 0) {
-      selectedSample.value = locusData.value.samples[0]?.name ?? locusData.value.samples[0]
-    }
 
     // Fetch transcript structure separately — failure is non-fatal
     apiService.getTranscriptStructure(transcriptId)
@@ -1732,237 +1512,6 @@ code {
   font-weight: 700;
 }
 
-/* ── Dark mode ─────────────────────────────────────────────────── */
-.v-theme--apaAtlasDarkTheme .gene-header-card {
-  background: rgba(24, 28, 37, 0.82);
-  border: 1px solid rgba(255, 255, 255, 0.07);
-  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.35), 0 1px 4px rgba(0, 0, 0, 0.25);
-}
-
-.v-theme--apaAtlasDarkTheme .section-card {
-  background: rgba(24, 28, 37, 0.80);
-  border: 1px solid rgba(255, 255, 255, 0.07);
-  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.30), 0 1px 4px rgba(0, 0, 0, 0.20);
-}
-
-.v-theme--apaAtlasDarkTheme .section-title {
-  color: rgba(255, 255, 255, 0.85);
-  border-bottom-color: rgba(255, 255, 255, 0.07);
-}
-
-.v-theme--apaAtlasDarkTheme .panel-box {
-  background: rgba(20, 24, 33, 0.85);
-  border-color: rgba(42, 168, 174, 0.15);
-}
-
-.v-theme--apaAtlasDarkTheme .panel-header {
-  background: rgba(42, 168, 174, 0.07);
-  border-bottom-color: rgba(42, 168, 174, 0.12);
-}
-
-.v-theme--apaAtlasDarkTheme .panel-title-text {
-  color: rgba(255, 255, 255, 0.87);
-}
-
-.v-theme--apaAtlasDarkTheme .panel-subtitle-text {
-  color: rgba(255, 255, 255, 0.45);
-}
-
-.v-theme--apaAtlasDarkTheme .gene-name-text {
-  color: rgba(255, 255, 255, 0.90);
-}
-
-.v-theme--apaAtlasDarkTheme .gene-meta-label {
-  color: rgba(255, 255, 255, 0.38);
-}
-
-.v-theme--apaAtlasDarkTheme .gene-meta-value {
-  color: rgba(255, 255, 255, 0.75);
-}
-
-.v-theme--apaAtlasDarkTheme .gene-meta-accent {
-  color: #2AA8AE;
-}
-
-.v-theme--apaAtlasDarkTheme .gene-id-link {
-  color: #2AA8AE;
-}
-
-.v-theme--apaAtlasDarkTheme .elegant-table :deep(.v-data-table__th) {
-  background: rgba(42, 168, 174, 0.07) !important;
-  color: rgba(255, 255, 255, 0.50) !important;
-  border-bottom-color: rgba(42, 168, 174, 0.12) !important;
-}
-
-.v-theme--apaAtlasDarkTheme .elegant-table :deep(.v-data-table__td) {
-  color: rgba(255, 255, 255, 0.78) !important;
-  border-bottom-color: rgba(255, 255, 255, 0.05) !important;
-}
-
-.v-theme--apaAtlasDarkTheme .elegant-table :deep(.v-data-table__tr:hover .v-data-table__td) {
-  background: rgba(42, 168, 174, 0.05) !important;
-}
-
-.v-theme--apaAtlasDarkTheme .elegant-table :deep(.v-data-table-footer) {
-  color: rgba(255, 255, 255, 0.45) !important;
-  border-top-color: rgba(42, 168, 174, 0.12) !important;
-}
-
-.v-theme--apaAtlasDarkTheme .elegant-table :deep(code) {
-  background: rgba(42, 168, 174, 0.10);
-  color: #2AA8AE;
-}
-
-.v-theme--apaAtlasDarkTheme code {
-  background: rgba(255, 255, 255, 0.07);
-  color: rgba(255, 255, 255, 0.75);
-}
-
-.v-theme--apaAtlasDarkTheme .heatmap-grid {
-  border-color: rgba(42, 168, 174, 0.18);
-  box-shadow: 0 2px 14px rgba(0, 0, 0, 0.32);
-}
-
-.v-theme--apaAtlasDarkTheme .heatmap-corner {
-  background: rgba(42, 168, 174, 0.08);
-  border-color: rgba(42, 168, 174, 0.15);
-}
-
-.v-theme--apaAtlasDarkTheme .heatmap-corner-text {
-  color: rgba(255, 255, 255, 0.32);
-}
-
-.v-theme--apaAtlasDarkTheme .heatmap-col-header {
-  background: rgba(42, 168, 174, 0.05);
-  border-color: rgba(42, 168, 174, 0.15);
-}
-
-.v-theme--apaAtlasDarkTheme .heatmap-col-text {
-  color: rgba(255, 255, 255, 0.60);
-}
-
-.v-theme--apaAtlasDarkTheme .heatmap-sample-dot {
-  box-shadow: 0 0 0 2px rgba(20, 20, 30, 0.85), 0 1px 4px rgba(0, 0, 0, 0.3);
-}
-
-.v-theme--apaAtlasDarkTheme .heatmap-row-label {
-  background: rgba(42, 168, 174, 0.04);
-  border-color: rgba(42, 168, 174, 0.15);
-}
-
-.v-theme--apaAtlasDarkTheme .heatmap-site-id {
-  color: rgba(255, 255, 255, 0.82);
-}
-
-.v-theme--apaAtlasDarkTheme .heatmap-stats-chip {
-  background: rgba(42, 168, 174, 0.12);
-  border-color: rgba(42, 168, 174, 0.22);
-  color: #2AA8AE;
-}
-
-.v-theme--apaAtlasDarkTheme .heatmap-legend-bar {
-  background: linear-gradient(
-    to right,
-    rgba(42, 168, 174, 0.06),
-    rgba(42, 168, 174, 0.28),
-    rgba(42, 168, 174, 0.65),
-    rgba(42, 168, 174, 1.0)
-  );
-  border-color: rgba(255, 255, 255, 0.08);
-}
-
-.v-theme--apaAtlasDarkTheme .heatmap-legend-tick {
-  color: rgba(255, 255, 255, 0.42);
-}
-
-.v-theme--apaAtlasDarkTheme .heatmap-legend-caption {
-  color: rgba(255, 255, 255, 0.30);
-}
-
-.v-theme--apaAtlasDarkTheme .heatmap-legend-nd {
-  border-color: rgba(255, 255, 255, 0.10);
-  background: rgba(255, 255, 255, 0.03);
-}
-
-.v-theme--apaAtlasDarkTheme .heatmap-legend-nd-swatch {
-  background: repeating-linear-gradient(
-    45deg,
-    rgba(255, 255, 255, 0.04) 0px,
-    rgba(255, 255, 255, 0.04) 3px,
-    rgba(255, 255, 255, 0.10) 3px,
-    rgba(255, 255, 255, 0.10) 6px
-  );
-  border-color: rgba(255, 255, 255, 0.14);
-}
-
-.v-theme--apaAtlasDarkTheme .heatmap-legend-nd-label {
-  color: rgba(255, 255, 255, 0.42);
-}
-
-.v-theme--apaAtlasDarkTheme .seq-meta-chip {
-  background: rgba(255, 255, 255, 0.07);
-  color: rgba(255, 255, 255, 0.60);
-  border-color: rgba(255, 255, 255, 0.10);
-}
-
-.v-theme--apaAtlasDarkTheme .seq-meta-strand {
-  background: rgba(42, 168, 174, 0.12);
-  color: #2AA8AE;
-  border-color: rgba(42, 168, 174, 0.28);
-}
-
-.v-theme--apaAtlasDarkTheme .seq-display {
-  color: rgba(255, 255, 255, 0.82);
-  border-top-color: rgba(255, 255, 255, 0.07);
-}
-
-.v-theme--apaAtlasDarkTheme .seq-nt {
-  color: rgba(255, 255, 255, 0.82);
-}
-
-.v-theme--apaAtlasDarkTheme .detail-panel {
-  background: rgba(42, 168, 174, 0.04);
-  border-top-color: rgba(42, 168, 174, 0.15);
-}
-
-.v-theme--apaAtlasDarkTheme .detail-section {
-  border-bottom-color: rgba(255, 255, 255, 0.06);
-}
-
-.v-theme--apaAtlasDarkTheme .detail-section-label {
-  color: #2AA8AE;
-}
-
-.v-theme--apaAtlasDarkTheme .detail-section-sub {
-  color: rgba(255, 255, 255, 0.28);
-}
-
-.v-theme--apaAtlasDarkTheme .sample-type-text {
-  color: rgba(255, 255, 255, 0.30);
-}
-
-.v-theme--apaAtlasDarkTheme .sample-pct-text {
-  color: rgba(255, 255, 255, 0.55);
-}
-
-.v-theme--apaAtlasDarkTheme .ld-chevron {
-  color: rgba(42, 168, 174, 0.5);
-}
-
-.v-theme--apaAtlasDarkTheme .ld-row-clickable:hover .ld-chevron {
-  color: #2AA8AE;
-}
-
-.v-theme--apaAtlasDarkTheme .ld-chevron-open {
-  color: #2AA8AE;
-}
-
-.v-theme--apaAtlasDarkTheme .ld-site-id-tag {
-  background: rgba(42, 168, 174, 0.10);
-  color: #2AA8AE;
-  border-color: rgba(42, 168, 174, 0.22);
-}
-
 /* ── Mean Abundance header with popover ─────────────────────────── */
 .ld-header-cell-row {
   display: inline-flex;
@@ -1999,26 +1548,5 @@ code {
   color: rgba(0, 0, 0, 0.78);
   padding: 14px 16px !important;
   text-align: justify;
-}
-
-/* Dark theme */
-.v-theme--apaAtlasDarkTheme .tx-info-icon {
-  color: rgba(42, 168, 174, 0.6);
-}
-
-.v-theme--apaAtlasDarkTheme .tx-info-icon:hover {
-  color: #2AA8AE;
-}
-
-.v-theme--apaAtlasDarkTheme .tx-info-popover {
-  background: rgba(16, 22, 32, 0.52) !important;
-  backdrop-filter: blur(20px) saturate(160%);
-  -webkit-backdrop-filter: blur(20px) saturate(160%);
-  border-color: rgba(42, 168, 174, 0.28) !important;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.40), 0 2px 8px rgba(42, 168, 174, 0.08) !important;
-}
-
-.v-theme--apaAtlasDarkTheme .tx-info-popover-text {
-  color: rgba(255, 255, 255, 0.82);
 }
 </style>

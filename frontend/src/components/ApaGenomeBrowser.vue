@@ -398,9 +398,6 @@ const labelWidth = computed(() => margin.left - 12)
 // Dynamic width: fill container
 const containerWidth = ref(1100)
 
-// APA color (single fixed color)
-const APA_COLOR = '#D45D79'
-
 // Computed layout
 const trackOffsets = computed(() => {
   const offsets = {
@@ -1228,24 +1225,6 @@ watch(dynamicMarginLeft, (newLeft) => {
   flex-shrink: 0;
 }
 
-.selector-btn {
-  font-size: 13.5px;
-  letter-spacing: 0.01em;
-  text-transform: none;
-  border-color: rgba(0, 0, 0, 0.2) !important;
-}
-
-.selector-btn.has-selection {
-  border-color: rgb(var(--v-theme-primary)) !important;
-  color: rgb(var(--v-theme-primary));
-}
-
-.selector-badge {
-  font-size: 11px;
-  height: 16px;
-  min-width: 28px;
-}
-
 /* ── Fancy selector buttons ────────────────────────────────────────────────── */
 .fancy-selector-btn {
   display: inline-flex;
@@ -1408,50 +1387,6 @@ watch(dynamicMarginLeft, (newLeft) => {
 
 .genome-svg:active {
   cursor: grabbing;
-}
-
-/* Tooltip styling */
-.genome-tooltip {
-  position: absolute;
-  background: rgba(33, 37, 41, 0.95);
-  color: white;
-  padding: 12px 14px;
-  border-radius: 6px;
-  font-size: 12px;
-  pointer-events: none;
-  z-index: 1000;
-  min-width: 200px;
-  max-width: 300px;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
-  backdrop-filter: blur(4px);
-}
-
-.tooltip-title {
-  font-weight: 700;
-  font-size: 13px;
-  margin-bottom: 8px;
-  padding-bottom: 6px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.3);
-  color: #fff;
-}
-
-.tooltip-item {
-  display: flex;
-  justify-content: space-between;
-  margin-top: 5px;
-  gap: 16px;
-  line-height: 1.5;
-}
-
-.tooltip-label {
-  color: #adb5bd;
-  font-weight: 500;
-}
-
-.tooltip-value {
-  font-weight: 600;
-  text-align: right;
-  color: #f8f9fa;
 }
 
 /* SVG element styling via classes */

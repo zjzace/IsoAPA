@@ -155,7 +155,7 @@
 </template>
 
 <script setup>
-import { ref, reactive, onMounted, watch, nextTick } from 'vue'
+import { ref, reactive, onMounted, watch } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { apiService } from '@/services/api'
 
@@ -260,13 +260,6 @@ const changePageSize = (newSize) => {
   search()
 }
 
-const viewDetail = (item) => {
-  router.push({
-    path: `/locus/${item.transcript_id}`,
-    query: { species: item.species }
-  })
-}
-
 const exportResults = () => {
   const headers = ['Gene Name', 'Transcript ID', 'Gene ID', 'Chromosome', 'Strand', 'APA Site Count', 'Species', 'Tissues']
   const rows = results.value.map(item => [
@@ -329,14 +322,6 @@ watch(() => route.query, (newQuery) => {
   if (newQuery.gene_name) filters.gene_name = newQuery.gene_name
   if (newQuery.transcript_id) filters.transcript_id = newQuery.transcript_id
   if (newQuery.sample) filters.sample = newQuery.sample
-  if (newQuery.species) filters.species = newQuery.species
-  search()
-})
-
-watch(() => route.query, (newQuery) => {
-  if (newQuery.gene_name) filters.gene_name = newQuery.gene_name
-  if (newQuery.transcript_id) filters.transcript_id = newQuery.transcript_id
-  if (newQuery.cell_line) filters.cell_line = newQuery.cell_line
   if (newQuery.species) filters.species = newQuery.species
   search()
 })
@@ -412,30 +397,5 @@ watch(() => route.query, (newQuery) => {
 /* ── Search/Export buttons ──────────────────────────────────── */
 .search-page :deep(.v-btn) {
   letter-spacing: 0.02em;
-}
-
-/* ── Dark mode ──────────────────────────────────────────────── */
-.v-theme--apaAtlasDarkTheme .search-page :deep(.v-card) {
-  background: rgba(24, 28, 37, 0.80) !important;
-  border: 1px solid rgba(255, 255, 255, 0.07) !important;
-  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.30), 0 1px 4px rgba(0, 0, 0, 0.20) !important;
-}
-
-.v-theme--apaAtlasDarkTheme .search-page :deep(h1.text-h4) {
-  color: rgba(255, 255, 255, 0.90);
-}
-
-.v-theme--apaAtlasDarkTheme .search-page :deep(.v-data-table__th) {
-  background: rgba(13, 115, 119, 0.08) !important;
-  color: rgba(255, 255, 255, 0.50) !important;
-  border-bottom-color: rgba(13, 115, 119, 0.15) !important;
-}
-
-.v-theme--apaAtlasDarkTheme .search-page :deep(.v-data-table__td) {
-  border-bottom-color: rgba(255, 255, 255, 0.05) !important;
-}
-
-.v-theme--apaAtlasDarkTheme .search-page :deep(.v-data-table__tr:hover .v-data-table__td) {
-  background: rgba(42, 168, 174, 0.06) !important;
 }
 </style>

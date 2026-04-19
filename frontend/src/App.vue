@@ -24,9 +24,6 @@
           <router-link to="/help" class="nav-link" active-class="nav-link--active">Help</router-link>
         </nav>
 
-        <button class="theme-toggle ml-4" @click="toggleTheme" :title="isDark ? 'Switch to light mode' : 'Switch to dark mode'">
-          <v-icon size="18">{{ isDark ? 'mdi-weather-sunny' : 'mdi-weather-night' }}</v-icon>
-        </button>
       </v-container>
     </v-app-bar>
 
@@ -70,16 +67,7 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
-import { useTheme } from 'vuetify'
 import ApaAtlasIcon from '@/components/ApaAtlasIcon.vue'
-
-const theme = useTheme()
-const isDark = computed(() => theme.global.name.value === 'apaAtlasDarkTheme')
-
-const toggleTheme = () => {
-  theme.global.name.value = isDark.value ? 'apaAtlasTheme' : 'apaAtlasDarkTheme'
-}
 </script>
 
 <style>
@@ -105,11 +93,6 @@ a {
   border-bottom: 1px solid rgba(0, 0, 0, 0.07) !important;
 }
 
-.v-theme--apaAtlasDarkTheme .glass-navbar {
-  background: rgba(15, 17, 23, 0.78) !important;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.07) !important;
-}
-
 .nav-logo-wrap {
   width: 32px;
   height: 32px;
@@ -125,10 +108,6 @@ a {
   font-weight: 700;
   letter-spacing: -0.3px;
   color: #0D7377;
-}
-
-.v-theme--apaAtlasDarkTheme .nav-brand {
-  color: #2AA8AE;
 }
 
 .nav-links {
@@ -159,52 +138,11 @@ a {
   font-weight: 600;
 }
 
-.v-theme--apaAtlasDarkTheme .nav-link {
-  color: #94A3B8;
-}
-
-.v-theme--apaAtlasDarkTheme .nav-link:hover,
-.v-theme--apaAtlasDarkTheme .nav-link--active {
-  background: rgba(42, 168, 174, 0.12);
-  color: #2AA8AE !important;
-}
-
-.theme-toggle {
-  width: 34px;
-  height: 34px;
-  border-radius: 8px;
-  border: 1px solid rgba(0, 0, 0, 0.08);
-  background: rgba(0, 0, 0, 0.03);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  color: #4B5563;
-  transition: background 150ms, border-color 150ms;
-}
-
-.theme-toggle:hover {
-  background: rgba(13, 115, 119, 0.08);
-  border-color: rgba(13, 115, 119, 0.20);
-  color: #0D7377;
-}
-
-.v-theme--apaAtlasDarkTheme .theme-toggle {
-  border-color: rgba(255, 255, 255, 0.08);
-  background: rgba(255, 255, 255, 0.04);
-  color: #94A3B8;
-}
-
 /* ── Footer ───────────────────────────────────────────────── */
 .app-footer {
   background: #F8FAFB;
   border-top: 1px solid rgba(0, 0, 0, 0.07);
   padding: 48px 0 28px;
-}
-
-.v-theme--apaAtlasDarkTheme .app-footer {
-  background: #13161E;
-  border-top: 1px solid rgba(255, 255, 255, 0.06);
 }
 
 .footer-grid {
@@ -226,10 +164,6 @@ a {
   font-weight: 700;
   letter-spacing: -0.2px;
   color: #1E293B;
-}
-
-.v-theme--apaAtlasDarkTheme .footer-brand-name {
-  color: #E2E8F0;
 }
 
 .footer-heading {
@@ -288,10 +222,6 @@ a {
   margin-bottom: 20px;
 }
 
-.v-theme--apaAtlasDarkTheme .footer-divider {
-  background: rgba(255, 255, 255, 0.06);
-}
-
 .footer-copy {
   font-size: 13.5px;
   color: #94A3B8;
@@ -309,12 +239,6 @@ a {
   box-shadow: 0 4px 24px rgba(0, 0, 0, 0.06), 0 1px 4px rgba(0, 0, 0, 0.04) !important;
 }
 
-.v-theme--apaAtlasDarkTheme .glass-card {
-  background: rgba(24, 28, 37, 0.80) !important;
-  border: 1px solid rgba(255, 255, 255, 0.07) !important;
-  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.30), 0 1px 4px rgba(0, 0, 0, 0.20) !important;
-}
-
 .glass-card-subtle {
   background: rgba(255, 255, 255, 0.50) !important;
   backdrop-filter: blur(10px) !important;
@@ -324,8 +248,4 @@ a {
   box-shadow: 0 2px 12px rgba(0, 0, 0, 0.05) !important;
 }
 
-.v-theme--apaAtlasDarkTheme .glass-card-subtle {
-  background: rgba(30, 36, 50, 0.70) !important;
-  border: 1px solid rgba(255, 255, 255, 0.06) !important;
-}
 </style>

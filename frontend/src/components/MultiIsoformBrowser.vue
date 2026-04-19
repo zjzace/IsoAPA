@@ -936,42 +936,6 @@ watch(dynamicMarginLeft, (newLeft) => {
   cursor: grabbing;
 }
 
-/* Tooltip */
-.genome-tooltip {
-  position: absolute;
-  background: rgba(33, 37, 41, 0.95);
-  color: white;
-  padding: 12px 14px;
-  border-radius: 6px;
-  font-size: 13.5px;
-  pointer-events: none;
-  z-index: 1000;
-  min-width: 200px;
-  max-width: 300px;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
-  backdrop-filter: blur(4px);
-}
-
-.tooltip-title {
-  font-weight: 700;
-  font-size: 14.5px;
-  margin-bottom: 8px;
-  padding-bottom: 6px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.3);
-  color: #fff;
-}
-
-.tooltip-item {
-  display: flex;
-  justify-content: space-between;
-  margin-top: 5px;
-  gap: 16px;
-  line-height: 1.5;
-}
-
-.tooltip-label { color: #adb5bd; font-weight: 500; }
-.tooltip-value { font-weight: 600; text-align: right; color: #f8f9fa; }
-
 /* Statistics strip */
 .stats-strip {
   border-top: 1px solid rgba(13, 115, 119, 0.15);
