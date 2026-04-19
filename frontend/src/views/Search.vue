@@ -1,83 +1,124 @@
 <template>
   <div class="search-page">
-    <v-container class="py-8">
-      <h1 class="text-h4 mb-6">Browse APA Sites</h1>
+    <v-container class="py-10">
+      <div class="section-eyebrow mb-2">Search & Filter</div>
+      <h1 class="section-heading mb-6">Browse APA Sites</h1>
+
+      <!-- Glassmorphism Search Frame -->
+      <div class="search-frame mb-8">
+        <!-- Top bar -->
+        <div class="search-frame-topbar">
+          <div class="d-flex align-center" style="gap:10px;">
+            <div class="topbar-icon">
+              <v-icon icon="mdi-filter-variant" size="17" color="white"></v-icon>
+            </div>
+            <span class="topbar-label">Filter by</span>
+          </div>
+          <button class="reset-btn" @click="clearFilters">
+            <v-icon icon="mdi-refresh" size="14" class="mr-1"></v-icon>
+            Reset
+          </button>
+        </div>
+
+        <!-- Filter inputs -->
+        <div class="filter-grid">
+          <div class="filter-card">
+            <div class="filter-inner-label">
+              <span class="filter-col-icon" style="background: linear-gradient(135deg,#0D7377,#14919B)">
+                <v-icon icon="mdi-dna" size="13" color="white"></v-icon>
+              </span>
+              <span>Gene Name</span>
+            </div>
+            <v-text-field
+              v-model="filters.gene_name"
+              clearable
+              variant="plain"
+              density="compact"
+              hide-details
+              class="filter-field"
+              @update:model-value="debouncedSearch"
+            ></v-text-field>
+          </div>
+
+          <div class="filter-card">
+            <div class="filter-inner-label">
+              <span class="filter-col-icon" style="background: linear-gradient(135deg,#5C6BC0,#7986CB)">
+                <v-icon icon="mdi-rna" size="13" color="white"></v-icon>
+              </span>
+              <span>Transcript ID</span>
+            </div>
+            <v-text-field
+              v-model="filters.transcript_id"
+              clearable
+              variant="plain"
+              density="compact"
+              hide-details
+              class="filter-field"
+              @update:model-value="debouncedSearch"
+            ></v-text-field>
+          </div>
+
+          <div class="filter-card filter-card--select">
+            <div class="filter-inner-label">
+              <span class="filter-col-icon" style="background: linear-gradient(135deg,#2E7D32,#43A047)">
+                <v-icon icon="mdi-earth" size="13" color="white"></v-icon>
+              </span>
+              <span>Species</span>
+            </div>
+            <v-select
+              v-model="filters.species"
+              :items="speciesList"
+              clearable
+              variant="plain"
+              density="compact"
+              hide-details
+              class="filter-field"
+              :menu-props="{ class: 'search-select-menu' }"
+              @update:model-value="debouncedSearch"
+            ></v-select>
+          </div>
+
+          <div class="filter-card filter-card--select">
+            <div class="filter-inner-label">
+              <span class="filter-col-icon" style="background: linear-gradient(135deg,#C75B00,#EF6C00)">
+                <v-icon icon="mdi-flask-outline" size="13" color="white"></v-icon>
+              </span>
+              <span>Sample</span>
+            </div>
+            <v-select
+              v-model="filters.sample"
+              :items="sampleList"
+              clearable
+              variant="plain"
+              density="compact"
+              hide-details
+              class="filter-field"
+              :menu-props="{ class: 'search-select-menu' }"
+              @update:model-value="debouncedSearch"
+            ></v-select>
+          </div>
+        </div>
+
+        <!-- Actions row -->
+        <div class="search-frame-actions">
+          <button class="search-btn" @click="search" :disabled="loading">
+            <v-progress-circular v-if="loading" size="16" width="2" indeterminate class="mr-2" color="white"></v-progress-circular>
+            <v-icon v-else icon="mdi-magnify" size="18" class="mr-2"></v-icon>
+            Search
+          </button>
+          <v-spacer></v-spacer>
+          <button
+            class="export-btn"
+            @click="exportResults"
+            :disabled="results.length === 0"
+          >
+            <v-icon icon="mdi-download" size="16" class="mr-2"></v-icon>
+            Export CSV
+          </button>
+        </div>
+      </div>
       
-      <v-card class="mb-6" variant="outlined">
-        <v-card-text>
-          <v-row>
-            <v-col cols="12" sm="6" md="3">
-              <v-text-field
-                v-model="filters.gene_name"
-                label="Gene Name"
-                prepend-inner-icon="mdi-gene"
-                clearable
-                @update:model-value="debouncedSearch"
-              ></v-text-field>
-            </v-col>
-            <v-col cols="12" sm="6" md="3">
-              <v-text-field
-                v-model="filters.transcript_id"
-                label="Transcript ID"
-                prepend-inner-icon="mdi-rna"
-                clearable
-                @update:model-value="debouncedSearch"
-              ></v-text-field>
-            </v-col>
-            <v-col cols="12" sm="6" md="3">
-              <v-select
-                v-model="filters.species"
-                label="Species"
-                :items="speciesList"
-                prepend-inner-icon="mdi-earth"
-                clearable
-                @update:model-value="debouncedSearch"
-              ></v-select>
-            </v-col>
-            <v-col cols="12" sm="6" md="3">
-              <v-select
-                v-model="filters.sample"
-                label="Sample"
-                :items="sampleList"
-                prepend-inner-icon="mdi-heart"
-                clearable
-                @update:model-value="debouncedSearch"
-              ></v-select>
-            </v-col>
-          </v-row>
-          <v-row>
-            <v-col cols="12" class="d-flex align-center">
-              <v-btn 
-                color="primary" 
-                @click="search"
-                :loading="loading"
-              >
-                <v-icon start>mdi-magnify</v-icon>
-                Search
-              </v-btn>
-              <v-btn 
-                variant="text" 
-                @click="clearFilters"
-                class="ml-2"
-              >
-                Clear Filters
-              </v-btn>
-              <v-spacer></v-spacer>
-              <v-btn 
-                variant="outlined"
-                color="primary"
-                @click="exportResults"
-                :disabled="results.length === 0"
-              >
-                <v-icon start>mdi-download</v-icon>
-                Export CSV
-              </v-btn>
-            </v-col>
-          </v-row>
-        </v-card-text>
-      </v-card>
-      
-      <v-card variant="outlined">
+      <div class="results-card">
         <v-data-table
           :headers="headers"
           :items="results"
@@ -145,7 +186,7 @@
           <template v-slot:item.actions="{ item }">
           </template>
         </v-data-table>
-      </v-card>
+      </div>
       
       <v-snackbar v-model="snackbar" :color="snackbarColor">
         {{ snackbarText }}
@@ -333,28 +374,233 @@ watch(() => route.query, (newQuery) => {
   background: rgb(var(--v-theme-background));
 }
 
-/* ── Page title ─────────────────────────────────────────────── */
-.search-page :deep(h1.text-h4) {
+/* ── Eyebrow + Heading ──────────────────────────────────────── */
+.section-eyebrow {
+  display: inline-block;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #14919B;
+  background: rgba(20, 145, 155, 0.08);
+  border-radius: 20px;
+  padding: 3px 12px;
+}
+.section-heading {
+  font-size: 1.75rem;
   font-weight: 700;
   letter-spacing: -0.02em;
   color: rgba(0, 0, 0, 0.82);
 }
 
-/* ── Filter card — glassmorphism ────────────────────────────── */
-.search-page :deep(.v-card) {
-  background: rgba(255, 255, 255, 0.72) !important;
-  backdrop-filter: blur(16px) saturate(160%) !important;
-  -webkit-backdrop-filter: blur(16px) saturate(160%) !important;
-  border: 1px solid rgba(255, 255, 255, 0.60) !important;
-  border-radius: 16px !important;
-  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.06), 0 1px 4px rgba(0, 0, 0, 0.04) !important;
+/* ── Search Frame ───────────────────────────────────────────── */
+.search-frame {
+  background: rgba(255, 255, 255, 0.78);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  border: 1px solid rgba(255, 255, 255, 0.65);
+  border-radius: 20px;
+  box-shadow: 0 4px 32px rgba(0, 0, 0, 0.06), 0 1px 4px rgba(0, 0, 0, 0.04);
+  overflow: hidden;
 }
 
-/* ── Data table — keep glass bg, refine header ───────────────── */
+.search-frame-topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 24px;
+  background: linear-gradient(90deg, rgba(13, 115, 119, 0.07) 0%, rgba(20, 145, 155, 0.02) 100%);
+  border-bottom: 1px solid rgba(13, 115, 119, 0.10);
+}
+
+.topbar-icon {
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  background: linear-gradient(135deg, #0D7377, #14919B);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.topbar-label {
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: rgba(0, 0, 0, 0.50);
+}
+
+.reset-btn {
+  display: flex;
+  align-items: center;
+  font-size: 0.80rem;
+  font-weight: 500;
+  color: #0D7377;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 5px 12px;
+  border-radius: 8px;
+  transition: background 0.15s;
+}
+.reset-btn:hover {
+  background: rgba(13, 115, 119, 0.08);
+}
+
+/* ── Filter Grid ─────────────────────────────────────────────── */
+.filter-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 14px;
+  padding: 20px 24px 8px;
+}
+@media (max-width: 960px) {
+  .filter-grid { grid-template-columns: repeat(2, 1fr); }
+}
+@media (max-width: 600px) {
+  .filter-grid { grid-template-columns: 1fr; }
+}
+
+.filter-card {
+  background: rgba(255, 255, 255, 0.68);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.82);
+  border-radius: 12px;
+  padding: 0 12px 4px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.04);
+  transition: border-color 0.2s, box-shadow 0.2s, border-bottom-left-radius 0.1s, border-bottom-right-radius 0.1s;
+}
+.filter-card:focus-within {
+  border-color: rgba(20, 145, 155, 0.45);
+  box-shadow: 0 2px 18px rgba(13, 115, 119, 0.13);
+}
+.filter-card--select:focus-within {
+  border-bottom-left-radius: 0;
+  border-bottom-right-radius: 0;
+  border-bottom-color: transparent;
+}
+
+.filter-inner-label {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: rgba(0, 0, 0, 0.48);
+  padding: 9px 0 2px;
+}
+
+.filter-col-icon {
+  width: 20px;
+  height: 20px;
+  border-radius: 5px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.filter-field :deep(.v-field__input) {
+  padding-top: 6px !important;
+  padding-bottom: 6px !important;
+  padding-left: 0 !important;
+  font-size: 0.91rem;
+  font-weight: 500;
+  color: rgba(0, 0, 0, 0.80);
+  min-height: unset !important;
+}
+.filter-field :deep(.v-field) {
+  padding: 0 !important;
+}
+.filter-field :deep(.v-input__control) {
+  min-height: unset !important;
+}
+.filter-field :deep(.v-field__clearable) {
+  padding-top: 4px !important;
+  padding-right: 0 !important;
+}
+.filter-field :deep(.v-select__selection-text) {
+  font-size: 0.91rem;
+  font-weight: 500;
+}
+
+/* ── Actions row ────────────────────────────────────────────── */
+.search-frame-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 24px 20px;
+  border-top: 1px solid rgba(13, 115, 119, 0.08);
+}
+
+.search-btn {
+  display: inline-flex;
+  align-items: center;
+  height: 42px;
+  padding: 0 24px;
+  border-radius: 10px;
+  border: none;
+  background: linear-gradient(135deg, #0D7377, #14919B);
+  color: white;
+  font-size: 0.9rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+  box-shadow: 0 2px 12px rgba(13, 115, 119, 0.30);
+  transition: box-shadow 0.2s, opacity 0.15s;
+}
+.search-btn:hover:not(:disabled) {
+  box-shadow: 0 4px 20px rgba(13, 115, 119, 0.42);
+}
+.search-btn:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+}
+
+.export-btn {
+  display: inline-flex;
+  align-items: center;
+  height: 42px;
+  padding: 0 20px;
+  border-radius: 10px;
+  border: 1.5px solid rgba(13, 115, 119, 0.40);
+  background: transparent;
+  color: #0D7377;
+  font-size: 0.875rem;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+}
+.export-btn:hover:not(:disabled) {
+  background: rgba(13, 115, 119, 0.06);
+  border-color: #0D7377;
+}
+.export-btn:disabled {
+  opacity: 0.40;
+  cursor: not-allowed;
+}
+
+/* ── Results Card — glassmorphism ───────────────────────────── */
+.results-card {
+  background: rgba(255, 255, 255, 0.78);
+  backdrop-filter: blur(24px) saturate(200%);
+  -webkit-backdrop-filter: blur(24px) saturate(200%);
+  border: 1px solid rgba(255, 255, 255, 0.70);
+  border-radius: 20px;
+  box-shadow: 0 8px 40px rgba(0, 0, 0, 0.07), 0 2px 8px rgba(0, 0, 0, 0.04);
+  overflow: hidden;
+}
+
+/* ── Data table ─────────────────────────────────────────────── */
 .search-page :deep(.v-data-table) {
   background: transparent !important;
 }
-
 .search-page :deep(.v-data-table__th) {
   background: rgba(13, 115, 119, 0.05) !important;
   font-size: 13px !important;
@@ -365,18 +611,15 @@ watch(() => route.query, (newQuery) => {
   border-bottom: 1px solid rgba(13, 115, 119, 0.10) !important;
   white-space: nowrap;
 }
-
 .search-page :deep(.v-data-table__td) {
   padding: 11px 16px !important;
   background: transparent !important;
   border-bottom: 1px solid rgba(0, 0, 0, 0.05) !important;
   font-size: 14.5px;
 }
-
 .search-page :deep(.v-data-table__tr:hover .v-data-table__td) {
   background: rgba(13, 115, 119, 0.03) !important;
 }
-
 .search-page :deep(.v-data-table-footer) {
   border-top: 1px solid rgba(13, 115, 119, 0.08) !important;
   font-size: 13.5px;
@@ -388,14 +631,52 @@ watch(() => route.query, (newQuery) => {
   font-size: 13px;
   font-weight: 500;
 }
+</style>
 
-/* ── Outlined input fields ──────────────────────────────────── */
-.search-page :deep(.v-field__outline) {
-  --v-field-border-opacity: 0.18;
+<!-- Global: Vuetify overlays are teleported outside the component root;
+     scoped styles cannot reach them — this block is intentionally unscoped. -->
+<style>
+.search-select-menu {
+  margin-top: -1px;
 }
-
-/* ── Search/Export buttons ──────────────────────────────────── */
-.search-page :deep(.v-btn) {
-  letter-spacing: 0.02em;
+.search-select-menu .v-overlay__content {
+  min-width: unset !important;
+  max-width: unset !important;
+}
+.search-select-menu .v-list {
+  background: rgba(255, 255, 255, 0.90) !important;
+  backdrop-filter: blur(12px) !important;
+  -webkit-backdrop-filter: blur(12px) !important;
+  border: 1px solid rgba(255, 255, 255, 0.82) !important;
+  border-top: none !important;
+  border-top-left-radius: 0 !important;
+  border-top-right-radius: 0 !important;
+  border-bottom-left-radius: 12px !important;
+  border-bottom-right-radius: 12px !important;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.10), 0 2px 8px rgba(0, 0, 0, 0.06) !important;
+  padding: 6px !important;
+}
+.search-select-menu .v-list-item {
+  border-radius: 8px !important;
+  min-height: 36px !important;
+  margin: 1px 0 !important;
+  padding: 0 12px !important;
+  transition: background 0.15s !important;
+}
+.search-select-menu .v-list-item:hover {
+  background: rgba(13, 115, 119, 0.08) !important;
+}
+.search-select-menu .v-list-item--active {
+  background: rgba(13, 115, 119, 0.12) !important;
+}
+.search-select-menu .v-list-item-title {
+  font-size: 0.875rem !important;
+  font-weight: 500 !important;
+  color: rgba(0, 0, 0, 0.75) !important;
+  letter-spacing: 0.01em !important;
+}
+.search-select-menu .v-list-item--active .v-list-item-title {
+  color: #0D7377 !important;
+  font-weight: 600 !important;
 }
 </style>
