@@ -1134,7 +1134,7 @@ code {
   align-items: center;
   gap: 6px;
   flex-wrap: wrap;
-  font-size: 12.5px;
+  font-size: 12px;
   font-weight: 400;
 }
 
@@ -1155,8 +1155,8 @@ code {
   color: #0D7377;
   padding: 2px 7px;
   border-radius: 4px;
-  font-size: 13.5px;
-  font-family: 'Roboto Mono', 'Courier New', monospace;
+  font-size: 13px;
+  font-family: 'Roboto', sans-serif;
 }
 
 .elegant-table :deep(code.code-plain) {
@@ -1179,7 +1179,7 @@ code {
 
 .elegant-table :deep(.v-data-table__th) {
   background: rgba(13, 115, 119, 0.04) !important;
-  font-size: 12px !important;
+  font-size: 12.5px !important;
   font-weight: 600 !important;
   letter-spacing: 0.4px;
   text-transform: uppercase;
@@ -1289,7 +1289,7 @@ code {
 }
 
 .heatmap-col-text {
-  font-size: 11.5px;
+  font-size: 12px;
   font-family: 'Roboto', sans-serif;
   font-weight: 600;
   color: rgba(0, 0, 0, 0.62);
@@ -1330,7 +1330,7 @@ code {
 }
 
 .heatmap-site-id {
-  font-size: 11.5px;
+  font-size: 12px;
   font-family: 'Roboto', sans-serif;
   font-weight: 500;
   color: rgba(0, 0, 0, 0.80);
@@ -1552,7 +1552,7 @@ code {
 .detail-panel-inner {
   box-sizing: border-box;
   width: 100%;
-  padding: 12px 24px 16px;
+  padding: 12px 24px 16px 48px;
   display: flex;
   flex-direction: column;
 }
@@ -1571,7 +1571,7 @@ code {
 .detail-section-label {
   display: flex;
   align-items: center;
-  font-size: 12px;
+  font-size: 12.5px;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.6px;
@@ -1596,7 +1596,7 @@ code {
   gap: 9px;
   max-height: 200px;
   overflow-y: auto;
-  padding-right: 12px;
+  padding-right: 6px;
 }
 
 .sample-abundance-row {
@@ -1616,7 +1616,7 @@ code {
 
 .sample-name-chip {
   flex-shrink: 0;
-  font-size: 11.5px !important;
+  font-size: 12px !important;
   font-family: 'Roboto', sans-serif !important;
 }
 
@@ -1641,7 +1641,7 @@ code {
 .sample-bar-track { flex: 1; min-width: 0; }
 
 .sample-pct-text {
-  font-size: 11.5px;
+  font-size: 12px;
   font-weight: 500;
   color: rgba(0, 0, 0, 0.55);
   width: 44px;
@@ -1662,7 +1662,7 @@ code {
   display: inline-flex;
   align-items: center;
   line-height: 1;
-  font-size: 11.5px;
+  font-size: 12px;
   font-weight: 600;
   padding: 4px 9px;
   border-radius: 12px;
@@ -1692,7 +1692,7 @@ code {
   box-sizing: border-box;
   width: 100%;
   font-family: 'Roboto Mono', 'Courier New', monospace;
-  font-size: 12px;
+  font-size: 13.5px;
   line-height: 1.6;
   letter-spacing: 0.05em;
   white-space: nowrap;
