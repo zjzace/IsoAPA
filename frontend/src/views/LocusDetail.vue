@@ -59,10 +59,10 @@
               <span class="gene-meta-label">PA Sites</span>
               <span class="gene-meta-value gene-meta-accent">{{ locusData.apa_sites.length }}</span>
             </div>
-            <div class="gene-meta-item" v-if="locusData.transcript.transcript_biotype">
+            <div class="gene-meta-item" v-if="displayBiotype">
               <span class="gene-meta-label">Biotype</span>
               <span class="gene-meta-value">
-                <v-chip size="small" variant="tonal" color="teal" class="gene-meta-chip">{{ locusData.transcript.transcript_biotype }}</v-chip>
+                <v-chip size="small" variant="tonal" color="teal" class="gene-meta-chip">{{ displayBiotype }}</v-chip>
               </span>
             </div>
             <div class="gene-meta-item" style="align-items: flex-start;" v-if="locusData.apa_sites[0]?.species">
@@ -601,6 +601,14 @@ const siteIdOptions = computed(() => {
 const sampleOptions = computed(() => {
   if (!locusData.value) return []
   return (locusData.value.samples || []).map(s => s?.name ?? s)
+})
+
+const displayBiotype = computed(() => {
+  const raw = locusData.value?.transcript?.transcript_biotype
+  if (!raw) return null
+  if (raw === 'protein_coding') return 'mRNA'
+  if (raw.toLowerCase().includes('lnc')) return 'lncRNA'
+  return raw
 })
 
 const sampleSiteAbundanceData = computed(() => {
