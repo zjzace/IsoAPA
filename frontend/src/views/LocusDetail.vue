@@ -604,7 +604,7 @@ const sampleOptions = computed(() => {
 })
 
 const displayBiotype = computed(() => {
-  const raw = locusData.value?.transcript?.transcript_biotype
+  const raw = locusData.value?.apa_sites?.[0]?.transcript_biotype
   if (!raw) return null
   if (raw === 'protein_coding') return 'mRNA'
   if (raw.toLowerCase().includes('lnc')) return 'lncRNA'
