@@ -678,12 +678,10 @@ watch(() => route.query, (newQuery) => {
 <!-- Global: Vuetify overlays are teleported outside the component root;
      scoped styles cannot reach them — this block is intentionally unscoped. -->
 <style>
-.search-select-menu {
-  margin-left: -1px;
-}
 .search-select-menu .v-overlay__content {
   min-width: unset !important;
   max-width: unset !important;
+  margin-left: -1px !important;
   border-radius: 0 0 12px 12px !important;
   overflow: hidden !important;
 }
