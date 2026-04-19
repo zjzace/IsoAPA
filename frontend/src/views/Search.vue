@@ -23,7 +23,7 @@
         <!-- Filter inputs -->
         <div class="filter-grid">
           <div class="filter-card">
-            <div class="filter-inner-label">
+            <div class="filter-inner-label" :class="{ 'label-hidden': !!filters.gene_name }">
               <span class="filter-col-icon" style="background: linear-gradient(135deg,#0D7377,#14919B)">
                 <v-icon icon="mdi-dna" size="13" color="white"></v-icon>
               </span>
@@ -41,7 +41,7 @@
           </div>
 
           <div class="filter-card">
-            <div class="filter-inner-label">
+            <div class="filter-inner-label" :class="{ 'label-hidden': !!filters.transcript_id }">
               <span class="filter-col-icon" style="background: linear-gradient(135deg,#5C6BC0,#7986CB)">
                 <v-icon icon="mdi-rna" size="13" color="white"></v-icon>
               </span>
@@ -59,7 +59,7 @@
           </div>
 
           <div class="filter-card filter-card--select">
-            <div class="filter-inner-label">
+            <div class="filter-inner-label" :class="{ 'label-hidden': !!filters.species }">
               <span class="filter-col-icon" style="background: linear-gradient(135deg,#2E7D32,#43A047)">
                 <v-icon icon="mdi-earth" size="13" color="white"></v-icon>
               </span>
@@ -79,7 +79,7 @@
           </div>
 
           <div class="filter-card filter-card--select">
-            <div class="filter-inner-label">
+            <div class="filter-inner-label" :class="{ 'label-hidden': !!filters.sample }">
               <span class="filter-col-icon" style="background: linear-gradient(135deg,#C75B00,#EF6C00)">
                 <v-icon icon="mdi-flask-outline" size="13" color="white"></v-icon>
               </span>
@@ -464,12 +464,17 @@ watch(() => route.query, (newQuery) => {
 }
 
 .filter-card {
+  position: relative;
   background: rgba(255, 255, 255, 0.68);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
   border: 1px solid rgba(255, 255, 255, 0.82);
   border-radius: 12px;
-  padding: 0 12px 4px;
+  padding: 0;
+  height: 50px;
+  display: flex;
+  align-items: center;
+  overflow: hidden;
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.04);
   transition: border-color 0.2s, box-shadow 0.2s, border-bottom-left-radius 0.1s, border-bottom-right-radius 0.1s;
 }
@@ -483,7 +488,14 @@ watch(() => route.query, (newQuery) => {
   border-bottom-color: transparent;
 }
 
+/* Label floats over the input area; fades on hover, focus, or when value is filled */
 .filter-inner-label {
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  pointer-events: none;
+  z-index: 1;
   display: flex;
   align-items: center;
   gap: 7px;
@@ -492,7 +504,14 @@ watch(() => route.query, (newQuery) => {
   letter-spacing: 0.09em;
   text-transform: uppercase;
   color: rgba(0, 0, 0, 0.48);
-  padding: 9px 0 2px;
+  white-space: nowrap;
+  transition: opacity 0.18s ease, transform 0.18s ease;
+}
+.filter-inner-label.label-hidden,
+.filter-card:hover .filter-inner-label,
+.filter-card:focus-within .filter-inner-label {
+  opacity: 0;
+  transform: translateY(-50%) translateX(-4px);
 }
 
 .filter-col-icon {
@@ -505,9 +524,15 @@ watch(() => route.query, (newQuery) => {
   flex-shrink: 0;
 }
 
+/* v-field spans full card width (no card padding) → dropdown width = card width */
+.filter-field {
+  flex: 1;
+  min-width: 0;
+  align-self: stretch;
+}
 .filter-field :deep(.v-field__input) {
-  padding-top: 6px !important;
-  padding-bottom: 6px !important;
+  padding-top: 0 !important;
+  padding-bottom: 0 !important;
   padding-left: 0 !important;
   font-size: 0.91rem;
   font-weight: 500;
@@ -515,13 +540,16 @@ watch(() => route.query, (newQuery) => {
   min-height: unset !important;
 }
 .filter-field :deep(.v-field) {
-  padding: 0 !important;
+  padding: 0 12px !important;
+  align-items: center;
+  height: 100%;
 }
 .filter-field :deep(.v-input__control) {
   min-height: unset !important;
+  height: 100%;
 }
 .filter-field :deep(.v-field__clearable) {
-  padding-top: 4px !important;
+  padding-top: 0 !important;
   padding-right: 0 !important;
 }
 .filter-field :deep(.v-select__selection-text) {
