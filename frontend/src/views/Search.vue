@@ -684,17 +684,16 @@ watch(() => route.query, (newQuery) => {
 .search-select-menu .v-overlay__content {
   min-width: unset !important;
   max-width: unset !important;
+  border-radius: 0 0 12px 12px !important;
+  overflow: hidden !important;
 }
 .search-select-menu .v-list {
   background: rgba(255, 255, 255, 0.90) !important;
   backdrop-filter: blur(12px) !important;
   -webkit-backdrop-filter: blur(12px) !important;
-  border: 1px solid rgba(255, 255, 255, 0.82) !important;
+  border: 1px solid rgba(20, 145, 155, 0.45) !important;
   border-top: none !important;
-  border-top-left-radius: 0 !important;
-  border-top-right-radius: 0 !important;
-  border-bottom-left-radius: 12px !important;
-  border-bottom-right-radius: 12px !important;
+  border-radius: 0 0 12px 12px !important;
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.10), 0 2px 8px rgba(0, 0, 0, 0.06) !important;
   padding: 6px !important;
 }
