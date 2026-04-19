@@ -681,7 +681,7 @@ watch(() => route.query, (newQuery) => {
 .search-select-menu .v-overlay__content {
   min-width: unset !important;
   max-width: unset !important;
-  margin-left: -1px !important;
+  margin-left: -2px !important;
   border-radius: 0 0 12px 12px !important;
   overflow: hidden !important;
 }
