@@ -112,41 +112,49 @@
 
                 <!-- Guide 1 — Locus Detail View -->
                 <template v-if="index === 1">
-                  <p class="guide-p">Click any search result to open the full Locus Detail page for that transcript. Four analysis panels are available:</p>
+                  <p class="guide-p">Click any search result to open the full Locus Detail page for that transcript. The page is organised into three panels:</p>
                   <div class="guide-rows">
                     <div class="guide-row">
-                      <v-icon icon="mdi-dna" color="#5C6BC0" class="mr-3"></v-icon>
-                      <div><strong>Genome Browser</strong> — Exon/intron/UTR structure with PA site markers overlaid on the transcript model.</div>
+                      <v-icon icon="mdi-chart-gantt" color="#5C6BC0" class="mr-3"></v-icon>
+                      <div><strong>Genome Browser</strong> — Interactive diagram of the transcript's exon/intron/UTR structure with PA site markers overlaid. Hover a marker to see its position and abundance.</div>
                     </div>
                     <div class="guide-row">
-                      <v-icon icon="mdi-chart-bar" color="#5C6BC0" class="mr-3"></v-icon>
-                      <div><strong>Site Distribution</strong> — Relative abundance of each PA site across all available samples.</div>
+                      <v-icon icon="mdi-table" color="#5C6BC0" class="mr-3"></v-icon>
+                      <div><strong>PA Sites Details</strong> — Sortable table listing every polyadenylation site detected for the transcript. Click any row to expand it and reveal per-sample abundance bars and a colour-coded genomic sequence window centred on the cleavage site.</div>
                     </div>
                     <div class="guide-row">
-                      <v-icon icon="mdi-molecule" color="#5C6BC0" class="mr-3"></v-icon>
-                      <div><strong>UTR Composition</strong> — GC%, AU-rich element (ATTTA pentamer) density, and dinucleotide frequencies for each site's 3' UTR region.</div>
-                    </div>
-                    <div class="guide-row">
-                      <v-icon icon="mdi-account-search" color="#5C6BC0" class="mr-3"></v-icon>
-                      <div><strong>RBP Motifs</strong> — Known RNA-binding protein binding site scanner (HuR, TTP, CPEB1, FMR1, PABPC1 and more).</div>
+                      <v-icon icon="mdi-view-grid-outline" color="#5C6BC0" class="mr-3"></v-icon>
+                      <div><strong>Per-site Abundance Heatmap</strong> — Sites × samples matrix. Colour intensity encodes relative abundance (0–100%); hatched cells indicate the site was not detected in that sample.</div>
                     </div>
                   </div>
                   <v-table density="compact" class="metrics-table mt-4">
                     <tbody>
                       <tr>
-                        <td><strong>Site Position</strong></td>
-                        <td class="text-grey-darken-1">Genomic coordinate of the cleavage site</td>
+                        <td><strong>Site ID</strong></td>
+                        <td class="text-grey-darken-1">Unique identifier for the PA site within this transcript</td>
                       </tr>
                       <tr>
-                        <td><strong>Abundance</strong></td>
-                        <td class="text-grey-darken-1">Fraction of reads using this site vs. all sites for this transcript</td>
+                        <td><strong>Rep. Position</strong></td>
+                        <td class="text-grey-darken-1">Modal genomic coordinate — the single nucleotide most frequently observed as the cleavage-and-polyadenylation point across all supporting reads and samples</td>
                       </tr>
                       <tr>
-                        <td><strong>Read Count</strong></td>
-                        <td class="text-grey-darken-1">Absolute number of supporting sequencing reads</td>
+                        <td><strong>PAS Motif</strong></td>
+                        <td class="text-grey-darken-1">Upstream hexamer signal (e.g. AATAAA) colour-coded by type: canonical, variant, or none detected</td>
+                      </tr>
+                      <tr>
+                        <td><strong>Samples</strong></td>
+                        <td class="text-grey-darken-1">Number of samples in which this PA site was detected</td>
+                      </tr>
+                      <tr>
+                        <td><strong>Mean Abundance</strong></td>
+                        <td class="text-grey-darken-1">Average relative usage of this site across all samples in which it was detected</td>
                       </tr>
                     </tbody>
                   </v-table>
+                  <div class="tip-box mt-4">
+                    <v-icon icon="mdi-lightbulb-on-outline" color="#0D7377" class="mr-2"></v-icon>
+                    <strong>Tip:</strong> The transcript header shows biotype (mRNA, lncRNA, etc.), species with genome assembly version, and a direct link to the parent Gene Detail page.
+                  </div>
                 </template>
 
                 <!-- Guide 2 — Gene Detail View -->
@@ -677,6 +685,11 @@ const glossary = [
 .metrics-table td {
   font-size: 0.85rem !important;
   border-bottom: 1px solid #f1f5f9 !important;
+}
+.metrics-table td:first-child {
+  white-space: nowrap;
+  width: 1%;
+  padding-right: 24px !important;
 }
 .mini-cards-grid {
   display: grid;
