@@ -181,7 +181,25 @@ fi
 
 # ─── step 5 : frontend dependencies ──────────────────────────────────────────
 
-log "[5/7] Frontend dependencies"
+log "[5/7] BED12 indices"
+
+_bed12_any_built=0
+for _bed in "$DATA_DIR"/*/reference/*.bed; do
+    [[ -f "$_bed" ]] || continue
+    if [[ ! -f "${_bed}.bidx" ]]; then
+        info "Building BED12 index: $(basename "$_bed") ..."
+        "$PYTHON" "$BACKEND_DIR/build_bed12_index.py" "$_bed" \
+            || warn "Failed to build index for $_bed"
+        _bed12_any_built=1
+    fi
+done
+if [[ "$_bed12_any_built" -eq 0 ]]; then
+    ok "All BED12 indices present"
+else
+    ok "BED12 index build complete"
+fi
+
+log "[6/8] Frontend dependencies"
 
 if [[ ! -d "$FRONTEND_DIR/node_modules" ]]; then
     info "Installing npm packages (first run) ..."
@@ -194,7 +212,7 @@ fi
 
 # ─── step 6 : start backend ───────────────────────────────────────────────────
 
-log "[6/7] Starting backend (port 8000)"
+log "[7/8] Starting backend (port 8000)"
 
 (cd "$BACKEND_DIR" && "$PYTHON" -m uvicorn main:app --host 0.0.0.0 --port 8000) &
 BACKEND_PID=$!
@@ -209,7 +227,7 @@ ok "Backend running"
 
 # ─── step 7 : start frontend ──────────────────────────────────────────────────
 
-log "[7/7] Starting frontend (port 3000)"
+log "[8/8] Starting frontend (port 3000)"
 
 (cd "$FRONTEND_DIR" && npm run dev) &
 FRONTEND_PID=$!
