@@ -41,7 +41,7 @@
               density="compact"
               hide-details
               class="filter-field"
-              :menu-props="{ class: 'search-select-menu', width: filterSelectWidth || undefined, offset: 1 }"
+              :menu-props="{ class: 'search-select-menu', width: filterSelectWidth || undefined, offset: 0 }"
               @update:search="onGeneNameSearch"
             ></v-autocomplete>
           </div>
@@ -65,7 +65,7 @@
               density="compact"
               hide-details
               class="filter-field"
-              :menu-props="{ class: 'search-select-menu', width: filterSelectWidth || undefined, offset: 1 }"
+              :menu-props="{ class: 'search-select-menu', width: filterSelectWidth || undefined, offset: 0 }"
               @update:search="onTranscriptSearch"
             ></v-autocomplete>
           </div>
@@ -87,7 +87,7 @@
               hide-details
               no-data-text="No matches"
               class="filter-field"
-              :menu-props="{ class: 'search-select-menu', width: filterSelectWidth || undefined, offset: 1 }"
+              :menu-props="{ class: 'search-select-menu', width: filterSelectWidth || undefined, offset: 0 }"
               @update:model-value="debouncedSearch"
             ></v-autocomplete>
           </div>
@@ -109,7 +109,7 @@
               hide-details
               no-data-text="No matches"
               class="filter-field"
-              :menu-props="{ class: 'search-select-menu', width: filterSelectWidth || undefined, offset: 1 }"
+              :menu-props="{ class: 'search-select-menu', width: filterSelectWidth || undefined, offset: 0 }"
               @update:model-value="debouncedSearch"
             ></v-autocomplete>
           </div>
@@ -531,27 +531,37 @@ const onTranscriptSearch = (val) => {
 
 .filter-card {
   position: relative;
-  background: rgba(255, 255, 255, 0.68);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border: 1px solid rgba(255, 255, 255, 0.82);
+  background: linear-gradient(180deg, rgba(255,255,255,0.74) 0%, rgba(247,252,252,0.68) 100%);
+  backdrop-filter: blur(16px) saturate(165%);
+  -webkit-backdrop-filter: blur(16px) saturate(165%);
+  border: 1px solid rgba(255, 255, 255, 0.42);
   border-radius: 12px;
   padding: 0;
   height: 50px;
   display: flex;
   align-items: center;
   overflow: hidden;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.04);
-  transition: border-color 0.2s, box-shadow 0.2s, border-bottom-left-radius 0.1s, border-bottom-right-radius 0.1s;
+  box-shadow: 0 4px 16px rgba(13, 115, 119, 0.07), inset 0 1px 0 rgba(255, 255, 255, 0.50);
+  transition: border-color 0.2s, box-shadow 0.2s, background 0.2s, border-radius 0.15s;
+}
+.filter-card:hover {
+  background: linear-gradient(180deg, rgba(255,255,255,0.80) 0%, rgba(243,250,250,0.72) 100%);
+  border-color: rgba(20, 145, 155, 0.22);
+  box-shadow: 0 8px 24px rgba(13, 115, 119, 0.11), 0 2px 6px rgba(13, 115, 119, 0.05), inset 0 1px 0 rgba(255, 255, 255, 0.54);
 }
 .filter-card:focus-within {
-  border-color: rgba(20, 145, 155, 0.45);
-  box-shadow: 0 2px 18px rgba(13, 115, 119, 0.13);
+  background: linear-gradient(180deg, rgba(255,255,255,0.86) 0%, rgba(240,249,249,0.78) 100%);
+  border-color: rgba(20, 145, 155, 0.46);
+  box-shadow: 0 0 0 3px rgba(20, 145, 155, 0.13), 0 8px 28px rgba(13, 115, 119, 0.14), inset 0 1px 0 rgba(255, 255, 255, 0.54);
+  backdrop-filter: blur(18px) saturate(180%);
+  -webkit-backdrop-filter: blur(18px) saturate(180%);
 }
-.filter-card--select:focus-within {
+/* Flat-bottom only when Vuetify menu is actually open — not on mere focus */
+.filter-card--select:has([aria-expanded="true"]) {
   border-bottom-left-radius: 0;
   border-bottom-right-radius: 0;
-  border-bottom-color: transparent;
+  border-bottom-color: rgba(20, 145, 155, 0.12);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.54);
 }
 
 /* Label floats over the input area; fades on hover, focus, or when value is filled */
@@ -733,18 +743,17 @@ const onTranscriptSearch = (val) => {
 .search-select-menu .v-overlay__content {
   min-width: unset !important;
   max-width: unset !important;
-  margin-left: -2px !important;
   border-radius: 0 0 12px 12px !important;
   overflow: hidden !important;
 }
 .search-select-menu .v-list {
-  background: rgba(255, 255, 255, 0.90) !important;
-  backdrop-filter: blur(12px) !important;
-  -webkit-backdrop-filter: blur(12px) !important;
-  border: 1px solid rgba(20, 145, 155, 0.45) !important;
-  border-top: none !important;
+  background: linear-gradient(180deg, rgba(255,255,255,0.86) 0%, rgba(240,250,250,0.80) 100%) !important;
+  backdrop-filter: blur(20px) saturate(180%) !important;
+  -webkit-backdrop-filter: blur(20px) saturate(180%) !important;
+  border: 1px solid rgba(20, 145, 155, 0.28) !important;
+  border-top: 1px solid rgba(20, 145, 155, 0.12) !important;
   border-radius: 0 0 12px 12px !important;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.10), 0 2px 8px rgba(0, 0, 0, 0.06) !important;
+  box-shadow: 0 16px 40px rgba(13, 115, 119, 0.14), 0 6px 16px rgba(13, 115, 119, 0.08) !important;
   padding: 6px !important;
 }
 .search-select-menu .v-list-item {
