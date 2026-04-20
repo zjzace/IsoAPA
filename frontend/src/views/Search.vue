@@ -22,40 +22,52 @@
 
         <!-- Filter inputs -->
         <div class="filter-grid" ref="filterGridRef">
-          <div class="filter-card">
+          <div class="filter-card filter-card--select">
             <div class="filter-inner-label" :class="{ 'label-hidden': !!filters.gene_name }">
               <span class="filter-col-icon" style="background: linear-gradient(135deg,#0D7377,#14919B)">
                 <v-icon icon="mdi-dna" size="13" color="white"></v-icon>
               </span>
               <span>Gene Name</span>
             </div>
-            <v-text-field
+            <v-autocomplete
               v-model="filters.gene_name"
+              :items="geneNameSuggestions"
+              item-title="value"
+              item-value="value"
+              no-filter
               clearable
               variant="plain"
               density="compact"
               hide-details
+              no-data-text="No matches"
               class="filter-field"
-              @update:model-value="debouncedSearch"
-            ></v-text-field>
+              :menu-props="{ class: 'search-select-menu', width: filterSelectWidth || undefined, offset: 1 }"
+              @update:search="onGeneNameSearch"
+            ></v-autocomplete>
           </div>
 
-          <div class="filter-card">
+          <div class="filter-card filter-card--select">
             <div class="filter-inner-label" :class="{ 'label-hidden': !!filters.transcript_id }">
               <span class="filter-col-icon" style="background: linear-gradient(135deg,#5C6BC0,#7986CB)">
                 <v-icon icon="mdi-rna" size="13" color="white"></v-icon>
               </span>
               <span>Transcript ID</span>
             </div>
-            <v-text-field
+            <v-autocomplete
               v-model="filters.transcript_id"
+              :items="transcriptSuggestions"
+              item-title="value"
+              item-value="value"
+              no-filter
               clearable
               variant="plain"
               density="compact"
               hide-details
+              no-data-text="No matches"
               class="filter-field"
-              @update:model-value="debouncedSearch"
-            ></v-text-field>
+              :menu-props="{ class: 'search-select-menu', width: filterSelectWidth || undefined, offset: 1 }"
+              @update:search="onTranscriptSearch"
+            ></v-autocomplete>
           </div>
 
           <div class="filter-card filter-card--select">
@@ -387,6 +399,39 @@ watch(() => route.query, (newQuery) => {
   if (newQuery.species) filters.species = newQuery.species
   search()
 })
+
+const geneNameSuggestions = ref([])
+const transcriptSuggestions = ref([])
+let geneNameTimer = null
+let transcriptTimer = null
+
+const onGeneNameSearch = (val) => {
+  filters.gene_name = val ?? ''
+  debouncedSearch()
+  clearTimeout(geneNameTimer)
+  if (!val) { geneNameSuggestions.value = []; return }
+  geneNameTimer = setTimeout(async () => {
+    try {
+      geneNameSuggestions.value = await apiService.autocomplete(val, 'gene_name')
+    } catch {
+      geneNameSuggestions.value = []
+    }
+  }, 250)
+}
+
+const onTranscriptSearch = (val) => {
+  filters.transcript_id = val ?? ''
+  debouncedSearch()
+  clearTimeout(transcriptTimer)
+  if (!val) { transcriptSuggestions.value = []; return }
+  transcriptTimer = setTimeout(async () => {
+    try {
+      transcriptSuggestions.value = await apiService.autocomplete(val, 'transcript_id')
+    } catch {
+      transcriptSuggestions.value = []
+    }
+  }, 250)
+}
 </script>
 
 <style scoped>
