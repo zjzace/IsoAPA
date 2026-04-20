@@ -267,6 +267,11 @@
                         <Transition name="tx-expand" appear>
                           <div class="tx-expanded-content">
                             <table class="tx-inner-table">
+                               <colgroup>
+                                 <col style="width: 260px">
+                                 <col style="width: 210px">
+                                 <col>
+                               </colgroup>
                                <thead>
                                  <tr>
                                     <th class="tx-inner-th">Site ID</th>
@@ -955,7 +960,7 @@ code {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  max-width: 320px;
+  max-width: 230px;
   cursor: default;
 }
 
@@ -1023,6 +1028,7 @@ code {
 
 .tx-inner-table {
   width: 100%;
+  table-layout: fixed;
   border-collapse: collapse;
   background: rgba(255, 255, 255, 0.6);
   border: 1px solid rgba(13, 115, 119, 0.1);
