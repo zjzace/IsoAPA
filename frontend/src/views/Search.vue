@@ -49,7 +49,7 @@
           <div class="filter-card filter-card--select">
             <div class="filter-inner-label" :class="{ 'label-hidden': !!filters.transcript_id }">
               <span class="filter-col-icon" style="background: linear-gradient(135deg,#5C6BC0,#7986CB)">
-                <v-icon icon="mdi-rna" size="13" color="white"></v-icon>
+                <v-icon icon="mdi-identifier" size="13" color="white"></v-icon>
               </span>
               <span>Transcript ID</span>
             </div>
@@ -72,8 +72,8 @@
 
           <div class="filter-card filter-card--select">
             <div class="filter-inner-label" :class="{ 'label-hidden': !!filters.species }">
-              <span class="filter-col-icon" style="background: linear-gradient(135deg,#2E7D32,#43A047)">
-                <v-icon icon="mdi-earth" size="13" color="white"></v-icon>
+              <span class="filter-col-icon" style="background: linear-gradient(135deg,#6A1B9A,#AB47BC)">
+                <v-icon icon="mdi-paw" size="13" color="white"></v-icon>
               </span>
               <span>Species</span>
             </div>
