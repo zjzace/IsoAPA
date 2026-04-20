@@ -20,41 +20,85 @@ from app.schemas.schemas import (
 
 router = APIRouter()
 
-# ---------------------------------------------------------------------------
-# GTF index cache: loaded lazily per GTF path, kept in memory for fast lookup
-# ---------------------------------------------------------------------------
-_GTF_INDEX_CACHE: dict = {}  # gtf_path -> {transcript_id: [(offset, length), ...]}
-_GTF_ATTR_RE = re.compile(r'transcript_id "([^"]+)"')
+_BED12_INDEX_CACHE: dict = {}
 
 
-def _load_gtf_index(gtf_path: str) -> dict:
-    """Load (or return cached) byte-offset index for a GTF file."""
-    if gtf_path in _GTF_INDEX_CACHE:
-        return _GTF_INDEX_CACHE[gtf_path]
-
-    idx_path = gtf_path + ".tidx"
+def _load_bed12_index(bed12_path: str) -> dict:
+    if bed12_path in _BED12_INDEX_CACHE:
+        return _BED12_INDEX_CACHE[bed12_path]
+    idx_path = bed12_path + ".bidx"
     if not os.path.exists(idx_path):
-        # Index not built yet – return empty so caller falls back gracefully
         return {}
-
     with open(idx_path, "r") as f:
         idx = json.load(f)
-    _GTF_INDEX_CACHE[gtf_path] = idx
+    _BED12_INDEX_CACHE[bed12_path] = idx
     return idx
 
 
-def _fetch_transcript_lines(gtf_path: str, transcript_id: str) -> list:
-    """Return decoded GTF lines for a transcript using the byte-offset index."""
-    idx = _load_gtf_index(gtf_path)
-    spans = idx.get(transcript_id)
-    if not spans:
-        return []
-    lines = []
-    with open(gtf_path, "rb") as f:
-        for offset, length in spans:
-            f.seek(offset)
-            lines.append(f.read(length).decode("utf-8", errors="replace"))
-    return lines
+def _fetch_bed12_record(bed12_path: str, transcript_id: str) -> dict | None:
+    idx = _load_bed12_index(bed12_path)
+    span = idx.get(transcript_id)
+    if not span:
+        return None
+    offset, length = span
+    with open(bed12_path, "rb") as f:
+        f.seek(offset)
+        line = f.read(length).decode("utf-8", errors="replace").strip()
+    fields = line.split("\t")
+    if len(fields) < 12:
+        return None
+    chrom_start = int(fields[1])
+    thick_start = int(fields[6])
+    thick_end = int(fields[7])
+    block_sizes = [int(x) for x in fields[10].rstrip(",").split(",") if x]
+    block_starts = [int(x) for x in fields[11].rstrip(",").split(",") if x]
+    return {
+        "chrom": fields[0],
+        "chrom_start": chrom_start,
+        "strand": fields[5],
+        "thick_start": thick_start,
+        "thick_end": thick_end,
+        "block_sizes": block_sizes,
+        "block_starts": block_starts,
+    }
+
+
+def _parse_bed12_structure(rec: dict) -> dict:
+    cs = rec["chrom_start"]
+    ts, te = rec["thick_start"], rec["thick_end"]
+    has_cds = ts < te
+    exons, cds, utrs = [], [], []
+
+    for bstart_rel, bsize in zip(rec["block_starts"], rec["block_sizes"]):
+        b_start = cs + bstart_rel
+        b_end = b_start + bsize
+        ex_s, ex_e = b_start + 1, b_end
+
+        exons.append((ex_s, ex_e))
+
+        if not has_cds:
+            utrs.append((ex_s, ex_e))
+            continue
+
+        cds_s0 = max(b_start, ts)
+        cds_e0 = min(b_end, te)
+
+        if cds_s0 < cds_e0:
+            cds.append((cds_s0 + 1, cds_e0))
+            if b_start < ts:
+                utrs.append((ex_s, ts))
+            if b_end > te:
+                utrs.append((te + 1, ex_e))
+        else:
+            utrs.append((ex_s, ex_e))
+
+    return {
+        "chrom": rec["chrom"],
+        "strand": rec["strand"],
+        "exons": exons,
+        "cds": cds,
+        "utrs": utrs,
+    }
 
 
 DATA_DIR = os.path.join(
@@ -69,7 +113,7 @@ SPECIES_FOLDER_MAP = {
 }
 
 
-def get_species_ref_path(species_name: str, file_type: str = "gtf") -> str:
+def get_species_ref_path(species_name: str, file_type: str = "bed12") -> str:
     """Get reference file path for a species."""
     species_folder = SPECIES_FOLDER_MAP.get(species_name)
     if not species_folder:
@@ -80,11 +124,11 @@ def get_species_ref_path(species_name: str, file_type: str = "gtf") -> str:
         return None
 
     for f in os.listdir(ref_dir):
-        if file_type == "gtf" and (f.endswith(".gtf") or f.endswith(".gff3")):
-            return os.path.join(ref_dir, f)
-        elif file_type == "fasta" and (
+        if file_type == "fasta" and (
             f.endswith(".fa") or f.endswith(".fasta") or f.endswith(".fna")
         ):
+            return os.path.join(ref_dir, f)
+        elif file_type == "bed12" and f.endswith(".bed") and not f.endswith(".bidx"):
             return os.path.join(ref_dir, f)
 
     return None
@@ -149,6 +193,7 @@ def search_transcripts(
             Gene.strand,
             func.count(APASite.id).label("apa_site_count"),
             Species.name.label("species"),
+            Gene.id.label("gene_db_id"),
         )
         .join(Gene)
         .join(APASite)
@@ -170,6 +215,7 @@ def search_transcripts(
 
     _count_subq = query.group_by(
         Transcript.transcript_id,
+        Gene.id,
         Gene.gene_id,
         Gene.gene_name,
         Gene.chromosome,
@@ -181,6 +227,7 @@ def search_transcripts(
     results = (
         query.group_by(
             Transcript.transcript_id,
+            Gene.id,
             Gene.gene_id,
             Gene.gene_name,
             Gene.chromosome,
@@ -226,20 +273,30 @@ def search_transcripts(
                 apa_site_count=r[5],
                 cell_lines=list(sample_names),
                 species=r[6],
+                gene_db_id=r[7],
             )
         )
 
     return SearchResponse(items=search_results, total=total_count)
 
 
-@router.get("/gene/{gene_id}", response_model=GeneDetail)
-def get_gene_detail(gene_id: str, db: Session = Depends(get_db)):
+@router.get("/gene/{gene_db_id}", response_model=GeneDetail)
+def get_gene_detail(gene_db_id: int, db: Session = Depends(get_db)):
     """Get detailed information about a gene and all its transcripts with APA sites."""
-    gene = db.query(Gene).filter(Gene.gene_id == gene_id).first()
+    gene = db.query(Gene).filter(Gene.id == gene_db_id).first()
     if not gene:
         raise HTTPException(status_code=404, detail="Gene not found")
 
     transcripts = db.query(Transcript).filter(Transcript.gene_id == gene.id).all()
+
+    species_name = None
+    for transcript in transcripts:
+        asite = db.query(APASite).filter(APASite.transcript_id == transcript.id).first()
+        if asite and asite.species_id:
+            sp = db.query(Species).filter(Species.id == asite.species_id).first()
+            if sp:
+                species_name = sp.name
+                break
 
     transcript_data = []
     for transcript in transcripts:
@@ -280,10 +337,12 @@ def get_gene_detail(gene_id: str, db: Session = Depends(get_db)):
         )
 
     return GeneDetail(
+        id=gene.id,
         gene_id=gene.gene_id,
         gene_name=gene.gene_name,
         chromosome=gene.chromosome,
         strand=gene.strand,
+        species=species_name,
         transcripts=transcript_data,
     )
 
@@ -358,7 +417,6 @@ if _BACKEND_ROOT not in sys.path:
 
 @router.get("/transcript/{transcript_id}/structure")
 def get_transcript_structure(transcript_id: str, db: Session = Depends(get_db)):
-    """Get transcript exon structure for genome browser visualization"""
     transcript = (
         db.query(Transcript).filter(Transcript.transcript_id == transcript_id).first()
     )
@@ -369,8 +427,6 @@ def get_transcript_structure(transcript_id: str, db: Session = Depends(get_db)):
     if not gene:
         raise HTTPException(status_code=404, detail="Gene not found")
 
-    # Find species for this transcript (via APA sites)
-    # Query only the columns that exist in the database (species_id)
     apa_site_species = (
         db.query(APASite.species_id)
         .filter(APASite.transcript_id == transcript.id)
@@ -381,104 +437,33 @@ def get_transcript_structure(transcript_id: str, db: Session = Depends(get_db)):
             db.query(Species).filter(Species.id == apa_site_species[0]).first()
         )
     else:
-        # Default to Human if no APA sites
         species_obj = db.query(Species).filter(Species.name == "Human").first()
 
     if not species_obj:
         raise HTTPException(status_code=404, detail="Species not found")
 
-    # Get GTF path
-    gtf_path = get_species_ref_path(species_obj.name, "gtf")
-    if not gtf_path:
+    bed12_path = get_species_ref_path(species_obj.name, "bed12")
+    if not bed12_path:
         raise HTTPException(
-            status_code=404, detail="GTF file not available for this species"
+            status_code=404, detail="BED12 file not available for this species"
         )
 
-    # Parse transcript structure using byte-offset index for O(1) lookup
     try:
-        gtf_lines = _fetch_transcript_lines(gtf_path, transcript_id)
-        if not gtf_lines:
+        rec = _fetch_bed12_record(bed12_path, transcript_id)
+        if not rec:
             raise HTTPException(
-                status_code=404, detail="Transcript not found in GTF index"
+                status_code=404, detail="Transcript not found in BED12 index"
             )
-
-        exons = []
-        cds = []
-        chrom = None
-        strand = None
-        gene_name_val = None
-        gene_id_val = None
-
-        for line in gtf_lines:
-            if not line:
-                continue
-            fields = line.split("\t")
-            if len(fields) < 9:
-                continue
-
-            feature = fields[2]
-            start = int(fields[3])
-            end = int(fields[4])
-
-            if chrom is None:
-                chrom = fields[0]
-                strand = fields[6]
-                # Parse attributes for gene info
-                attrs = {}
-                for item in fields[8].split(";"):
-                    item = item.strip()
-                    if " " in item:
-                        key, val = item.split(" ", 1)
-                        attrs[key] = val.strip('"')
-                gene_name_val = attrs.get("gene_name")
-                gene_id_val = attrs.get("gene_id")
-
-            if feature == "exon":
-                exons.append((start, end))
-            elif feature == "CDS":
-                cds.append((start, end))
-
-        if not exons:
-            raise HTTPException(status_code=404, detail="No exons found for transcript")
-
-        # Calculate UTRs (exon regions not in CDS)
-        utrs = []
-        for ex_start, ex_end in exons:
-            cds_in_exon = [
-                (max(ex_start, c_start), min(ex_end, c_end))
-                for c_start, c_end in cds
-                if c_start < ex_end and c_end > ex_start
-            ]
-
-            if not cds_in_exon:
-                utrs.append((ex_start, ex_end))
-            else:
-                cds_in_exon.sort()
-                if ex_start < cds_in_exon[0][0]:
-                    utrs.append((ex_start, cds_in_exon[0][0] - 1))
-                if ex_end > cds_in_exon[-1][1]:
-                    utrs.append((cds_in_exon[-1][1] + 1, ex_end))
-
-        structure = {
-            "gene_name": gene_name_val,
-            "gene_id": gene_id_val,
-            "chrom": chrom,
-            "strand": strand,
-            "exons": exons,
-            "cds": cds,
-            "utrs": utrs,
-        }
-
+        structure = _parse_bed12_structure(rec)
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to parse GTF: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to parse BED12: {str(e)}")
 
-    # Format response
     return {
         "transcript_id": transcript_id,
-        "gene_name": structure["gene_name"] or gene.gene_name,
-        "gene_id": structure["gene_id"] or gene.gene_id,
+        "gene_name": gene.gene_name,
+        "gene_id": gene.gene_id,
         "chromosome": structure["chrom"] or gene.chromosome,
         "strand": structure["strand"] or gene.strand,
         "exons": [{"start": s, "end": e} for s, e in structure["exons"]],
@@ -647,12 +632,12 @@ def get_detailed_stats(db: Session = Depends(get_db)):
     # Top genes by APA sites
     top_genes = (
         db.query(
-            Gene.gene_name, Gene.gene_id, func.count(APASite.id).label("apa_count")
+            Gene.gene_name, Gene.gene_id, func.count(APASite.id).label("apa_count"), Gene.id
         )
         .select_from(APASite)
         .join(Transcript, APASite.transcript_id == Transcript.id)
         .join(Gene, Transcript.gene_id == Gene.id)
-        .group_by(Gene.gene_name, Gene.gene_id)
+        .group_by(Gene.gene_name, Gene.gene_id, Gene.id)
         .order_by(func.count(APASite.id).desc())
         .limit(20)
         .all()
@@ -696,7 +681,7 @@ def get_detailed_stats(db: Session = Depends(get_db)):
         ],
         "apa_sites_by_strand": [{"strand": s[0], "count": s[1]} for s in apa_by_strand],
         "top_genes_by_apa": [
-            {"gene_name": g[0], "gene_id": g[1], "apa_count": g[2]} for g in top_genes
+            {"gene_name": g[0], "gene_id": g[1], "apa_count": g[2], "gene_db_id": g[3]} for g in top_genes
         ],
     }
 
@@ -1110,20 +1095,14 @@ def _rev_comp(seq: str) -> str:
     return seq.translate(comp)[::-1]
 
 
-def _derive_cds_end(transcript_id: str, strand: str, gtf_path: str):
-    """Return genomic CDS end position (int) or None."""
-    gtf_lines = _fetch_transcript_lines(gtf_path, transcript_id)
-    cds_positions = []
-    for line in gtf_lines:
-        if not line:
-            continue
-        fields = line.split("\t")
-        if len(fields) < 9 or fields[2] != "CDS":
-            continue
-        cds_positions += [int(fields[3]), int(fields[4])]
-    if not cds_positions:
+def _derive_cds_end(transcript_id: str, strand: str, bed12_path: str):
+    rec = _fetch_bed12_record(bed12_path, transcript_id)
+    if not rec:
         return None
-    return min(cds_positions) if strand == "-" else max(cds_positions)
+    ts, te = rec["thick_start"], rec["thick_end"]
+    if ts >= te:
+        return None
+    return ts + 1 if strand == "-" else te
 
 
 def _utr_genomic_coords(site_pos: int, cds_end_pos, strand: str):
@@ -1172,8 +1151,8 @@ def get_utr_sequence(transcript_id: str, site_id: str, db: Session = Depends(get
     strand = str(gene.strand)
     chrom = str(gene.chromosome)
 
-    gtf_path = get_species_ref_path(str(species_obj.name), "gtf")
-    cds_end_pos = _derive_cds_end(transcript_id, strand, gtf_path) if gtf_path else None
+    bed12_path = get_species_ref_path(str(species_obj.name), "bed12")
+    cds_end_pos = _derive_cds_end(transcript_id, strand, bed12_path) if bed12_path else None
 
     site_pos = int(apa_site.mode_site_position)
     g_start, g_end = _utr_genomic_coords(site_pos, cds_end_pos, strand)
@@ -1234,10 +1213,10 @@ def get_utr_composition(transcript_id: str, db: Session = Depends(get_db)):
     strand = str(gene.strand)
     chrom = str(gene.chromosome)
 
-    gtf_path = (
-        get_species_ref_path(str(species_obj.name), "gtf") if species_obj else None
+    bed12_path = (
+        get_species_ref_path(str(species_obj.name), "bed12") if species_obj else None
     )
-    cds_end_pos = _derive_cds_end(transcript_id, strand, gtf_path) if gtf_path else None
+    cds_end_pos = _derive_cds_end(transcript_id, strand, bed12_path) if bed12_path else None
 
     DINUCS = [
         "AA",
@@ -1445,13 +1424,13 @@ def get_rbp_motifs(transcript_id: str, db: Session = Depends(get_db)):
     fasta_path = (
         get_species_ref_path(str(species_obj.name), "fasta") if species_obj else None
     )
-    gtf_path = (
-        get_species_ref_path(str(species_obj.name), "gtf") if species_obj else None
+    bed12_path = (
+        get_species_ref_path(str(species_obj.name), "bed12") if species_obj else None
     )
 
     strand = str(gene.strand)
     chrom = str(gene.chromosome)
-    cds_end_pos = _derive_cds_end(transcript_id, strand, gtf_path) if gtf_path else None
+    cds_end_pos = _derive_cds_end(transcript_id, strand, bed12_path) if bed12_path else None
 
     result = []
     for site in apa_sites:

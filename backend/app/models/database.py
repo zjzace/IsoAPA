@@ -43,7 +43,7 @@ class Gene(Base):
     __tablename__ = "genes"
 
     id = Column(Integer, primary_key=True, index=True)
-    gene_id = Column(String(100), unique=True, nullable=False, index=True)
+    gene_id = Column(String(100), nullable=False, index=True)
     gene_name = Column(String(100), nullable=False, index=True)
     chromosome = Column(String(50), nullable=False, index=True)
     strand = Column(String(1), nullable=False)

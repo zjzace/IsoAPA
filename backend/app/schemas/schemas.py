@@ -102,6 +102,7 @@ class TranscriptWithGene(BaseModel):
 class SearchResult(BaseModel):
     transcript_id: str
     gene_id: str
+    gene_db_id: int
     gene_name: str
     chromosome: str
     strand: str
@@ -141,10 +142,12 @@ class LocusDetail(BaseModel):
 
 
 class GeneDetail(BaseModel):
+    id: int
     gene_id: str
     gene_name: str
     chromosome: str
     strand: str
+    species: Optional[str] = None
     transcripts: List[dict]
 
     class Config:
