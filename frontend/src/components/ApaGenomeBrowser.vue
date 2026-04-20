@@ -610,13 +610,13 @@ const showPaSiteTooltip = (event, site, sampleName, abundance) => {
   el.style.top  = y + 'px'
 }
 
-const showExonTooltip = (event, idx, exon) => {
+const showExonTooltip = (event, displayNum, exon) => {
   const el = ensureTooltipEl()
 
   el.innerHTML = `
     <div style="padding:13px 15px">
       <div style="font-size:10.5px;letter-spacing:0.10em;color:#0D7377;font-weight:700;text-transform:uppercase;margin-bottom:3px">Exon</div>
-      <div style="font-family:'Inter',sans-serif;font-size:14px;color:#0f172a;font-weight:700;margin-bottom:10px">Exon ${idx + 1}</div>
+      <div style="font-family:'Inter',sans-serif;font-size:14px;color:#0f172a;font-weight:700;margin-bottom:10px">Exon ${displayNum}</div>
       <div style="height:1px;background:rgba(13,115,119,0.15);margin-bottom:9px"></div>
       <div style="display:grid;grid-template-columns:auto 1fr;row-gap:6px;column-gap:16px;align-items:center">
         <span style="color:#475569;font-size:12.5px;white-space:nowrap">Position</span>
@@ -914,6 +914,7 @@ const renderTranscript = () => {
 
   // Render exons with DISTINCT CDS vs UTR styling
   sortedExons.forEach((exon, idx) => {
+    const displayNum = props.strand === '-' ? sortedExons.length - idx : idx + 1
     const isCDS = cdsSet.has(`${exon.start}-${exon.end}`)
     const exonHeight = 20
     const exonColor = isCDS ? '#0D7377' : '#14919B'
@@ -936,10 +937,10 @@ const renderTranscript = () => {
         d3.select(this)
           .attr('opacity', 0.8)
           .attr('stroke', '#000')
-        showExonTooltip(event, idx, exon)
+        showExonTooltip(event, displayNum, exon)
       })
       .on('mousemove', function(event) {
-        showExonTooltip(event, idx, exon)
+        showExonTooltip(event, displayNum, exon)
       })
       .on('mouseleave', function() {
         d3.select(this)
@@ -959,7 +960,7 @@ const renderTranscript = () => {
         .style('font-weight', '600')
         .style('fill', '#fff')
         .style('pointer-events', 'none')
-        .text(idx + 1)
+        .text(displayNum)
     }
   })
 }
