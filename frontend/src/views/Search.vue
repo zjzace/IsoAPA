@@ -147,7 +147,7 @@
         >
           <template v-slot:item.gene_name="{ item }">
             <router-link 
-              :to="{ name: 'GeneDetail', params: { geneId: item.gene_id } }"
+              :to="{ name: 'GeneDetail', params: { geneId: item.gene_db_id } }"
               class="text-primary font-weight-medium"
             >
               {{ item.gene_name }}

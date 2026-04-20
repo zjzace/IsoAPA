@@ -33,7 +33,7 @@
               <span class="gene-meta-label">Gene Symbol</span>
               <span class="gene-meta-value font-weight-medium">
                 <router-link
-                  :to="{ name: 'GeneDetail', params: { geneId: locusData.gene.gene_id } }"
+                  :to="{ name: 'GeneDetail', params: { geneId: locusData.gene.id } }"
                   class="gene-id-link"
                 >{{ locusData.gene.gene_name }}</router-link>
               </span>
@@ -42,7 +42,7 @@
               <span class="gene-meta-label">Gene ID</span>
               <span class="gene-meta-value">
                 <router-link
-                  :to="{ name: 'GeneDetail', params: { geneId: locusData.gene.gene_id } }"
+                  :to="{ name: 'GeneDetail', params: { geneId: locusData.gene.id } }"
                   class="gene-id-link"
                 >{{ locusData.gene.gene_id }}</router-link>
               </span>

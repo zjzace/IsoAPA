@@ -176,7 +176,7 @@
           <div class="leaderboard-container mt-6">
             <div v-for="(gene, i) in detailedStats.top_genes_by_apa" :key="gene.gene_id" class="leaderboard-row">
               <div class="rank-badge" :class="rankClass(i)">{{ i + 1 }}</div>
-              <router-link :to="{ name: 'GeneDetail', params: { geneId: gene.gene_id } }" class="gene-name-link">
+              <router-link :to="{ name: 'GeneDetail', params: { geneId: gene.gene_db_id } }" class="gene-name-link">
                 {{ gene.gene_name }}
               </router-link>
               <code class="gene-id-badge">{{ gene.gene_id }}</code>
