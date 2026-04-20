@@ -51,11 +51,6 @@ export const apiService = {
     return response.data
   },
   
-  async getGenes(page = 1, limit = 50) {
-    const response = await api.get('/genes', { params: { page, limit } })
-    return response.data
-  },
-  
   async downloadApaSites(params) {
     const response = await api.get('/download/apa-sites', { 
       params,
@@ -77,21 +72,6 @@ export const apiService = {
       params,
       responseType: 'blob'
     })
-    return response.data
-  },
-
-  async getUtrComposition(transcriptId) {
-    const response = await api.get(`/transcript/${transcriptId}/utr-composition`)
-    return response.data
-  },
-
-  // Returns a direct URL for the browser to navigate to (triggers file download)
-  getUtrSequenceUrl(transcriptId, siteId) {
-    return `/api/v1/transcript/${transcriptId}/utr-sequence/${siteId}`
-  },
-
-  async getRbpMotifs(transcriptId) {
-    const response = await api.get(`/transcript/${transcriptId}/rbp-motifs`)
     return response.data
   },
 
