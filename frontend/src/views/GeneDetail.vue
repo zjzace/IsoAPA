@@ -268,9 +268,9 @@
                           <div class="tx-expanded-content">
                             <table class="tx-inner-table">
                                <colgroup>
-                                 <col style="width: 260px">
-                                 <col style="width: 210px">
                                  <col>
+                                 <col style="width: 210px">
+                                 <col style="width: 220px">
                                </colgroup>
                                <thead>
                                  <tr>
@@ -957,10 +957,7 @@ code {
   border: 1px solid rgba(13, 115, 119, 0.22);
   border-radius: 10px;
   padding: 2px 9px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  max-width: 230px;
+  word-break: break-all;
   cursor: default;
 }
 
