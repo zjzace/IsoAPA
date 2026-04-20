@@ -35,11 +35,11 @@
               item-title="value"
               item-value="value"
               no-filter
+              hide-no-data
               clearable
               variant="plain"
               density="compact"
               hide-details
-              no-data-text="No matches"
               class="filter-field"
               :menu-props="{ class: 'search-select-menu', width: filterSelectWidth || undefined, offset: 1 }"
               @update:search="onGeneNameSearch"
@@ -59,11 +59,11 @@
               item-title="value"
               item-value="value"
               no-filter
+              hide-no-data
               clearable
               variant="plain"
               density="compact"
               hide-details
-              no-data-text="No matches"
               class="filter-field"
               :menu-props="{ class: 'search-select-menu', width: filterSelectWidth || undefined, offset: 1 }"
               @update:search="onTranscriptSearch"
