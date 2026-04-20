@@ -399,11 +399,22 @@ const geneSummaryError = ref(null)
 const geneSummaryData = ref(null)
 const showAllPathways = ref(false)
 
-const fetchGeneSummary = async (geneSymbol) => {
+const fetchGeneSummary = async (geneSymbol, speciesName) => {
+  const SPECIES_TAXON = {
+    'Human': 'human',
+    'Mouse': 'mouse',
+    'Rat': 'rat',
+    'Zebrafish': 'zebrafish',
+    'Fruitfly': 'fruitfly',
+    'Nematode': 'nematode',
+    'Pig': 'pig',
+    'Frog': 'frog',
+  }
+  const taxon = SPECIES_TAXON[speciesName] ?? 'human'
   geneSummaryLoading.value = true
   geneSummaryError.value = null
   try {
-    const url = `https://mygene.info/v3/query?q=symbol:${encodeURIComponent(geneSymbol)}&fields=name,summary,pathway.kegg,uniprot,entrezgene,HGNC,symbol,alias,type_of_gene,refseq,ensembl&species=human&size=1`
+    const url = `https://mygene.info/v3/query?q=symbol:${encodeURIComponent(geneSymbol)}&fields=name,summary,pathway.kegg,uniprot,entrezgene,HGNC,symbol,alias,type_of_gene,refseq,ensembl&species=${taxon}&size=1`
     const res = await fetch(url)
     if (!res.ok) throw new Error(`HTTP ${res.status}`)
     const json = await res.json()
@@ -529,7 +540,7 @@ onMounted(async () => {
     geneData.value = await apiService.getGeneDetail(geneId)
 
     // Fire gene summary fetch (non-blocking)
-    fetchGeneSummary(geneData.value.gene_name)
+    fetchGeneSummary(geneData.value.gene_name, geneData.value.species)
 
     // Fetch species info from first transcript's locus detail (non-fatal)
     if (geneData.value?.transcripts?.length) {
