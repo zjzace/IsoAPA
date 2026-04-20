@@ -65,17 +65,19 @@
               </span>
               <span>Species</span>
             </div>
-            <v-select
+            <v-autocomplete
               v-model="filters.species"
               :items="speciesList"
+              :custom-filter="filterSubstring"
               clearable
               variant="plain"
               density="compact"
               hide-details
+              no-data-text="No matches"
               class="filter-field"
               :menu-props="{ class: 'search-select-menu', width: filterSelectWidth || undefined, offset: 1 }"
               @update:model-value="debouncedSearch"
-            ></v-select>
+            ></v-autocomplete>
           </div>
 
           <div class="filter-card filter-card--select">
@@ -85,17 +87,19 @@
               </span>
               <span>Sample</span>
             </div>
-            <v-select
+            <v-autocomplete
               v-model="filters.sample"
               :items="sampleList"
+              :custom-filter="filterSubstring"
               clearable
               variant="plain"
               density="compact"
               hide-details
+              no-data-text="No matches"
               class="filter-field"
               :menu-props="{ class: 'search-select-menu', width: filterSelectWidth || undefined, offset: 1 }"
               @update:model-value="debouncedSearch"
-            ></v-select>
+            ></v-autocomplete>
           </div>
         </div>
 
@@ -252,6 +256,9 @@ const speciesColors = {
 const getSpeciesColor = (species) => {
   return speciesColors[species] || 'primary'
 }
+
+const filterSubstring = (value, query) =>
+  value.toString().toLowerCase().includes(query.toLowerCase())
 
 const debouncedSearch = () => {
   clearTimeout(searchTimeout)
