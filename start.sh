@@ -6,12 +6,10 @@
 #    1. Locate conda/mamba and create the 'apaatlas' environment if needed
 #    2. Activate the environment
 #    3. Verify Node.js is available
-#    4. Build GTF byte-offset index (.tidx) for every species that needs one
-#    5. Build FASTA byte-offset index (.fidx) for every species that needs one
-#    6. Detect data changes; rebuild SQLite DB + run ETL when needed
-#    7. Install frontend npm deps if missing
-#    8. Start the backend (uvicorn, port 8000)
-#    9. Start the frontend (vite dev, port 3000)
+#    4. Detect data changes; rebuild SQLite DB + run ETL when needed
+#    5. Install frontend npm deps if missing
+#    6. Start the backend (uvicorn, port 8000)
+#    7. Start the frontend (vite dev, port 3000)
 # =============================================================================
 
 set -euo pipefail
@@ -68,7 +66,7 @@ log "=========================================="
 log "  ApaAtlas – setup & launch"
 log "=========================================="
 
-log "[1/9] Conda environment"
+log "[1/7] Conda environment"
 
 # Locate mamba or conda (prefer mamba)
 CONDA_EXE=""
@@ -148,7 +146,7 @@ fi
 
 # ─── step 2 : activate ────────────────────────────────────────────────────────
 
-log "[2/9] Activating environment"
+log "[2/7] Activating environment"
 activate_env
 
 # Resolve python inside the environment (robust even if activate did nothing)
@@ -159,103 +157,15 @@ info "Python: $PYTHON ($($PYTHON --version 2>&1))"
 
 # ─── step 3 : node.js ─────────────────────────────────────────────────────────
 
-log "[3/9] Checking Node.js"
+log "[3/7] Checking Node.js"
 if ! command -v node &>/dev/null; then
     die "node not found. Install Node.js (https://nodejs.org) and re-run."
 fi
 ok "Node $(node --version) / npm $(npm --version)"
 
-# ─── step 4 : GTF byte-offset index ──────────────────────────────────────────
+# ─── step 4 : database / ETL ─────────────────────────────────────────────────
 
-log "[4/9] GTF index (.tidx)"
-
-# Walk every species reference directory and build an index for any GTF that
-# lacks one (or whose GTF is newer than its index).
-INDEXER="$BACKEND_DIR/build_gtf_index.py"
-
-if [[ ! -f "$INDEXER" ]]; then
-    die "GTF indexer not found at $INDEXER"
-fi
-
-shopt -s nullglob
-found_gtf=false
-for ref_dir in "$DATA_DIR"/*/reference; do
-    for gtf_file in "$ref_dir"/*.gtf "$ref_dir"/*.gff3; do
-        [[ -f "$gtf_file" ]] || continue
-        found_gtf=true
-        tidx_file="${gtf_file}.tidx"
-        needs_index=false
-
-        if [[ ! -f "$tidx_file" ]]; then
-            needs_index=true
-            info "No index found for $(basename "$gtf_file")"
-        elif [[ "$gtf_file" -nt "$tidx_file" ]]; then
-            needs_index=true
-            info "GTF is newer than index for $(basename "$gtf_file"), rebuilding..."
-        else
-            ok "Index up-to-date: $(basename "$tidx_file")"
-        fi
-
-        if $needs_index; then
-            info "Building index for $(basename "$gtf_file") (this runs once, ~10-30s) ..."
-            "$PYTHON" "$INDEXER" "$gtf_file" \
-                || warn "Failed to build index for $gtf_file — structure endpoint may be slow"
-        fi
-    done
-done
-shopt -u nullglob
-
-if ! $found_gtf; then
-    warn "No GTF files found under $DATA_DIR/*/reference/ — skipping index step"
-fi
-
-# ─── step 5 : FASTA byte-offset index ────────────────────────────────────────
-
-log "[5/9] FASTA index (.fidx)"
-
-FASTA_INDEXER="$BACKEND_DIR/build_fasta_index.py"
-
-if [[ ! -f "$FASTA_INDEXER" ]]; then
-    warn "FASTA indexer not found at $FASTA_INDEXER — skipping (sequence endpoints may fail)"
-else
-    shopt -s nullglob
-    found_fasta=false
-    for ref_dir in "$DATA_DIR"/*/reference; do
-        for fa_file in "$ref_dir"/*.fa "$ref_dir"/*.fasta "$ref_dir"/*.fa.gz; do
-            [[ -f "$fa_file" ]] || continue
-            # Skip .gz — random access requires uncompressed file
-            [[ "$fa_file" == *.gz ]] && { warn "Skipping compressed FASTA: $(basename "$fa_file") — decompress for sequence access"; continue; }
-            found_fasta=true
-            fidx_file="${fa_file}.fidx"
-            needs_index=false
-
-            if [[ ! -f "$fidx_file" ]]; then
-                needs_index=true
-                info "No FASTA index found for $(basename "$fa_file")"
-            elif [[ "$fa_file" -nt "$fidx_file" ]]; then
-                needs_index=true
-                info "FASTA is newer than index for $(basename "$fa_file"), rebuilding..."
-            else
-                ok "FASTA index up-to-date: $(basename "$fidx_file")"
-            fi
-
-            if $needs_index; then
-                info "Building FASTA index for $(basename "$fa_file") (this runs once, ~60-120s for a 3 GB genome) ..."
-                "$PYTHON" "$FASTA_INDEXER" "$fa_file" \
-                    || warn "Failed to build FASTA index for $fa_file — sequence download endpoints will not work"
-            fi
-        done
-    done
-    shopt -u nullglob
-
-    if ! $found_fasta; then
-        warn "No FASTA files found under $DATA_DIR/*/reference/ — skipping FASTA index step"
-    fi
-fi
-
-# ─── step 6 : database / ETL ─────────────────────────────────────────────────
-
-log "[6/9] Database & ETL"
+log "[4/7] Database & ETL"
 
 if should_reload_db; then
     info "Data change detected (or DB missing) — rebuilding database ..."
@@ -269,9 +179,9 @@ else
     ok "No data changes — using existing database"
 fi
 
-# ─── step 7 : frontend dependencies ──────────────────────────────────────────
+# ─── step 5 : frontend dependencies ──────────────────────────────────────────
 
-log "[7/9] Frontend dependencies"
+log "[5/7] Frontend dependencies"
 
 if [[ ! -d "$FRONTEND_DIR/node_modules" ]]; then
     info "Installing npm packages (first run) ..."
@@ -282,9 +192,9 @@ else
     ok "node_modules present"
 fi
 
-# ─── step 8 : start backend ───────────────────────────────────────────────────
+# ─── step 6 : start backend ───────────────────────────────────────────────────
 
-log "[8/9] Starting backend (port 8000)"
+log "[6/7] Starting backend (port 8000)"
 
 (cd "$BACKEND_DIR" && "$PYTHON" -m uvicorn main:app --host 0.0.0.0 --port 8000) &
 BACKEND_PID=$!
@@ -297,9 +207,9 @@ if ! kill -0 "$BACKEND_PID" 2>/dev/null; then
 fi
 ok "Backend running"
 
-# ─── step 9 : start frontend ──────────────────────────────────────────────────
+# ─── step 7 : start frontend ──────────────────────────────────────────────────
 
-log "[9/9] Starting frontend (port 3000)"
+log "[7/7] Starting frontend (port 3000)"
 
 (cd "$FRONTEND_DIR" && npm run dev) &
 FRONTEND_PID=$!
