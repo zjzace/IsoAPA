@@ -622,7 +622,7 @@ const showExonTooltip = (event, idx, exon) => {
         <span style="color:#475569;font-size:12.5px;white-space:nowrap">Position</span>
         <span style="color:#0f172a;font-size:12.5px;font-weight:700;font-family:'Inter',sans-serif">${exon.start.toLocaleString()} – ${exon.end.toLocaleString()}</span>
         <span style="color:#475569;font-size:12.5px">Length</span>
-        <span style="color:#0f172a;font-size:12.5px;font-weight:700;font-family:'Inter',sans-serif">${(exon.end - exon.start).toLocaleString()} bp</span>
+        <span style="color:#0f172a;font-size:12.5px;font-weight:700;font-family:'Inter',sans-serif">${(exon.end - exon.start + 1).toLocaleString()} bp</span>
       </div>
     </div>
   `
