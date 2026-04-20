@@ -267,11 +267,11 @@
                         <Transition name="tx-expand" appear>
                           <div class="tx-expanded-content">
                             <table class="tx-inner-table">
-                               <colgroup>
-                                 <col>
-                                 <col style="width: 210px">
-                                 <col style="width: 220px">
-                               </colgroup>
+                 <colgroup>
+                                  <col style="width: 40%">
+                                  <col style="width: 22%">
+                                  <col>
+                                </colgroup>
                                <thead>
                                  <tr>
                                     <th class="tx-inner-th">Site ID</th>
@@ -319,12 +319,12 @@
                                          class="tx-sample-pill"
                                        >{{ s.sample_name }}</span>
                                          <button
-                                           v-if="(site.sample_details?.length ?? 0) > 6 && !expandedSampleSites.includes(site.unified_id)"
+                                           v-if="(site.sample_details?.length ?? 0) > 4 && !expandedSampleSites.includes(site.unified_id)"
                                            class="tx-sample-more-btn"
                                            @click.stop="toggleSampleExpand(site.unified_id)"
                                          >+{{ (site.sample_details?.length ?? 0) - 6 }} more</button>
                                          <button
-                                           v-if="(site.sample_details?.length ?? 0) > 6 && expandedSampleSites.includes(site.unified_id)"
+                                           v-if="(site.sample_details?.length ?? 0) > 4 && expandedSampleSites.includes(site.unified_id)"
                                            class="tx-sample-more-btn tx-sample-more-btn--collapse"
                                            @click.stop="toggleSampleExpand(site.unified_id)"
                                          >− show less</button>
@@ -482,7 +482,7 @@ const toggleSampleExpand = (siteId) => {
 const visibleSamples = (site) => {
   if (!site.sample_details) return []
   if (expandedSampleSites.value.includes(site.unified_id)) return site.sample_details
-  return site.sample_details.slice(0, 6)
+  return site.sample_details.slice(0, 4)
 }
 
 
@@ -886,8 +886,9 @@ code {
 
 .tx-sample-chips {
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   gap: 4px;
+  overflow: hidden;
 }
 
 .tx-sample-pill {
@@ -896,7 +897,7 @@ code {
   color: #0D7377;
   border: 1px solid rgba(13, 115, 119, 0.22);
   border-radius: 10px;
-  font-size: 13px;
+  font-size: 12.5px;
   font-weight: 500;
   padding: 2px 9px;
   font-family: 'Roboto', sans-serif;
@@ -950,21 +951,21 @@ code {
 .tx-site-id-tag {
   display: inline-block;
   font-family: 'Roboto', sans-serif;
-  font-size: 13px;
+  font-size: 12.5px;
   font-weight: 500;
   color: #0D7377;
   background: rgba(13, 115, 119, 0.10);
   border: 1px solid rgba(13, 115, 119, 0.22);
   border-radius: 10px;
   padding: 2px 9px;
-  word-break: break-all;
+  white-space: nowrap;
   cursor: default;
 }
 
 /* Sample "+N more" / "show less" toggle button in inner table */
 .tx-sample-more-btn {
   display: inline-block;
-  font-size: 12.5px;
+  font-size: 12px;
   font-weight: 600;
   font-family: 'Roboto', sans-serif;
   color: #0D7377;
@@ -1013,6 +1014,7 @@ code {
 
 .tx-expanded-content {
   padding: 16px 24px 24px 48px;
+  overflow-x: auto;
 }
 
 .tx-expand-enter-active, .tx-expand-leave-active {
@@ -1025,6 +1027,7 @@ code {
 
 .tx-inner-table {
   width: 100%;
+  min-width: 720px;
   table-layout: fixed;
   border-collapse: collapse;
   background: rgba(255, 255, 255, 0.6);
@@ -1097,7 +1100,7 @@ code {
 .tx-inner-td {
   padding: 8px 12px;
   vertical-align: middle;
-  font-size: 14px;
+  font-size: 13.5px;
   color: rgba(0, 0, 0, 0.8);
 }
 
@@ -1123,7 +1126,7 @@ code {
 }
 
 .tx-abundance-val {
-  font-size: 12.5px;
+  font-size: 12px;
   color: rgba(0, 0, 0, 0.6);
   font-family: 'Roboto', sans-serif;
   width: 40px;

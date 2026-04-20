@@ -113,6 +113,11 @@ class SearchResult(BaseModel):
         from_attributes = True
 
 
+class SearchResponse(BaseModel):
+    items: List[SearchResult]
+    total: int
+
+
 class DashboardStats(BaseModel):
     total_genes: int
     total_transcripts: int

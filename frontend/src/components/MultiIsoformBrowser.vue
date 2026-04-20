@@ -74,13 +74,13 @@
         </v-col>
         <v-col cols="auto">
           <div class="stat-card stat-shared">
-            <div class="stat-value" style="color: #0D7377;">{{ stats.sharedSites }}</div>
+            <div class="stat-value" style="color: #6366F1;">{{ stats.sharedSites }}</div>
             <div class="stat-label">Shared</div>
           </div>
         </v-col>
         <v-col cols="auto">
           <div class="stat-card stat-private">
-            <div class="stat-value" style="color: #C9821A;">{{ stats.privateSites }}</div>
+            <div class="stat-value" style="color: #F43F5E;">{{ stats.privateSites }}</div>
             <div class="stat-label">Private</div>
           </div>
         </v-col>
@@ -168,8 +168,8 @@ const apaTrackHeight = 40
 const isoformGap = 12
 
 // ── Colors ───────────────────────────────────────────────────────────────────
-const SHARED_COLOR = '#0D7377'
-const PRIVATE_COLOR = '#C9821A'
+const SHARED_COLOR = '#6366F1'
+const PRIVATE_COLOR = '#F43F5E'
 const CDS_COLOR = '#0D7377'
 const UTR_COLOR = '#14919B'
 const INTRON_COLOR = '#B0B8C1'
@@ -327,8 +327,8 @@ const showApaTooltip = (event, site, classification, meanAbundance, sampleDetail
 
   const pct = (meanAbundance * 100).toFixed(1)
   const classColor = classification === 'Shared'
-    ? { bg: 'rgba(13,115,119,0.12)', border: 'rgba(13,115,119,0.35)', text: '#0A5C5F' }
-    : { bg: 'rgba(201,130,26,0.12)', border: 'rgba(201,130,26,0.40)', text: '#7a4f00' }
+    ? { bg: 'rgba(99,102,241,0.12)', border: 'rgba(99,102,241,0.35)', text: '#3730A3' }
+    : { bg: 'rgba(244,63,94,0.12)', border: 'rgba(244,63,94,0.35)', text: '#9F1239' }
 
   const detectedSet = new Set(sampleDetails.map(d => d.sample_name ?? d.sample ?? ''))
   const totalN = txSamples.length || detectedSet.size
@@ -342,7 +342,7 @@ const showApaTooltip = (event, site, classification, meanAbundance, sampleDetail
   const gap = circ - dash
   const cx = 32, cy = 32, size = 64
 
-  const ringColor = coveragePct === 100 ? '#0D7377' : coveragePct >= 50 ? '#14919B' : '#C9821A'
+  const ringColor = coveragePct === 100 ? '#6366F1' : coveragePct >= 50 ? '#818CF8' : '#F43F5E'
   const tagLine = coveragePct === 100 ? 'in every sample'
     : coveragePct >= 75 ? 'in most samples'
     : coveragePct >= 50 ? 'in half the samples'
@@ -350,7 +350,7 @@ const showApaTooltip = (event, site, classification, meanAbundance, sampleDetail
 
   const donutSvg = `
     <svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}" style="flex-shrink:0;display:block">
-      <circle cx="${cx}" cy="${cy}" r="${R}" fill="none" stroke="rgba(13,115,119,0.12)" stroke-width="${SW}"/>
+      <circle cx="${cx}" cy="${cy}" r="${R}" fill="none" stroke="rgba(99,102,241,0.15)" stroke-width="${SW}"/>
       <circle cx="${cx}" cy="${cy}" r="${R}" fill="none"
         stroke="${ringColor}" stroke-width="${SW}"
         stroke-dasharray="${dash.toFixed(2)} ${gap.toFixed(2)}"
@@ -359,7 +359,7 @@ const showApaTooltip = (event, site, classification, meanAbundance, sampleDetail
       <text x="${cx}" y="${cy - 4}" text-anchor="middle" dominant-baseline="auto"
         style="font-family:'Inter',sans-serif;font-size:11px;font-weight:800;fill:${ringColor}"
       >${detected}</text>
-      <line x1="${cx - 7}" y1="${cy + 1}" x2="${cx + 7}" y2="${cy + 1}" stroke="rgba(13,115,119,0.30)" stroke-width="0.8"/>
+      <line x1="${cx - 7}" y1="${cy + 1}" x2="${cx + 7}" y2="${cy + 1}" stroke="rgba(99,102,241,0.30)" stroke-width="0.8"/>
       <text x="${cx}" y="${cy + 12}" text-anchor="middle" dominant-baseline="auto"
         style="font-family:'Inter',sans-serif;font-size:9px;font-weight:600;fill:#94a3b8"
       >${totalN}</text>
@@ -386,7 +386,7 @@ const showApaTooltip = (event, site, classification, meanAbundance, sampleDetail
 
       <div style="height:1px;background:rgba(13,115,119,0.15);margin:10px 0 9px"></div>
 
-      <div style="background:rgba(13,115,119,0.05);border:1px solid rgba(13,115,119,0.14);border-radius:8px;padding:9px 11px;display:flex;align-items:center;gap:12px">
+      <div style="background:rgba(99,102,241,0.06);border:1px solid rgba(99,102,241,0.18);border-radius:8px;padding:9px 11px;display:flex;align-items:center;gap:12px">
         ${donutSvg}
         <div>
           <div style="font-family:'Inter',sans-serif;font-size:13px;font-weight:700;color:#0f172a;line-height:1.3">
@@ -416,6 +416,57 @@ const showApaTooltip = (event, site, classification, meanAbundance, sampleDetail
   const nativeEvent = event.sourceEvent || event
   const W = el.offsetWidth || 260
   const H = el.offsetHeight || 200
+  const vw = window.innerWidth
+  const vh = window.innerHeight
+  const OFFSET_X = 14, OFFSET_Y = -10
+
+  let x = nativeEvent.clientX + OFFSET_X
+  let y = nativeEvent.clientY + OFFSET_Y
+  if (x + W > vw - 8) x = nativeEvent.clientX - W - OFFSET_X
+  if (y + H > vh - 8) y = nativeEvent.clientY - H - Math.abs(OFFSET_Y)
+  if (y < 4) y = 4
+  if (x < 4) x = 4
+
+  el.style.left = x + 'px'
+  el.style.top  = y + 'px'
+}
+
+const showExonTooltip = (event, idx, exon, txId) => {
+  const el = ensureTooltipEl()
+
+  el.innerHTML = `
+    <div style="padding:13px 15px">
+      <div style="font-size:10.5px;letter-spacing:0.10em;color:#0D7377;font-weight:700;text-transform:uppercase;margin-bottom:3px">Exon</div>
+      <div style="font-family:'Inter',sans-serif;font-size:14px;color:#0f172a;font-weight:700;margin-bottom:10px">Exon ${idx + 1}</div>
+      <div style="height:1px;background:rgba(13,115,119,0.15);margin-bottom:9px"></div>
+      <div style="display:grid;grid-template-columns:auto 1fr;row-gap:6px;column-gap:16px;align-items:center">
+        <span style="color:#475569;font-size:12.5px;white-space:nowrap">Transcript</span>
+        <span style="color:#0f172a;font-size:12.5px;font-weight:600;font-family:'Inter',sans-serif">${txId}</span>
+        <span style="color:#475569;font-size:12.5px;white-space:nowrap">Position</span>
+        <span style="color:#0f172a;font-size:12.5px;font-weight:700;font-family:'Inter',sans-serif">${exon.start.toLocaleString()} – ${exon.end.toLocaleString()}</span>
+        <span style="color:#475569;font-size:12.5px">Length</span>
+        <span style="color:#0f172a;font-size:12.5px;font-weight:700;font-family:'Inter',sans-serif">${(exon.end - exon.start).toLocaleString()} bp</span>
+      </div>
+    </div>
+  `
+
+  el.style.padding = '0'
+  el.style.borderRadius = '12px'
+  el.style.background = 'rgba(255,255,255,0.78)'
+  el.style.backdropFilter = 'blur(24px) saturate(180%)'
+  el.style.webkitBackdropFilter = 'blur(24px) saturate(180%)'
+  el.style.border = '1px solid rgba(13,115,119,0.20)'
+  el.style.boxShadow = '0 8px 32px rgba(13,115,119,0.12), 0 2px 8px rgba(0,0,0,0.08), inset 0 1px 0 rgba(255,255,255,0.9)'
+  el.style.minWidth = '220px'
+  el.style.maxWidth = '300px'
+  el.style.fontSize = '13px'
+  el.style.fontFamily = 'Roboto, sans-serif'
+  el.style.color = '#0f172a'
+  el.style.display = 'block'
+
+  const nativeEvent = event.sourceEvent || event
+  const W = el.offsetWidth || 240
+  const H = el.offsetHeight || 140
   const vw = window.innerWidth
   const vh = window.innerHeight
   const OFFSET_X = 14, OFFSET_Y = -10
@@ -617,7 +668,7 @@ const renderExonTrack = (txIndex) => {
   // Exons
   sortedExons.forEach((exon, idx) => {
     const isCDS = cdsSet.has(`${exon.start}-${exon.end}`)
-    const exonH = isCDS ? 20 : 10
+    const exonH = 20
     const exonColor = isCDS ? CDS_COLOR : UTR_COLOR
     const x = xScale.value(exon.start)
     const w = Math.max(3, xScale.value(exon.end) - x)
@@ -631,20 +682,10 @@ const renderExonTrack = (txIndex) => {
       .style('cursor', 'pointer')
       .on('mouseenter', function(event) {
         d3.select(this).attr('opacity', 0.8).attr('stroke', '#000')
-        showTooltip(event, `Exon ${idx + 1}`, [
-          { label: 'Transcript', value: tx.transcript_id },
-          { label: 'Position', value: `${exon.start.toLocaleString()} – ${exon.end.toLocaleString()}` },
-          { label: 'Type', value: isCDS ? 'CDS' : 'UTR' },
-          { label: 'Length', value: `${(exon.end - exon.start).toLocaleString()} bp` }
-        ])
+        showExonTooltip(event, idx, exon, tx.transcript_id)
       })
       .on('mousemove', function(event) {
-        showTooltip(event, `Exon ${idx + 1}`, [
-          { label: 'Transcript', value: tx.transcript_id },
-          { label: 'Position', value: `${exon.start.toLocaleString()} – ${exon.end.toLocaleString()}` },
-          { label: 'Type', value: isCDS ? 'CDS' : 'UTR' },
-          { label: 'Length', value: `${(exon.end - exon.start).toLocaleString()} bp` }
-        ])
+        showExonTooltip(event, idx, exon, tx.transcript_id)
       })
       .on('mouseleave', function() {
         d3.select(this).attr('opacity', 1).attr('stroke', '#fff')
@@ -952,13 +993,13 @@ watch(dynamicMarginLeft, (newLeft) => {
 }
 
 .stat-shared {
-  background: rgba(13, 115, 119, 0.08);
-  border-color: rgba(13, 115, 119, 0.28);
+  background: rgba(99, 102, 241, 0.08);
+  border-color: rgba(99, 102, 241, 0.28);
 }
 
 .stat-private {
-  background: rgba(201, 130, 26, 0.07);
-  border-color: rgba(201, 130, 26, 0.28);
+  background: rgba(244, 63, 94, 0.07);
+  border-color: rgba(244, 63, 94, 0.28);
 }
 
 .stat-value {

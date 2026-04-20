@@ -135,9 +135,10 @@
       </div>
       
       <div class="results-card">
-        <v-data-table
+        <v-data-table-server
           :headers="headers"
           :items="results"
+          :items-length="totalResults"
           :loading="loading"
           :items-per-page="pageSize"
           :page="page"
@@ -201,7 +202,7 @@
           
           <template v-slot:item.actions="{ item }">
           </template>
-        </v-data-table>
+        </v-data-table-server>
       </div>
       
       <v-snackbar v-model="snackbar" :color="snackbarColor">
@@ -281,7 +282,6 @@ const debouncedSearch = () => {
 
 const search = async () => {
   loading.value = true
-  results.value = []
   try {
     console.log('Searching with filters:', filters)
     const params = {
@@ -297,7 +297,8 @@ const search = async () => {
     console.log('API params:', params)
     const data = await apiService.search(params)
     console.log('Search results:', data)
-    results.value = data
+    results.value = data.items
+    totalResults.value = data.total
   } catch (error) {
     console.error('Search failed:', error)
     snackbarText.value = 'Search failed. Please try again.'
@@ -724,10 +725,60 @@ const onTranscriptSearch = (val) => {
 .search-page :deep(.v-data-table__tr:hover .v-data-table__td) {
   background: rgba(13, 115, 119, 0.03) !important;
 }
+/* ── Data table footer — Glassmorphism ──────────────────────── */
 .search-page :deep(.v-data-table-footer) {
-  border-top: 1px solid rgba(13, 115, 119, 0.08) !important;
-  font-size: 13.5px;
-  color: rgba(0, 0, 0, 0.55);
+  border-top: 1px solid rgba(13, 115, 119, 0.10) !important;
+  background: rgba(13, 115, 119, 0.03) !important;
+  padding: 8px 20px !important;
+  font-family: 'Roboto', sans-serif;
+}
+
+/* "Items per page:" label */
+.search-page :deep(.v-data-table-footer__items-per-page span) {
+  font-size: 13px !important;
+  font-weight: 500;
+  color: rgba(0, 0, 0, 0.45);
+  white-space: nowrap;
+}
+
+/* Items per page select */
+.search-page :deep(.v-data-table-footer__items-per-page .v-field) {
+  background: rgba(255, 255, 255, 0.70) !important;
+  border-radius: 8px !important;
+  border: 1px solid rgba(13, 115, 119, 0.20) !important;
+  box-shadow: none !important;
+  min-height: 34px !important;
+}
+.search-page :deep(.v-data-table-footer__items-per-page .v-field__input) {
+  font-size: 13px !important;
+  font-family: 'Roboto', sans-serif;
+  color: rgba(0, 0, 0, 0.72) !important;
+  min-height: 34px !important;
+  padding-top: 0 !important;
+  padding-bottom: 0 !important;
+}
+.search-page :deep(.v-data-table-footer__items-per-page .v-field__append-inner .v-icon) {
+  font-size: 16px !important;
+  color: rgba(13, 115, 119, 0.50) !important;
+}
+
+/* "X–Y of Z" info text */
+.search-page :deep(.v-data-table-footer__info) {
+  font-size: 13px !important;
+  font-weight: 500;
+  font-family: 'Roboto', sans-serif;
+  color: rgba(0, 0, 0, 0.45);
+}
+
+/* Pagination buttons — color only, no structural overrides */
+.search-page :deep(.v-data-table-footer__pagination .v-btn) {
+  color: rgba(13, 115, 119, 0.65) !important;
+}
+.search-page :deep(.v-data-table-footer__pagination .v-btn:not(.v-btn--disabled):hover) {
+  color: #0D7377 !important;
+}
+.search-page :deep(.v-data-table-footer__pagination .v-btn.v-btn--disabled) {
+  color: rgba(0, 0, 0, 0.22) !important;
 }
 
 /* ── Chips in table ─────────────────────────────────────────── */

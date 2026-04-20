@@ -11,6 +11,7 @@ import re
 from app.models.database import get_db, Gene, Transcript, APASite, Species, Sample
 from app.schemas.schemas import (
     SearchResult,
+    SearchResponse,
     DashboardStats,
     LocusDetail,
     APASiteWithDetails,
@@ -126,7 +127,7 @@ def get_dashboard_stats(db: Session = Depends(get_db)):
     )
 
 
-@router.get("/search", response_model=List[SearchResult])
+@router.get("/search", response_model=SearchResponse)
 def search_transcripts(
     gene_name: Optional[str] = None,
     transcript_id: Optional[str] = None,
@@ -166,6 +167,16 @@ def search_transcripts(
         query = query.filter(Species.name.ilike(f"%{species}%"))
     if chromosome:
         query = query.filter(Gene.chromosome.ilike(f"%{chromosome}%"))
+
+    _count_subq = query.group_by(
+        Transcript.transcript_id,
+        Gene.gene_id,
+        Gene.gene_name,
+        Gene.chromosome,
+        Gene.strand,
+        Species.name,
+    ).subquery()
+    total_count = db.query(func.count()).select_from(_count_subq).scalar() or 0
 
     results = (
         query.group_by(
@@ -218,7 +229,7 @@ def search_transcripts(
             )
         )
 
-    return search_results
+    return SearchResponse(items=search_results, total=total_count)
 
 
 @router.get("/gene/{gene_id}", response_model=GeneDetail)

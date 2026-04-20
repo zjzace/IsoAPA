@@ -610,6 +610,55 @@ const showPaSiteTooltip = (event, site, sampleName, abundance) => {
   el.style.top  = y + 'px'
 }
 
+const showExonTooltip = (event, idx, exon) => {
+  const el = ensureTooltipEl()
+
+  el.innerHTML = `
+    <div style="padding:13px 15px">
+      <div style="font-size:10.5px;letter-spacing:0.10em;color:#0D7377;font-weight:700;text-transform:uppercase;margin-bottom:3px">Exon</div>
+      <div style="font-family:'Inter',sans-serif;font-size:14px;color:#0f172a;font-weight:700;margin-bottom:10px">Exon ${idx + 1}</div>
+      <div style="height:1px;background:rgba(13,115,119,0.15);margin-bottom:9px"></div>
+      <div style="display:grid;grid-template-columns:auto 1fr;row-gap:6px;column-gap:16px;align-items:center">
+        <span style="color:#475569;font-size:12.5px;white-space:nowrap">Position</span>
+        <span style="color:#0f172a;font-size:12.5px;font-weight:700;font-family:'Inter',sans-serif">${exon.start.toLocaleString()} – ${exon.end.toLocaleString()}</span>
+        <span style="color:#475569;font-size:12.5px">Length</span>
+        <span style="color:#0f172a;font-size:12.5px;font-weight:700;font-family:'Inter',sans-serif">${(exon.end - exon.start).toLocaleString()} bp</span>
+      </div>
+    </div>
+  `
+
+  el.style.padding = '0'
+  el.style.borderRadius = '12px'
+  el.style.background = 'rgba(255,255,255,0.78)'
+  el.style.backdropFilter = 'blur(24px) saturate(180%)'
+  el.style.webkitBackdropFilter = 'blur(24px) saturate(180%)'
+  el.style.border = '1px solid rgba(13,115,119,0.20)'
+  el.style.boxShadow = '0 8px 32px rgba(13,115,119,0.12), 0 2px 8px rgba(0,0,0,0.08), inset 0 1px 0 rgba(255,255,255,0.9)'
+  el.style.minWidth = '200px'
+  el.style.maxWidth = '280px'
+  el.style.fontSize = '13px'
+  el.style.fontFamily = 'Roboto, sans-serif'
+  el.style.color = '#0f172a'
+  el.style.display = 'block'
+
+  const nativeEvent = event.sourceEvent || event
+  const W = el.offsetWidth || 220
+  const H = el.offsetHeight || 120
+  const vw = window.innerWidth
+  const vh = window.innerHeight
+  const OFFSET_X = 14, OFFSET_Y = -10
+
+  let x = nativeEvent.clientX + OFFSET_X
+  let y = nativeEvent.clientY + OFFSET_Y
+  if (x + W > vw - 8) x = nativeEvent.clientX - W - OFFSET_X
+  if (y + H > vh - 8) y = nativeEvent.clientY - H - Math.abs(OFFSET_Y)
+  if (y < 4) y = 4
+  if (x < 4) x = 4
+
+  el.style.left = x + 'px'
+  el.style.top  = y + 'px'
+}
+
 // Initialize scale
 const initScale = () => {
   // Base scale maps the content region (exons + APA sites + 5% pad) directly to the
@@ -866,7 +915,7 @@ const renderTranscript = () => {
   // Render exons with DISTINCT CDS vs UTR styling
   sortedExons.forEach((exon, idx) => {
     const isCDS = cdsSet.has(`${exon.start}-${exon.end}`)
-    const exonHeight = isCDS ? 20 : 10  // CDS: tall, UTR: short
+    const exonHeight = 20
     const exonColor = isCDS ? '#0D7377' : '#14919B'
     
     const x = xScale.value(exon.start)
@@ -887,19 +936,10 @@ const renderTranscript = () => {
         d3.select(this)
           .attr('opacity', 0.8)
           .attr('stroke', '#000')
-        
-        showTooltip(event, `Exon ${idx + 1}`, [
-          { label: 'Position', value: `${exon.start.toLocaleString()} - ${exon.end.toLocaleString()}` },
-          { label: 'Type', value: isCDS ? 'Coding Sequence (CDS)' : 'Untranslated Region (UTR)' },
-          { label: 'Length', value: `${(exon.end - exon.start).toLocaleString()} bp` }
-        ])
+        showExonTooltip(event, idx, exon)
       })
       .on('mousemove', function(event) {
-        showTooltip(event, `Exon ${idx + 1}`, [
-          { label: 'Position', value: `${exon.start.toLocaleString()} - ${exon.end.toLocaleString()}` },
-          { label: 'Type', value: isCDS ? 'Coding Sequence (CDS)' : 'Untranslated Region (UTR)' },
-          { label: 'Length', value: `${(exon.end - exon.start).toLocaleString()} bp` }
-        ])
+        showExonTooltip(event, idx, exon)
       })
       .on('mouseleave', function() {
         d3.select(this)
