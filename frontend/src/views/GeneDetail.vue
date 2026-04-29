@@ -223,10 +223,11 @@
                       </td>
 
                       <!-- Transcript ID -->
-                      <td class="tx-td" @click.stop>
+                      <td class="tx-td">
                         <router-link
                           :to="{ name: 'LocusDetail', params: { transcriptId: tx.transcript_id } }"
                           class="tx-id-link"
+                          @click.stop
                         >{{ tx.transcript_id }}</router-link>
                       </td>
 

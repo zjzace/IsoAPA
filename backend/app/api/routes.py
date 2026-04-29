@@ -680,21 +680,22 @@ def download_apa_sites(
             Transcript.transcript_id,
             APASite.unified_id,
             APASite.mode_site_position,
-            APASite.site_count,
             APASite.site_abundance,
+            APASite.sample_data,
             Species.name.label("species"),
-            Sample.name.label("sample"),
         )
-        .join(Transcript)
-        .join(APASite)
-        .join(Species)
-        .outerjoin(Sample)
+        .select_from(Gene)
+        .join(Transcript, Gene.id == Transcript.gene_id)
+        .join(APASite, Transcript.id == APASite.transcript_id)
+        .join(Species, APASite.species_id == Species.id)
     )
 
     if species:
         query = query.filter(Species.name.ilike(f"%{species}%"))
     if gene_name:
         query = query.filter(Gene.gene_name.ilike(f"%{gene_name}%"))
+    if sample:
+        query = query.filter(APASite.sample_data.ilike(f"%{sample}%"))
 
     results = query.all()
 
@@ -705,9 +706,9 @@ def download_apa_sites(
         "gene_name",
         "gene_id",
         "transcript_id",
-        "unified_id",
-        "mode_site_position",
-        "site_count",
+        "site_id",
+        "representative_position",
+        "sample_site_position",
         "site_abundance",
         "species",
         "sample",
@@ -716,19 +717,45 @@ def download_apa_sites(
     writer.writeheader()
 
     for row in results:
-        writer.writerow(
-            {
-                "gene_name": row.gene_name or "",
-                "gene_id": row.gene_id or "",
-                "transcript_id": row.transcript_id or "",
-                "unified_id": row.unified_id or "",
-                "mode_site_position": row.mode_site_position or "",
-                "site_count": row.site_count or "",
-                "site_abundance": row.site_abundance or "",
-                "species": row.species or "",
-                "sample": row.sample or "",
-            }
-        )
+        sample_details = []
+        if row.sample_data:
+            try:
+                sample_details = json.loads(row.sample_data)
+            except Exception:
+                pass
+
+        if sample_details:
+            for sd in sample_details:
+                sample_name = sd.get("sample_name", "")
+                if sample and sample.lower() not in sample_name.lower():
+                    continue
+                writer.writerow(
+                    {
+                        "gene_name": row.gene_name or "",
+                        "gene_id": row.gene_id or "",
+                        "transcript_id": row.transcript_id or "",
+                        "site_id": row.unified_id or "",
+                        "representative_position": row.mode_site_position or "",
+                        "sample_site_position": sd.get("original_site_position", ""),
+                        "site_abundance": sd.get("site_abundance", ""),
+                        "species": row.species or "",
+                        "sample": sample_name,
+                    }
+                )
+        else:
+            writer.writerow(
+                {
+                    "gene_name": row.gene_name or "",
+                    "gene_id": row.gene_id or "",
+                    "transcript_id": row.transcript_id or "",
+                    "site_id": row.unified_id or "",
+                    "representative_position": row.mode_site_position or "",
+                    "sample_site_position": "",
+                    "site_abundance": "",
+                    "species": row.species or "",
+                    "sample": "",
+                }
+            )
 
     output.seek(0)
 
@@ -916,7 +943,7 @@ def download_bed(
 
     output = io.StringIO()
     output.write(
-        'track name="ApaAtlas_PA_Sites" description="ApaAtlas Polyadenylation Sites" useScore=1\n'
+        'track name="ApaAtlas_PA_Sites" description="ApaAtlas Polyadenylation Sites" useScore=0\n'
     )
 
     for row in results:
@@ -927,9 +954,8 @@ def download_bed(
         chrom_start = max(0, site_pos - 1)  # BED is 0-based
         chrom_end = site_pos               # half-open end
         name = f"{row.gene_name}|{row.transcript_id}|{row.unified_id}"
-        score = min(int(row.site_count) if row.site_count else 0, 1000)
-        strand = row.strand if row.strand in ("+", "-") else "."
-        output.write(f"{chrom}\t{chrom_start}\t{chrom_end}\t{name}\t{score}\t{strand}\n")
+        strand = row.strand or "."
+        output.write(f"{chrom}\t{chrom_start}\t{chrom_end}\t{name}\t.\t{strand}\n")
 
     output.seek(0)
     sp_suffix = f"_{species.lower().replace(' ', '_')}" if species else ""
@@ -978,7 +1004,7 @@ def download_abundance_matrix(
     output = io.StringIO()
     header_cols = [
         "site_id", "transcript_id", "gene_name",
-        "chromosome", "strand", "position", "species",
+        "chromosome", "strand", "species",
     ] + sample_names
     output.write("\t".join(header_cols) + "\n")
 
@@ -999,7 +1025,6 @@ def download_abundance_matrix(
             row.gene_name or "",
             row.chromosome or "",
             row.strand or "",
-            str(row.mode_site_position or ""),
             row.species or "",
         ] + [str(sample_counts[s]) for s in sample_names]
         output.write("\t".join(row_vals) + "\n")

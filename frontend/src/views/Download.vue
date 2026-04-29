@@ -115,8 +115,8 @@
         <v-btn
           size="x-large"
           class="download-btn"
-          :href="downloadUrl"
-          :download="downloadFilename"
+          :loading="downloading"
+          @click="triggerDownload"
         >
           <v-icon start icon="mdi-download"></v-icon>
           Download
@@ -210,6 +210,7 @@ const apiLang = ref('curl')
 const copied = ref(false)
 const schemaOpen = ref(false)
 const schemaTab = ref('apa-sites')
+const downloading = ref(false)
 
 const datasets = [
   {
@@ -244,6 +245,28 @@ const datasets = [
 const selectDataset = (item) => {
   selectedDataset.value = item
   selectedFormat.value = item.formats[0]
+}
+
+const triggerDownload = async () => {
+  if (!downloadUrl.value) return
+  downloading.value = true
+  try {
+    const response = await fetch(downloadUrl.value)
+    if (!response.ok) throw new Error(`Server returned ${response.status}`)
+    const blob = await response.blob()
+    const objectUrl = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = objectUrl
+    a.download = downloadFilename.value
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
+    URL.revokeObjectURL(objectUrl)
+  } catch (err) {
+    console.error('Download failed:', err)
+  } finally {
+    downloading.value = false
+  }
 }
 
 const BASE_URL = '/api/v1'
@@ -318,12 +341,12 @@ const copyCommand = async () => {
 const schemas = [
   { id: 'apa-sites', title: 'PA Sites', fields: [
     { name: 'gene_name', type: 'string', desc: 'Official gene symbol' },
-    { name: 'gene_id', type: 'string', desc: 'Ensembl Gene ID' },
-    { name: 'transcript_id', type: 'string', desc: 'Ensembl Transcript ID' },
-    { name: 'unified_id', type: 'string', desc: 'APA site identifier' },
-    { name: 'mode_site_position', type: 'integer', desc: 'Genomic position of the PA site' },
-    { name: 'site_count', type: 'integer', desc: 'Number of reads supporting this site' },
-    { name: 'site_abundance', type: 'float', desc: 'Relative abundance (0–1) within the transcript' },
+{ name: 'gene_id', type: 'string', desc: 'NCBI Entrez Gene ID' },
+      { name: 'transcript_id', type: 'string', desc: 'NCBI RefSeq Transcript ID' },
+    { name: 'site_id', type: 'string', desc: 'Unique APA site identifier (shared across samples)' },
+    { name: 'representative_position', type: 'integer', desc: 'Consensus genomic coordinate of the PA site, computed as the mode across all supporting samples' },
+    { name: 'sample_site_position', type: 'integer', desc: 'Genomic coordinate of the PA cleavage site as detected in this specific sample' },
+    { name: 'site_abundance', type: 'float', desc: 'Relative abundance of this PA site within the transcript for this sample (0–1)' },
     { name: 'species', type: 'string', desc: 'Species name' },
     { name: 'sample', type: 'string', desc: 'Sample / cell line name' },
   ]},
@@ -332,16 +355,15 @@ const schemas = [
     { name: 'chromStart', type: 'integer', desc: '0-based start position of the PA site' },
     { name: 'chromEnd', type: 'integer', desc: '1-based end position (half-open interval)' },
     { name: 'name', type: 'string', desc: 'gene_name|transcript_id|site_id' },
-    { name: 'score', type: 'integer', desc: 'Read support (0–1000, capped per BED spec)' },
+    { name: 'score', type: 'string', desc: '.' },
     { name: 'strand', type: 'string', desc: '+ or –' },
   ]},
   { id: 'abundance-matrix', title: 'Abundance Matrix', fields: [
     { name: 'site_id', type: 'string', desc: 'APA site identifier' },
-    { name: 'transcript_id', type: 'string', desc: 'Ensembl Transcript ID' },
+    { name: 'transcript_id', type: 'string', desc: 'NCBI RefSeq Transcript ID' },
     { name: 'gene_name', type: 'string', desc: 'Official gene symbol' },
     { name: 'chromosome', type: 'string', desc: 'Chromosome' },
     { name: 'strand', type: 'string', desc: '+ or –' },
-    { name: 'position', type: 'integer', desc: 'Genomic position of the PA site' },
     { name: 'species', type: 'string', desc: 'Species name' },
     { name: '[sample_name]', type: 'integer', desc: 'One column per sample — read count at this PA site' },
   ]},
