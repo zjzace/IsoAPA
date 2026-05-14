@@ -79,7 +79,7 @@
             <p class="section-subtitle">How many PA sites does each transcript isoform carry? This distribution reveals the regulatory diversity hidden within the transcriptome.</p>
           </div>
           
-          <div style="height: 360px; margin-bottom: 24px;">
+          <div class="chart-shell chart-shell--large">
             <Bar v-if="multiplicityChartData" :data="multiplicityChartData" :options="multiplicityChartOptions" />
           </div>
 
@@ -147,7 +147,7 @@
             <v-card variant="outlined" class="data-section h-100 mb-0">
               <div class="section-eyebrow">Genomic Bias</div>
               <h2 class="text-h6 font-weight-bold mb-6 text-primary">Strand Distribution</h2>
-              <div style="height: 320px;">
+              <div class="chart-shell">
                 <Doughnut v-if="strandChartData" :data="strandChartData" :options="doughnutOptions" />
                 <div v-else class="d-flex h-100 justify-center align-center text-grey">No strand data</div>
               </div>
@@ -157,7 +157,7 @@
             <v-card variant="outlined" class="data-section h-100 mb-0">
               <div class="section-eyebrow">Genomic Topology</div>
               <h2 class="text-h6 font-weight-bold mb-6 text-primary">Chromosome Distribution</h2>
-              <div style="height: 320px;">
+              <div class="chart-shell">
                 <Bar v-if="chromosomeChartData" :data="chromosomeChartData" :options="chromosomeBarOptions" />
                 <div v-else class="d-flex h-100 justify-center align-center text-grey">No chromosome data</div>
               </div>
@@ -284,8 +284,9 @@ const multiplicityChartData = computed(() => {
     datasets: [{
       label: 'Number of Isoforms',
       data: [buckets['1'], buckets['2'], buckets['3'], buckets['4'], buckets['5+']],
-      backgroundColor: ['#94a3b8', '#14919B', '#0D7377', '#0a5c5f', '#064346'],
-      borderRadius: 6,
+      backgroundColor: ['#94a3b8', '#14919B', '#0D7377', '#0A5C5F', '#064346'],
+      hoverBackgroundColor: ['#64748b', '#0D7377', '#0A5C5F', '#064346', '#042f31'],
+      borderRadius: 8,
       borderSkipped: false
     }]
   }
@@ -297,6 +298,14 @@ const multiplicityChartOptions = {
   plugins: {
     legend: { display: false },
     tooltip: {
+      backgroundColor: 'rgba(248, 252, 252, 0.96)',
+      titleColor: '#0f172a',
+      bodyColor: '#334155',
+      borderColor: 'rgba(13, 115, 119, 0.18)',
+      borderWidth: 1,
+      padding: 12,
+      titleFont: { family: 'IBM Plex Sans', size: 13, weight: '700' },
+      bodyFont: { family: 'IBM Plex Sans', size: 13, weight: '500' },
       callbacks: {
         afterLabel: (ctx) => {
           const total = multiplicityBuckets.value.total
@@ -307,8 +316,16 @@ const multiplicityChartOptions = {
     }
   },
   scales: {
-    y: { beginAtZero: true, title: { display: true, text: 'Number of Isoforms' } },
-    x: { grid: { display: false } }
+    y: {
+      beginAtZero: true,
+      title: { display: true, text: 'Number of Isoforms', color: '#475569', font: { family: 'IBM Plex Sans', weight: '700' } },
+      grid: { color: 'rgba(148, 163, 184, 0.22)' },
+      ticks: { color: '#64748b', font: { family: 'IBM Plex Sans', size: 12 } }
+    },
+    x: {
+      grid: { display: false },
+      ticks: { color: '#475569', font: { family: 'IBM Plex Sans', size: 12, weight: '700' } }
+    }
   }
 }
 
@@ -321,7 +338,7 @@ const speciesRichnessData = computed(() => {
     apaCount: apaMap[sp.name] ?? 0
   }))
   const maxCount = Math.max(...speciesWithCounts.map(s => s.apaCount), 1)
-  const colors = ['#0D7377', '#14919B', '#2E7D32', '#5C6BC0', '#E94560', '#F57C00']
+  const colors = ['#0D7377', '#14919B', '#2F855A', '#355C7D', '#B63F5A', '#B7791F']
   return speciesWithCounts
     .sort((a, b) => b.apaCount - a.apaCount)
     .map((sp, i) => ({ ...sp, pct: (sp.apaCount / maxCount) * 100, color: colors[i % colors.length] }))
@@ -334,7 +351,9 @@ const strandChartData = computed(() => {
     labels: detailedStats.value.apa_sites_by_strand.map(s => s.strand || 'Unknown'),
     datasets: [{
       data: detailedStats.value.apa_sites_by_strand.map(s => s.count),
-      backgroundColor: ['#0D7377', '#E94560', '#9E9E9E'],
+      backgroundColor: ['#0D7377', '#B63F5A', '#94A3B8'],
+      borderColor: 'rgba(255, 255, 255, 0.92)',
+      borderWidth: 3,
       borderWidth: 0,
       hoverOffset: 4
     }]
@@ -349,17 +368,21 @@ const doughnutOptions = {
       position: 'bottom',
       labels: {
         padding: 20,
-        font: { size: 13, weight: '500' },
-        color: '#444'
+        font: { family: 'IBM Plex Sans', size: 12, weight: '700' },
+        color: '#475569',
+        usePointStyle: true,
+        pointStyle: 'circle'
       }
     },
     tooltip: {
-      backgroundColor: 'rgba(255, 255, 255, 0.95)',
-      titleColor: '#333',
-      bodyColor: '#666',
-      borderColor: '#e0e0e0',
+      backgroundColor: 'rgba(248, 252, 252, 0.96)',
+      titleColor: '#0f172a',
+      bodyColor: '#334155',
+      borderColor: 'rgba(13, 115, 119, 0.18)',
       borderWidth: 1,
-      padding: 10
+      padding: 12,
+      titleFont: { family: 'IBM Plex Sans', size: 13, weight: '700' },
+      bodyFont: { family: 'IBM Plex Sans', size: 13, weight: '500' }
     }
   },
   cutout: '65%'
@@ -374,7 +397,9 @@ const chromosomeChartData = computed(() => {
       label: 'APA Sites',
       data: sorted.map(c => c.count),
       backgroundColor: '#14919B',
-      borderRadius: 4
+      hoverBackgroundColor: '#0D7377',
+      borderRadius: 7,
+      borderSkipped: false
     }]
   }
 })
@@ -386,23 +411,25 @@ const chromosomeBarOptions = {
   plugins: {
     legend: { display: false },
     tooltip: {
-      backgroundColor: 'rgba(255, 255, 255, 0.95)',
-      titleColor: '#333',
-      bodyColor: '#666',
-      borderColor: '#e0e0e0',
+      backgroundColor: 'rgba(248, 252, 252, 0.96)',
+      titleColor: '#0f172a',
+      bodyColor: '#334155',
+      borderColor: 'rgba(13, 115, 119, 0.18)',
       borderWidth: 1,
-      padding: 10
+      padding: 12,
+      titleFont: { family: 'IBM Plex Sans', size: 13, weight: '700' },
+      bodyFont: { family: 'IBM Plex Sans', size: 13, weight: '500' }
     }
   },
   scales: {
     x: {
       beginAtZero: true,
-      grid: { color: '#f0f0f0' },
-      ticks: { color: '#666' }
+      grid: { color: 'rgba(148, 163, 184, 0.22)' },
+      ticks: { color: '#64748b', font: { family: 'IBM Plex Sans', size: 12 } }
     },
     y: {
       grid: { display: false },
-      ticks: { color: '#444' }
+      ticks: { color: '#475569', font: { family: 'IBM Plex Sans', size: 12, weight: '700' } }
     }
   }
 }
@@ -424,7 +451,9 @@ const rankClass = (i) => {
 <style scoped>
 .statistics-page {
   min-height: 100vh;
-  background: #f8fafc;
+  background:
+    radial-gradient(circle at 10% 4%, rgba(20, 145, 155, 0.10), transparent 30%),
+    linear-gradient(180deg, #f8fbfc 0%, #f5f8fa 100%);
 }
 
 .text-primary {
@@ -437,11 +466,20 @@ const rankClass = (i) => {
 
 /* Data Section Base */
 .data-section {
-  border: 1px solid #e2e8f0 !important;
-  border-radius: 16px;
+  border-radius: 20px;
   padding: 32px;
   margin-bottom: 32px;
-  background: white;
+}
+
+.chart-shell {
+  height: 320px;
+  padding: 20px;
+  margin-bottom: 8px;
+}
+
+.chart-shell--large {
+  height: 360px;
+  margin-bottom: 24px;
 }
 
 .section-header {
@@ -458,7 +496,7 @@ const rankClass = (i) => {
 }
 
 .section-title {
-  font-size: 1.3rem;
+  font-size: 1.45rem;
   font-weight: 700;
   color: #1e293b;
   margin-bottom: 6px;
@@ -479,8 +517,9 @@ const rankClass = (i) => {
 }
 
 .insight-banner {
-  background: white;
-  border-left: 4px solid #e2e8f0;
+  background: rgba(255, 255, 255, 0.78);
+  border: 1px solid rgba(203, 213, 225, 0.72);
+  border-left: 4px solid #cbd5e1;
   border-radius: 0 12px 12px 0;
   padding: 16px 24px;
   display: flex;
@@ -488,7 +527,7 @@ const rankClass = (i) => {
   gap: 16px;
   flex: 1;
   min-width: 280px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.02);
+  box-shadow: 0 12px 28px rgba(15, 23, 42, 0.06);
 }
 
 .insight-banner.highlight {
@@ -518,14 +557,14 @@ const rankClass = (i) => {
   gap: 0;
   flex-wrap: wrap;
   padding: 32px;
-  background: white;
+  background: rgba(255, 255, 255, 0.78);
   border-radius: 20px;
   border: 1px solid #e2e8f0;
   margin-bottom: 48px;
 }
 
 .flow-node {
-  background: #f8fafc;
+  background: linear-gradient(180deg, rgba(255,255,255,0.92), rgba(248,250,252,0.88));
   border: 1px solid #e2e8f0;
   border-top: 3px solid #14919B;
   border-radius: 12px;
@@ -727,7 +766,7 @@ const rankClass = (i) => {
   color: #475569;
   padding: 3px 8px;
   border-radius: 6px;
-  font-family: monospace;
+  font-family: var(--aa-font-mono);
   border: 1px solid #e2e8f0;
   min-width: 160px;
 }

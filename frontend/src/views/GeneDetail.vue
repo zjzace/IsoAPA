@@ -736,7 +736,7 @@ code {
   font-weight: 600;
   color: rgba(0, 0, 0, 0.87);
   line-height: 1.3;
-  font-family: 'Roboto', sans-serif;
+  font-family: 'IBM Plex Sans', sans-serif;
 }
 
 .panel-subtitle-text {
@@ -744,7 +744,7 @@ code {
   color: rgba(0, 0, 0, 0.60);
   margin-top: 2px;
   max-width: 480px;
-  font-family: 'Roboto', sans-serif;
+  font-family: 'IBM Plex Sans', sans-serif;
 }
 
 /* Panel body padding for browser/coupling */
@@ -762,7 +762,7 @@ code {
   width: 100%;
   min-width: 860px;
   border-collapse: collapse;
-  font-family: 'Roboto', sans-serif;
+  font-family: 'IBM Plex Sans', sans-serif;
   font-size: 14.5px;
 }
 
@@ -784,7 +784,7 @@ code {
   backdrop-filter: blur(8px);
   border-bottom: 1px solid rgba(13, 115, 119, 0.10);
   white-space: nowrap;
-  font-family: 'Roboto', sans-serif;
+  font-family: 'IBM Plex Sans', sans-serif;
 }
 
 .tx-row {
@@ -830,7 +830,7 @@ code {
   font-size: 14.5px;
   color: #0D7377;
   text-decoration: none;
-  font-family: 'Roboto', sans-serif;
+  font-family: 'IBM Plex Sans', sans-serif;
   display: inline-flex;
   align-items: center;
 }
@@ -880,7 +880,7 @@ code {
   border-radius: 12px;
   font-size: 13px;
   font-weight: 700;
-  font-family: 'Roboto', sans-serif;
+  font-family: 'IBM Plex Sans', sans-serif;
 }
 
 .tx-sample-count {
@@ -912,7 +912,7 @@ code {
   font-size: 12.5px;
   font-weight: 500;
   padding: 2px 9px;
-  font-family: 'Roboto', sans-serif;
+  font-family: 'IBM Plex Sans', sans-serif;
   white-space: nowrap;
 }
 
@@ -930,7 +930,7 @@ code {
   border: 1px solid rgba(13, 115, 119, 0.15);
   border-radius: 6px;
   font-size: 12.5px;
-  font-family: 'Roboto Mono', monospace;
+  font-family: 'IBM Plex Mono', monospace;
   font-weight: 500;
   padding: 2px 8px;
   white-space: nowrap;
@@ -950,7 +950,7 @@ code {
 }
 
 .tx-dominant-site-id {
-  font-family: 'Roboto', sans-serif;
+  font-family: 'IBM Plex Sans', sans-serif;
   font-size: 14.5px;
   font-weight: 600;
   color: #0D7377;
@@ -962,7 +962,7 @@ code {
 /* Site ID tag in inner table */
 .tx-site-id-tag {
   display: inline-block;
-  font-family: 'Roboto', sans-serif;
+  font-family: 'IBM Plex Sans', sans-serif;
   font-size: 12.5px;
   font-weight: 500;
   color: #0D7377;
@@ -979,7 +979,7 @@ code {
   display: inline-block;
   font-size: 12px;
   font-weight: 600;
-  font-family: 'Roboto', sans-serif;
+  font-family: 'IBM Plex Sans', sans-serif;
   color: #0D7377;
   background: rgba(13, 115, 119, 0.08);
   border: 1px solid rgba(13, 115, 119, 0.22);
@@ -1093,7 +1093,7 @@ code {
 }
 
 .tx-info-popover-text {
-  font-family: 'Roboto', sans-serif;
+  font-family: 'IBM Plex Sans', sans-serif;
   font-size: 13px;
   line-height: 1.65;
   color: rgba(0, 0, 0, 0.78);
@@ -1140,7 +1140,7 @@ code {
 .tx-abundance-val {
   font-size: 12px;
   color: rgba(0, 0, 0, 0.6);
-  font-family: 'Roboto', sans-serif;
+  font-family: 'IBM Plex Sans', sans-serif;
   width: 40px;
 }
 
@@ -1228,7 +1228,7 @@ code {
 
 .gs-id-code {
   color: #0D7377;
-  font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+  font-family: var(--aa-font-sans);
   font-size: 13.5px;
   font-weight: 600;
 }

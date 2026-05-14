@@ -48,7 +48,7 @@
 
           <div class="filter-card filter-card--select">
             <div class="filter-inner-label" :class="{ 'label-hidden': !!filters.transcript_id }">
-              <span class="filter-col-icon" style="background: linear-gradient(135deg,#5C6BC0,#7986CB)">
+              <span class="filter-col-icon" style="background: linear-gradient(135deg,#355C7D,#4A7898)">
                 <v-icon icon="mdi-identifier" size="13" color="white"></v-icon>
               </span>
               <span>Transcript ID</span>
@@ -72,7 +72,7 @@
 
           <div class="filter-card filter-card--select">
             <div class="filter-inner-label" :class="{ 'label-hidden': !!filters.species }">
-              <span class="filter-col-icon" style="background: linear-gradient(135deg,#6A1B9A,#AB47BC)">
+              <span class="filter-col-icon" style="background: linear-gradient(135deg,#2F855A,#48A36D)">
                 <v-icon icon="mdi-paw" size="13" color="white"></v-icon>
               </span>
               <span>Species</span>
@@ -94,7 +94,7 @@
 
           <div class="filter-card filter-card--select">
             <div class="filter-inner-label" :class="{ 'label-hidden': !!filters.sample }">
-              <span class="filter-col-icon" style="background: linear-gradient(135deg,#C75B00,#EF6C00)">
+              <span class="filter-col-icon" style="background: linear-gradient(135deg,#9A5B13,#C9821A)">
                 <v-icon icon="mdi-flask-outline" size="13" color="white"></v-icon>
               </span>
               <span>Sample</span>
@@ -260,10 +260,10 @@ const headers = [
 ]
 
 const speciesColors = {
-  'Human': '#E94560',
+  'Human': '#B63F5A',
   'Mouse': '#0D7377',
-  'Rat': '#14919B',
-  'Zebrafish': '#323232'
+  'Rat': '#2F855A',
+  'Zebrafish': '#355C7D'
 }
 
 const getSpeciesColor = (species) => {
@@ -438,7 +438,10 @@ const onTranscriptSearch = (val) => {
 <style scoped>
 .search-page {
   min-height: 100vh;
-  background: rgb(var(--v-theme-background));
+  background:
+    radial-gradient(circle at 8% 4%, rgba(13, 115, 119, 0.10), transparent 30%),
+    radial-gradient(circle at 90% 0%, rgba(53, 92, 125, 0.10), transparent 28%),
+    rgb(var(--v-theme-background));
 }
 
 /* ── Eyebrow + Heading ──────────────────────────────────────── */
@@ -454,20 +457,15 @@ const onTranscriptSearch = (val) => {
   padding: 3px 12px;
 }
 .section-heading {
-  font-size: 1.75rem;
+  font-size: clamp(2rem, 3vw, 2.65rem);
   font-weight: 700;
-  letter-spacing: -0.02em;
-  color: rgba(0, 0, 0, 0.82);
+  letter-spacing: -0.025em;
+  color: var(--aa-slate-800);
 }
 
 /* ── Search Frame ───────────────────────────────────────────── */
 .search-frame {
-  background: rgba(255, 255, 255, 0.78);
-  backdrop-filter: blur(20px) saturate(180%);
-  -webkit-backdrop-filter: blur(20px) saturate(180%);
-  border: 1px solid rgba(255, 255, 255, 0.65);
-  border-radius: 20px;
-  box-shadow: 0 4px 32px rgba(0, 0, 0, 0.06), 0 1px 4px rgba(0, 0, 0, 0.04);
+  border-radius: 22px;
   overflow: hidden;
 }
 
@@ -492,11 +490,12 @@ const onTranscriptSearch = (val) => {
 }
 
 .topbar-label {
-  font-size: 0.78rem;
+  font-family: var(--aa-font-display);
+  font-size: 0.76rem;
   font-weight: 700;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.12em;
   text-transform: uppercase;
-  color: rgba(0, 0, 0, 0.50);
+  color: var(--aa-slate-600);
 }
 
 .reset-btn {
@@ -535,14 +534,14 @@ const onTranscriptSearch = (val) => {
   background: linear-gradient(180deg, rgba(255,255,255,0.74) 0%, rgba(247,252,252,0.68) 100%);
   backdrop-filter: blur(16px) saturate(165%);
   -webkit-backdrop-filter: blur(16px) saturate(165%);
-  border: 1px solid rgba(255, 255, 255, 0.42);
+  border: 1px solid rgba(203, 213, 225, 0.56);
   border-radius: 12px;
   padding: 0;
   height: 50px;
   display: flex;
   align-items: center;
   overflow: hidden;
-  box-shadow: 0 4px 16px rgba(13, 115, 119, 0.07), inset 0 1px 0 rgba(255, 255, 255, 0.50);
+  box-shadow: 0 4px 16px rgba(13, 115, 119, 0.07), inset 0 1px 0 rgba(255, 255, 255, 0.62);
   transition: border-color 0.2s, box-shadow 0.2s, background 0.2s, border-radius 0.15s;
 }
 .filter-card:hover {
@@ -576,11 +575,12 @@ const onTranscriptSearch = (val) => {
   display: flex;
   align-items: center;
   gap: 7px;
-  font-size: 0.72rem;
+  font-family: var(--aa-font-display);
+  font-size: 0.70rem;
   font-weight: 700;
   letter-spacing: 0.09em;
   text-transform: uppercase;
-  color: rgba(0, 0, 0, 0.48);
+  color: var(--aa-slate-500);
   white-space: nowrap;
   transition: opacity 0.18s ease, transform 0.18s ease;
 }
@@ -611,9 +611,9 @@ const onTranscriptSearch = (val) => {
   padding-top: 0 !important;
   padding-bottom: 0 !important;
   padding-left: 0 !important;
-  font-size: 0.91rem;
+  font-size: 0.92rem;
   font-weight: 500;
-  color: rgba(0, 0, 0, 0.80);
+  color: var(--aa-slate-800);
   min-height: unset !important;
 }
 .filter-field :deep(.v-field) {
@@ -656,11 +656,12 @@ const onTranscriptSearch = (val) => {
   font-weight: 600;
   letter-spacing: 0.04em;
   cursor: pointer;
-  box-shadow: 0 2px 12px rgba(13, 115, 119, 0.30);
-  transition: box-shadow 0.2s, opacity 0.15s;
+  box-shadow: 0 10px 24px rgba(13, 115, 119, 0.24);
+  transition: box-shadow 0.2s, opacity 0.15s, transform 0.15s;
 }
 .search-btn:hover:not(:disabled) {
-  box-shadow: 0 4px 20px rgba(13, 115, 119, 0.42);
+  box-shadow: 0 14px 30px rgba(13, 115, 119, 0.32);
+  transform: translateY(-1px);
 }
 .search-btn:disabled {
   opacity: 0.65;
@@ -674,7 +675,7 @@ const onTranscriptSearch = (val) => {
   padding: 0 20px;
   border-radius: 10px;
   border: 1.5px solid rgba(13, 115, 119, 0.40);
-  background: transparent;
+  background: rgba(255, 255, 255, 0.58);
   color: #0D7377;
   font-size: 0.875rem;
   font-weight: 500;
@@ -693,12 +694,7 @@ const onTranscriptSearch = (val) => {
 
 /* ── Results Card — glassmorphism ───────────────────────────── */
 .results-card {
-  background: rgba(255, 255, 255, 0.78);
-  backdrop-filter: blur(24px) saturate(200%);
-  -webkit-backdrop-filter: blur(24px) saturate(200%);
-  border: 1px solid rgba(255, 255, 255, 0.70);
-  border-radius: 20px;
-  box-shadow: 0 8px 40px rgba(0, 0, 0, 0.07), 0 2px 8px rgba(0, 0, 0, 0.04);
+  border-radius: 22px;
   overflow: hidden;
 }
 
@@ -707,20 +703,22 @@ const onTranscriptSearch = (val) => {
   background: transparent !important;
 }
 .search-page :deep(.v-data-table__th) {
-  background: rgba(13, 115, 119, 0.05) !important;
-  font-size: 13px !important;
-  font-weight: 600 !important;
-  letter-spacing: 0.4px;
-  text-transform: uppercase;
-  color: rgba(0, 0, 0, 0.55) !important;
+  background: linear-gradient(180deg, rgba(13, 115, 119, 0.08), rgba(13, 115, 119, 0.035)) !important;
+  font-family: var(--aa-font-display) !important;
+  font-size: 12px !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.09em;
+  color: var(--aa-slate-600) !important;
   border-bottom: 1px solid rgba(13, 115, 119, 0.10) !important;
   white-space: nowrap;
 }
 .search-page :deep(.v-data-table__td) {
-  padding: 11px 16px !important;
+  padding: 10px 16px !important;
   background: transparent !important;
   border-bottom: 1px solid rgba(0, 0, 0, 0.05) !important;
-  font-size: 14.5px;
+  font-size: 14px;
+  line-height: 1.45;
+  color: var(--aa-slate-700);
 }
 .search-page :deep(.v-data-table__tr:hover .v-data-table__td) {
   background: rgba(13, 115, 119, 0.03) !important;
@@ -730,7 +728,7 @@ const onTranscriptSearch = (val) => {
   border-top: 1px solid rgba(13, 115, 119, 0.10) !important;
   background: rgba(13, 115, 119, 0.03) !important;
   padding: 8px 20px !important;
-  font-family: 'Roboto', sans-serif;
+  font-family: var(--aa-font-sans);
 }
 
 /* "Items per page:" label */
@@ -751,7 +749,7 @@ const onTranscriptSearch = (val) => {
 }
 .search-page :deep(.v-data-table-footer__items-per-page .v-field__input) {
   font-size: 13px !important;
-  font-family: 'Roboto', sans-serif;
+  font-family: var(--aa-font-sans);
   color: rgba(0, 0, 0, 0.72) !important;
   min-height: 34px !important;
   padding-top: 0 !important;
@@ -766,7 +764,7 @@ const onTranscriptSearch = (val) => {
 .search-page :deep(.v-data-table-footer__info) {
   font-size: 13px !important;
   font-weight: 500;
-  font-family: 'Roboto', sans-serif;
+  font-family: var(--aa-font-sans);
   color: rgba(0, 0, 0, 0.45);
 }
 

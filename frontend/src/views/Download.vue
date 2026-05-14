@@ -236,7 +236,7 @@ const datasets = [
     title: 'Sample Abundance Matrix',
     description: 'PA site × sample read-count matrix (TSV) for differential APA analysis with DaPars, QAPA, or DEXSeq',
     icon: 'mdi-table-large',
-    gradient: 'linear-gradient(135deg, #5C6BC0, #7986CB)',
+    gradient: 'linear-gradient(135deg, #355C7D, #4A7898)',
     countLabel: 'Sites × Samples',
     formats: ['tsv'],
   },
@@ -728,12 +728,12 @@ onMounted(async () => {
   border-radius: 6px;
   font-size: 0.82rem;
   border: 1px solid rgba(13,115,119,0.2);
-  font-family: monospace;
+  font-family: var(--aa-font-mono);
 }
 .type-badge {
   font-size: 0.78rem;
   font-weight: 600;
-  color: #5C6BC0;
+  color: #355C7D;
   background: #eef2ff;
   padding: 2px 8px;
   border-radius: 4px;

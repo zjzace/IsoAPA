@@ -10,7 +10,7 @@
                 <ApaAtlasIcon :size="48" class="mr-3" style="color:white;" />
                 ApaAtlas
               </h1>
-              <p class="text-h5 text-white-lighten-1 mb-8">
+              <p class="hero-subtitle mb-8">
                 Isoform-Level Alternative Polyadenylation Database
               </p>
             </div>
@@ -286,10 +286,10 @@ const performSearch = () => {
 // Database at a Glance — live counts from DB (updated 2026-04)
 const dbStats = [
   { label: 'Species',     displayValue: '2',       desc: 'species, expanding continuously',   color: '#2E7D32' },
-  { label: 'Samples',     displayValue: '232',     desc: 'cell lines & tissue types',         color: '#5C6BC0' },
+  { label: 'Samples',     displayValue: '232',     desc: 'cell lines & tissue types',         color: '#355C7D' },
   { label: 'Genes',       displayValue: '34,494',  desc: 'protein-coding & lncRNA loci',      color: '#0D7377' },
   { label: 'Transcripts', displayValue: '102,164', desc: 'annotated isoforms',                color: '#14919B' },
-  { label: 'PA Sites',    displayValue: '235,377', desc: 'polyadenylation sites mapped',      color: '#E94560' },
+  { label: 'PA Sites',    displayValue: '235,377', desc: 'polyadenylation sites mapped',      color: '#B63F5A' },
 ]
 
 const taxonomyGroups = [
@@ -345,13 +345,51 @@ const taxonomyGroups = [
   padding: 56px 0 64px;
 }
 
+.hero-subtitle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  max-width: 780px;
+  color: rgba(255, 255, 255, 0.96);
+  font-size: clamp(1.22rem, 2.3vw, 1.65rem);
+  font-weight: 600;
+  line-height: 1.45;
+  letter-spacing: 0.01em;
+  text-shadow: 0 2px 12px rgba(4, 47, 49, 0.55);
+  background: rgba(4, 67, 70, 0.22);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 999px;
+  padding: 8px 22px;
+  backdrop-filter: blur(10px) saturate(140%);
+  -webkit-backdrop-filter: blur(10px) saturate(140%);
+}
+
 .search-card {
+  --home-search-radius: 22px;
+  --home-search-inset: 8px;
+  --home-search-inner-radius: calc(var(--home-search-radius) - var(--home-search-inset));
   background: rgba(255, 255, 255, 0.92) !important;
   backdrop-filter: blur(20px) saturate(160%) !important;
   -webkit-backdrop-filter: blur(20px) saturate(160%) !important;
   border: 1px solid rgba(255, 255, 255, 0.70) !important;
-  border-radius: 18px !important;
+  border-radius: var(--home-search-radius) !important;
   box-shadow: 0 8px 40px rgba(0, 0, 0, 0.18), 0 2px 8px rgba(0, 0, 0, 0.10) !important;
+  overflow: hidden;
+}
+
+.search-card :deep(.v-field) {
+  border-radius: var(--home-search-inner-radius) !important;
+  overflow: hidden;
+}
+
+.search-card :deep(.v-field__overlay),
+.search-card :deep(.v-field__outline),
+.search-card :deep(.v-field__loader) {
+  border-radius: inherit !important;
+}
+
+.search-card :deep(.v-btn) {
+  border-radius: var(--home-search-inner-radius) !important;
 }
 
 /* ── Section Eyebrow ──────────────────────────────────────── */
@@ -411,7 +449,7 @@ const taxonomyGroups = [
 }
 
 .bg-teal-gradient { background: linear-gradient(135deg, #0D7377, #14919B); }
-.bg-utr-gradient { background: linear-gradient(90deg, #E94560, #FF8A65); }
+.bg-utr-gradient { background: linear-gradient(90deg, #B63F5A, #C9821A); }
 
 .diagram-track-container {
   position: relative;
@@ -450,7 +488,7 @@ const taxonomyGroups = [
 
 .diagram-utr {
   height: 10px;
-  background: linear-gradient(90deg, #E94560, #FF8A65);
+  background: linear-gradient(90deg, #B63F5A, #C9821A);
   border-radius: 0 4px 4px 0;
   box-shadow: 0 2px 4px rgba(233, 69, 96, 0.2);
   z-index: 1;
@@ -460,7 +498,7 @@ const taxonomyGroups = [
 .diagram-utr.long { width: 140px; }
 
 .diagram-pas-marker {
-  color: #E94560;
+  color: #B63F5A;
   font-size: 14px;
   margin-left: 2px;
   margin-top: -12px;

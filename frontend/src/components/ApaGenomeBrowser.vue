@@ -370,7 +370,7 @@ const toggleSample = (name) => {
 const measureTextWidth = (text, fontSize = 13, fontWeight = '600') => {
   const canvas = document.createElement('canvas')
   const ctx = canvas.getContext('2d')
-  ctx.font = `${fontWeight} ${fontSize}px Roboto, sans-serif`
+  ctx.font = `${fontWeight} ${fontSize}px IBM Plex Sans, sans-serif`
   return ctx.measureText(text).width
 }
 
@@ -496,7 +496,7 @@ const showTooltip = (event, title, items) => {
   el.style.minWidth = '190px'
   el.style.maxWidth = '280px'
   el.style.fontSize = '13.5px'
-  el.style.fontFamily = 'Roboto, sans-serif'
+  el.style.fontFamily = 'IBM Plex Sans, sans-serif'
   el.style.color = '#fff'
   el.style.display = 'block'
 
@@ -539,24 +539,24 @@ const showPaSiteTooltip = (event, site, sampleName, abundance) => {
     <div style="padding:13px 15px">
 
       <div style="font-size:10.5px;letter-spacing:0.10em;color:#0D7377;font-weight:700;text-transform:uppercase;margin-bottom:3px">PA Site</div>
-      <div style="font-family:'Inter',sans-serif;font-size:11.5px;color:#0f172a;word-break:break-all;line-height:1.5;font-weight:600;margin-bottom:10px">${site.unified_id}</div>
+      <div style="font-family:'IBM Plex Sans',sans-serif;font-size:11.5px;color:#0f172a;word-break:break-all;line-height:1.5;font-weight:600;margin-bottom:10px">${site.unified_id}</div>
 
       <div style="height:1px;background:rgba(13,115,119,0.15);margin-bottom:9px"></div>
 
       <div style="display:grid;grid-template-columns:auto 1fr;row-gap:6px;column-gap:16px;align-items:center">
 
         <span style="color:#475569;font-size:12.5px;white-space:nowrap">Rep. Position</span>
-        <span style="color:#0f172a;font-size:12.5px;font-weight:700;font-family:'Inter',sans-serif">${site.mode_site_position.toLocaleString()}</span>
+        <span style="color:#0f172a;font-size:12.5px;font-weight:700;font-family:'IBM Plex Sans',sans-serif">${site.mode_site_position.toLocaleString()}</span>
 
         <span style="color:#475569;font-size:12.5px">Sample</span>
-        <span style="color:#0f172a;font-size:12.5px;font-weight:600;font-family:'Inter',sans-serif">${sampleName}</span>
+        <span style="color:#0f172a;font-size:12.5px;font-weight:600;font-family:'IBM Plex Sans',sans-serif">${sampleName}</span>
 
         <span style="color:#475569;font-size:12.5px">Abundance</span>
         <div style="display:flex;align-items:center;gap:7px">
           <div style="width:60px;height:5px;background:rgba(13,115,119,0.15);border-radius:3px;overflow:hidden">
             <div style="width:${pct}%;height:100%;background:linear-gradient(90deg,#0D7377,#14919B);border-radius:3px"></div>
           </div>
-          <span style="color:#0D7377;font-size:12.5px;font-weight:700;font-family:'Inter',sans-serif">${pct}%</span>
+          <span style="color:#0D7377;font-size:12.5px;font-weight:700;font-family:'IBM Plex Sans',sans-serif">${pct}%</span>
         </div>
 
       </div>
@@ -566,10 +566,10 @@ const showPaSiteTooltip = (event, site, sampleName, abundance) => {
       <div style="display:grid;grid-template-columns:auto 1fr;row-gap:6px;column-gap:16px;align-items:center">
 
         <span style="color:#475569;font-size:12.5px">PAS Motif</span>
-        <span style="color:#0f172a;font-size:12.5px;font-weight:700;font-family:'Inter',sans-serif;letter-spacing:0.04em">${site.pas_motif || 'N/A'}</span>
+        <span style="color:#0f172a;font-size:12.5px;font-weight:700;font-family:'IBM Plex Sans',sans-serif;letter-spacing:0.04em">${site.pas_motif || 'N/A'}</span>
 
         <span style="color:#475569;font-size:12.5px">PAS Offset</span>
-        <span style="color:#0f172a;font-size:12.5px;font-weight:600;font-family:'Inter',sans-serif">${site.pas_position != null ? site.pas_position + '\u202fbp' : 'N/A'}</span>
+        <span style="color:#0f172a;font-size:12.5px;font-weight:600;font-family:'IBM Plex Sans',sans-serif">${site.pas_position != null ? site.pas_position + '\u202fbp' : 'N/A'}</span>
 
         <span style="color:#475569;font-size:12.5px">PAS Type</span>
         <span style="display:inline-block;padding:2px 9px;border-radius:20px;font-size:11.5px;font-weight:600;background:${pasColor.bg};border:1px solid ${pasColor.border};color:${pasColor.text};letter-spacing:0.03em;justify-self:start;white-space:nowrap">${pasLabel}</span>
@@ -588,7 +588,7 @@ const showPaSiteTooltip = (event, site, sampleName, abundance) => {
   el.style.minWidth = '240px'
   el.style.maxWidth = '310px'
   el.style.fontSize = '13px'
-  el.style.fontFamily = 'Roboto, sans-serif'
+  el.style.fontFamily = 'IBM Plex Sans, sans-serif'
   el.style.color = '#0f172a'
   el.style.display = 'block'
 
@@ -616,13 +616,13 @@ const showExonTooltip = (event, displayNum, exon) => {
   el.innerHTML = `
     <div style="padding:13px 15px">
       <div style="font-size:10.5px;letter-spacing:0.10em;color:#0D7377;font-weight:700;text-transform:uppercase;margin-bottom:3px">Exon</div>
-      <div style="font-family:'Inter',sans-serif;font-size:14px;color:#0f172a;font-weight:700;margin-bottom:10px">Exon ${displayNum}</div>
+      <div style="font-family:'IBM Plex Sans',sans-serif;font-size:14px;color:#0f172a;font-weight:700;margin-bottom:10px">Exon ${displayNum}</div>
       <div style="height:1px;background:rgba(13,115,119,0.15);margin-bottom:9px"></div>
       <div style="display:grid;grid-template-columns:auto 1fr;row-gap:6px;column-gap:16px;align-items:center">
         <span style="color:#475569;font-size:12.5px;white-space:nowrap">Position</span>
-        <span style="color:#0f172a;font-size:12.5px;font-weight:700;font-family:'Inter',sans-serif">${exon.start.toLocaleString()} – ${exon.end.toLocaleString()}</span>
+        <span style="color:#0f172a;font-size:12.5px;font-weight:700;font-family:'IBM Plex Sans',sans-serif">${exon.start.toLocaleString()} – ${exon.end.toLocaleString()}</span>
         <span style="color:#475569;font-size:12.5px">Length</span>
-        <span style="color:#0f172a;font-size:12.5px;font-weight:700;font-family:'Inter',sans-serif">${(exon.end - exon.start + 1).toLocaleString()} bp</span>
+        <span style="color:#0f172a;font-size:12.5px;font-weight:700;font-family:'IBM Plex Sans',sans-serif">${(exon.end - exon.start + 1).toLocaleString()} bp</span>
       </div>
     </div>
   `
@@ -637,7 +637,7 @@ const showExonTooltip = (event, displayNum, exon) => {
   el.style.minWidth = '200px'
   el.style.maxWidth = '280px'
   el.style.fontSize = '13px'
-  el.style.fontFamily = 'Roboto, sans-serif'
+  el.style.fontFamily = 'IBM Plex Sans, sans-serif'
   el.style.color = '#0f172a'
   el.style.display = 'block'
 
@@ -716,14 +716,14 @@ const renderRuler = () => {
     .attr('stroke-width', 1)
 
   // ── Tick value generation ────────────────────────────────────────────────────
-  // Estimate the pixel width of a formatted label (Roboto 12px ~6.5px per char)
+  // Estimate the pixel width of a formatted label (IBM Plex Sans 12px ~6.5px per char)
   const domain = xScale.value.domain()
   const visibleRange = domain[1] - domain[0]
   const trackWidth = containerWidth.value - margin.left - margin.right
 
   // Sample label width using a representative value near the centre of the domain
   const sampleLabel = formatCoordinate((domain[0] + domain[1]) / 2)
-  const labelPx = sampleLabel.length * 9    // ~9px per char for Roboto 500 12px
+  const labelPx = sampleLabel.length * 9    // ~9px per char for IBM Plex Sans 500 12px
   const minSpacingPx = labelPx + 40         // label width + 40px breathing room
 
   // How many ticks fit?
@@ -763,7 +763,7 @@ const renderRuler = () => {
     .attr('stroke', '#999')
 
   axisGroup.selectAll('text')
-    .style('font-family', 'Roboto, sans-serif')
+    .style('font-family', 'IBM Plex Sans, sans-serif')
     .style('font-size', '12px')
     .style('font-weight', '500')
     .style('fill', 'rgba(0, 0, 0, 0.6)')
@@ -782,7 +782,7 @@ const renderLabels = () => {
     .attr('x', labelWidth.value / 2)
     .attr('y', trackOffsets.value.ruler + rulerHeight / 2 - 7)
     .attr('text-anchor', 'middle')
-    .style('font-family', 'Roboto, sans-serif')
+    .style('font-family', 'IBM Plex Sans, sans-serif')
 
   chrText.append('tspan')
     .attr('x', labelWidth.value / 2)
@@ -806,7 +806,7 @@ const renderLabels = () => {
     .attr('y', trackOffsets.value.transcript + props.trackHeight / 2)
     .attr('dy', '0.35em')
     .attr('text-anchor', 'middle')
-    .style('font-family', 'Roboto, sans-serif')
+    .style('font-family', 'IBM Plex Sans, sans-serif')
     .style('font-size', '14.5px')
     .style('font-weight', '600')
     .style('fill', '#0D7377')
@@ -827,7 +827,7 @@ const renderLabels = () => {
       .attr('y', trackOffsets.value.samples[idx] + SAMPLE_TRACK_H / 2)
       .attr('dy', '0.35em')
       .attr('text-anchor', 'middle')
-      .style('font-family', 'Roboto, sans-serif')
+      .style('font-family', 'IBM Plex Sans, sans-serif')
       .style('font-size', '12px')
       .style('font-weight', '500')
       .style('fill', 'rgba(0, 0, 0, 0.87)')
@@ -1281,7 +1281,7 @@ watch(dynamicMarginLeft, (newLeft) => {
   cursor: pointer;
   transition: border-color 0.18s ease, box-shadow 0.18s ease, background 0.18s ease, transform 0.12s ease;
   outline: none;
-  font-family: Roboto, sans-serif;
+  font-family: var(--aa-font-sans);
   white-space: nowrap;
   min-width: 0;
 }
@@ -1325,7 +1325,7 @@ watch(dynamicMarginLeft, (newLeft) => {
   outline: none;
   background: transparent;
   font-size: 14.5px;
-  font-family: Roboto, sans-serif;
+  font-family: var(--aa-font-sans);
   color: rgba(0, 0, 0, 0.87);
   line-height: 1.4;
   padding: 0;
@@ -1353,7 +1353,7 @@ watch(dynamicMarginLeft, (newLeft) => {
   font-size: 15px;
   font-weight: 600;
   letter-spacing: 0.01em;
-  color: rgba(0, 0, 0, 0.75);
+  color: var(--aa-slate-700);
 }
 
 .fancy-selector-btn--active .fancy-btn-label {
@@ -1409,15 +1409,13 @@ watch(dynamicMarginLeft, (newLeft) => {
 }
 
 .selector-list-item:hover {
-  background: rgba(0, 0, 0, 0.04);
+  background: rgba(13, 115, 119, 0.06);
 }
 .browser-svg-container {
   position: relative;
   width: 100%;
   overflow: hidden;
-  border: 1px solid rgba(0, 0, 0, 0.08);
-  border-radius: 8px;
-  background: rgba(255, 255, 255, 0.5);
+  border-radius: 16px;
   padding: 12px;
 }
 

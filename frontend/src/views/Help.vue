@@ -115,15 +115,15 @@
                   <p class="guide-p">Click any search result to open the full Locus Detail page for that transcript. The page is organised into three panels:</p>
                   <div class="guide-rows">
                     <div class="guide-row">
-                      <v-icon icon="mdi-chart-gantt" color="#5C6BC0" class="mr-3"></v-icon>
+                      <v-icon icon="mdi-chart-gantt" color="#355C7D" class="mr-3"></v-icon>
                       <div><strong>Genome Browser</strong> — Interactive diagram of the transcript's exon/intron/UTR structure with PA site markers overlaid. Hover a marker to see its position and abundance.</div>
                     </div>
                     <div class="guide-row">
-                      <v-icon icon="mdi-table" color="#5C6BC0" class="mr-3"></v-icon>
+                      <v-icon icon="mdi-table" color="#355C7D" class="mr-3"></v-icon>
                       <div><strong>PA Sites Details</strong> — Sortable table listing every polyadenylation site detected for the transcript. Click any row to expand it and reveal per-sample abundance bars and a colour-coded genomic sequence window centred on the cleavage site.</div>
                     </div>
                     <div class="guide-row">
-                      <v-icon icon="mdi-view-grid-outline" color="#5C6BC0" class="mr-3"></v-icon>
+                      <v-icon icon="mdi-view-grid-outline" color="#355C7D" class="mr-3"></v-icon>
                       <div><strong>Per-site Abundance Heatmap</strong> — Sites × samples matrix. Colour intensity encodes relative abundance (0–100%); hatched cells indicate the site was not detected in that sample.</div>
                     </div>
                   </div>
@@ -308,7 +308,7 @@ const scrollTo = (id) => {
 
 const jumpLinks = [
   { id: 'getting-started', icon: 'mdi-rocket-launch', gradient: 'linear-gradient(135deg,#0D7377,#14919B)', title: 'Quick Start', sub: '4-step guide' },
-  { id: 'features', icon: 'mdi-book-open-variant', gradient: 'linear-gradient(135deg,#5C6BC0,#7986CB)', title: 'Feature Guides', sub: 'Detailed how-tos' },
+  { id: 'features', icon: 'mdi-book-open-variant', gradient: 'linear-gradient(135deg,#355C7D,#4A7898)', title: 'Feature Guides', sub: 'Detailed how-tos' },
   { id: 'faq', icon: 'mdi-help-circle-outline', gradient: 'linear-gradient(135deg,#2E7D32,#388E3C)', title: 'FAQ', sub: 'Common questions' },
   { id: 'glossary', icon: 'mdi-book-alphabet', gradient: 'linear-gradient(135deg,#E65100,#EF6C00)', title: 'Glossary', sub: 'Key terms' }
 ]
@@ -332,7 +332,7 @@ const steps = [
   },
   { 
     icon: 'mdi-chart-bar', 
-    gradient: 'linear-gradient(135deg,#5C6BC0,#7986CB)', 
+    gradient: 'linear-gradient(135deg,#355C7D,#4A7898)', 
     title: 'Inspect APA Sites', 
     desc: 'Explore the genome browser, sample abundance charts, UTR composition, and RBP motif scanner.', 
     link: null, 
@@ -350,7 +350,7 @@ const steps = [
 
 const guides = [
   { title: 'Search & Filter', icon: 'mdi-magnify', gradient: 'linear-gradient(135deg,#0D7377,#14919B)' },
-  { title: 'Locus Detail View', icon: 'mdi-eye-outline', gradient: 'linear-gradient(135deg,#5C6BC0,#7986CB)' },
+  { title: 'Locus Detail View', icon: 'mdi-eye-outline', gradient: 'linear-gradient(135deg,#355C7D,#4A7898)' },
   { title: 'Gene Detail View', icon: 'mdi-dna', gradient: 'linear-gradient(135deg,#2E7D32,#388E3C)' },
   { title: 'Statistics Dashboard', icon: 'mdi-chart-line', gradient: 'linear-gradient(135deg,#AD1457,#E91E63)' },
   { title: 'Download Options', icon: 'mdi-download', gradient: 'linear-gradient(135deg,#E65100,#EF6C00)' }

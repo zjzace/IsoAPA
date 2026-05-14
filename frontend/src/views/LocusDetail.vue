@@ -616,13 +616,13 @@ const heatmapLabel = (siteId, sample) => {
 // ── Heatmap visual helpers ──────────────────────────────────────────────────
 
 const HEATMAP_SAMPLE_COLORS = [
-  '#0D7377', '#6366F1', '#EC4899', '#F59E0B', '#10B981', '#3B82F6', '#EF4444', '#8B5CF6'
+  '#0D7377', '#355C7D', '#EC4899', '#F59E0B', '#10B981', '#3B82F6', '#EF4444', '#8B5CF6'
 ]
 const heatmapSampleColor = (idx) => HEATMAP_SAMPLE_COLORS[idx % HEATMAP_SAMPLE_COLORS.length]
 
 const BADGE_GRADIENTS = [
   ['#0D7377', '#14919B'],
-  ['#6366F1', '#818CF8'],
+  ['#355C7D', '#4A7898'],
   ['#EC4899', '#F472B6'],
   ['#F59E0B', '#FCD34D'],
   ['#10B981', '#34D399'],
@@ -892,7 +892,7 @@ code {
   border-radius: 20px;
   font-size: 13px;
   font-weight: 600;
-  font-family: 'Roboto Mono', 'Courier New', monospace;
+  font-family: 'IBM Plex Mono', 'Courier New', monospace;
   letter-spacing: 0.3px;
   white-space: nowrap;
   line-height: 1.6;
@@ -902,7 +902,7 @@ code {
   background: rgba(0, 0, 0, 0.05);
   border: 1px solid #BDBDBD;
   color: #757575;
-  font-family: 'Roboto', sans-serif;
+  font-family: 'IBM Plex Sans', sans-serif;
   font-style: italic;
 }
 
@@ -916,7 +916,7 @@ code {
 
 .pas-type-label {
   font-size: 12.5px;
-  font-family: 'Roboto', sans-serif;
+  font-family: 'IBM Plex Sans', sans-serif;
   font-weight: 500;
   opacity: 0.85;
 }
@@ -938,7 +938,7 @@ code {
   padding: 2px 8px 2px 6px;
   border-radius: 20px;
   font-size: 12.5px;
-  font-family: 'Roboto', sans-serif;
+  font-family: 'IBM Plex Sans', sans-serif;
   font-weight: 500;
   white-space: nowrap;
 }
@@ -949,14 +949,14 @@ code {
   padding: 2px 7px;
   border-radius: 4px;
   font-size: 13px;
-  font-family: 'Roboto', sans-serif;
+  font-family: 'IBM Plex Sans', sans-serif;
 }
 
 .elegant-table :deep(code.code-plain) {
   background: none;
   border-radius: 0;
   padding: 0;
-  font-family: 'Roboto', sans-serif;
+  font-family: 'IBM Plex Sans', sans-serif;
 }
 
 .light-card-bg {
@@ -966,7 +966,7 @@ code {
 
 .elegant-table {
   background: transparent !important;
-  font-family: 'Roboto', sans-serif;
+  font-family: 'IBM Plex Sans', sans-serif;
   font-size: 14.5px;
 }
 
@@ -979,7 +979,7 @@ code {
   color: rgba(0, 0, 0, 0.60) !important;
   border-bottom: 1px solid rgba(13, 115, 119, 0.10) !important;
   white-space: nowrap;
-  font-family: 'Roboto', sans-serif;
+  font-family: 'IBM Plex Sans', sans-serif;
 }
 
 .elegant-table :deep(.v-data-table__td) {
@@ -987,7 +987,7 @@ code {
   background: transparent !important;
   color: rgba(0, 0, 0, 0.82);
   border-bottom: 1px solid rgba(0, 0, 0, 0.055) !important;
-  font-family: 'Roboto', sans-serif;
+  font-family: 'IBM Plex Sans', sans-serif;
   font-size: 13px;
 }
 
@@ -1052,7 +1052,7 @@ code {
 
 .heatmap-corner-text {
   font-size: 10.5px;
-  font-family: 'Roboto', sans-serif;
+  font-family: 'IBM Plex Sans', sans-serif;
   font-weight: 700;
   color: rgba(0, 0, 0, 0.38);
   text-transform: uppercase;
@@ -1083,7 +1083,7 @@ code {
 
 .heatmap-col-text {
   font-size: 12px;
-  font-family: 'Roboto', sans-serif;
+  font-family: 'IBM Plex Sans', sans-serif;
   font-weight: 600;
   color: rgba(0, 0, 0, 0.62);
   letter-spacing: 0.2px;
@@ -1116,7 +1116,7 @@ code {
   color: white;
   font-size: 11px;
   font-weight: 700;
-  font-family: 'Roboto', sans-serif;
+  font-family: 'IBM Plex Sans', sans-serif;
   flex-shrink: 0;
   box-shadow: 0 1px 5px rgba(0, 0, 0, 0.22);
   letter-spacing: -0.2px;
@@ -1124,7 +1124,7 @@ code {
 
 .heatmap-site-id {
   font-size: 12px;
-  font-family: 'Roboto', sans-serif;
+  font-family: 'IBM Plex Sans', sans-serif;
   font-weight: 500;
   color: rgba(0, 0, 0, 0.80);
   white-space: nowrap;
@@ -1181,7 +1181,7 @@ code {
 .heatmap-cell-pct {
   font-size: 11.5px;
   font-weight: 700;
-  font-family: 'Roboto', sans-serif;
+  font-family: 'IBM Plex Sans', sans-serif;
   line-height: 1;
   letter-spacing: -0.3px;
 }
@@ -1198,7 +1198,7 @@ code {
   font-size: 12px;
   font-weight: 500;
   color: #0D7377;
-  font-family: 'Roboto', sans-serif;
+  font-family: 'IBM Plex Sans', sans-serif;
 }
 
 .heatmap-stats-sep {
@@ -1229,7 +1229,7 @@ code {
 
 .heatmap-legend-tick {
   font-size: 11.5px;
-  font-family: 'Roboto', sans-serif;
+  font-family: 'IBM Plex Sans', sans-serif;
   color: rgba(0, 0, 0, 0.48);
   min-width: 26px;
 }
@@ -1254,7 +1254,7 @@ code {
 
 .heatmap-legend-caption {
   font-size: 10.5px;
-  font-family: 'Roboto', sans-serif;
+  font-family: 'IBM Plex Sans', sans-serif;
   color: rgba(0, 0, 0, 0.38);
   font-weight: 600;
   text-transform: uppercase;
@@ -1289,14 +1289,14 @@ code {
 
 .heatmap-legend-nd-label {
   font-size: 12px;
-  font-family: 'Roboto', sans-serif;
+  font-family: 'IBM Plex Sans', sans-serif;
   color: rgba(0, 0, 0, 0.48);
 }
 
 /* ── Site ID tag (outer table) ───────────────────────────────────── */
 .ld-site-id-tag {
   display: inline-block;
-  font-family: 'Roboto', sans-serif;
+  font-family: 'IBM Plex Sans', sans-serif;
   font-weight: 500;
   color: #0D7377;
   background: rgba(13, 115, 119, 0.10);
@@ -1410,12 +1410,12 @@ code {
 .sample-name-chip {
   flex-shrink: 0;
   font-size: 12px !important;
-  font-family: 'Roboto', sans-serif !important;
+  font-family: 'IBM Plex Sans', sans-serif !important;
 }
 
 .sample-type-text {
   font-size: 11px;
-  font-family: 'Roboto', sans-serif;
+  font-family: 'IBM Plex Sans', sans-serif;
   color: rgba(0, 0, 0, 0.38);
   font-style: italic;
   white-space: nowrap;
@@ -1439,7 +1439,7 @@ code {
   color: rgba(0, 0, 0, 0.55);
   width: 44px;
   flex-shrink: 0;
-  font-family: 'Roboto', sans-serif;
+  font-family: 'IBM Plex Sans', sans-serif;
 }
 
 /* ── Sequence viewer ─────────────────────────────────────────────── */
@@ -1484,7 +1484,7 @@ code {
 .seq-display {
   box-sizing: border-box;
   width: 100%;
-  font-family: 'Roboto Mono', 'Courier New', monospace;
+  font-family: 'IBM Plex Mono', 'Courier New', monospace;
   font-size: 13px;
   line-height: 1.6;
   letter-spacing: 0.05em;
@@ -1542,7 +1542,7 @@ code {
 }
 
 .tx-info-popover-text {
-  font-family: 'Roboto', sans-serif;
+  font-family: 'IBM Plex Sans', sans-serif;
   font-size: 13px;
   line-height: 1.65;
   color: rgba(0, 0, 0, 0.78);

@@ -74,13 +74,13 @@
         </v-col>
         <v-col cols="auto">
           <div class="stat-card stat-shared">
-            <div class="stat-value" style="color: #6366F1;">{{ stats.sharedSites }}</div>
+            <div class="stat-value" style="color: #355C7D;">{{ stats.sharedSites }}</div>
             <div class="stat-label">Shared</div>
           </div>
         </v-col>
         <v-col cols="auto">
           <div class="stat-card stat-private">
-            <div class="stat-value" style="color: #F43F5E;">{{ stats.privateSites }}</div>
+            <div class="stat-value" style="color: #B63F5A;">{{ stats.privateSites }}</div>
             <div class="stat-label">Private</div>
           </div>
         </v-col>
@@ -115,17 +115,18 @@ const ensureTooltipEl = () => {
     tooltipEl.style.cssText = `
       position: fixed;
       display: none;
-      background: rgba(33,37,41,0.95);
-      color: #fff;
+      background: rgba(248,252,252,0.96);
+      color: #0f172a;
       padding: 10px 13px;
-      border-radius: 6px;
+      border: 1px solid rgba(13,115,119,0.18);
+      border-radius: 12px;
       font-size: 13.5px;
-      font-family: Roboto, sans-serif;
+      font-family: IBM Plex Sans, sans-serif;
       z-index: 99999;
       min-width: 190px;
       max-width: 280px;
-      box-shadow: 0 4px 16px rgba(0,0,0,0.35);
-      backdrop-filter: blur(4px);
+      box-shadow: 0 18px 45px rgba(15,23,42,0.16);
+      backdrop-filter: blur(16px) saturate(160%);
     `
     document.body.appendChild(tooltipEl)
   }
@@ -141,7 +142,7 @@ const props = defineProps({
 const measureTextWidth = (text, fontSize = 13, fontWeight = '600') => {
   const canvas = document.createElement('canvas')
   const ctx = canvas.getContext('2d')
-  ctx.font = `${fontWeight} ${fontSize}px Roboto, sans-serif`
+  ctx.font = `${fontWeight} ${fontSize}px IBM Plex Sans, sans-serif`
   return ctx.measureText(text).width
 }
 
@@ -168,8 +169,8 @@ const apaTrackHeight = 40
 const isoformGap = 12
 
 // ── Colors ───────────────────────────────────────────────────────────────────
-const SHARED_COLOR = '#6366F1'
-const PRIVATE_COLOR = '#F43F5E'
+const SHARED_COLOR = '#355C7D'
+const PRIVATE_COLOR = '#B63F5A'
 const CDS_COLOR = '#0D7377'
 const UTR_COLOR = '#14919B'
 const INTRON_COLOR = '#B0B8C1'
@@ -342,7 +343,7 @@ const showApaTooltip = (event, site, classification, meanAbundance, sampleDetail
   const gap = circ - dash
   const cx = 32, cy = 32, size = 64
 
-  const ringColor = coveragePct === 100 ? '#6366F1' : coveragePct >= 50 ? '#818CF8' : '#F43F5E'
+  const ringColor = coveragePct === 100 ? '#355C7D' : coveragePct >= 50 ? '#4A7898' : '#B63F5A'
   const tagLine = coveragePct === 100 ? 'in every sample'
     : coveragePct >= 75 ? 'in most samples'
     : coveragePct >= 50 ? 'in half the samples'
@@ -357,22 +358,22 @@ const showApaTooltip = (event, site, classification, meanAbundance, sampleDetail
         stroke-linecap="round"
         transform="rotate(-90 ${cx} ${cy})"/>
       <text x="${cx}" y="${cy - 4}" text-anchor="middle" dominant-baseline="auto"
-        style="font-family:'Inter',sans-serif;font-size:11px;font-weight:800;fill:${ringColor}"
+        style="font-family:'IBM Plex Sans',sans-serif;font-size:11px;font-weight:800;fill:${ringColor}"
       >${detected}</text>
       <line x1="${cx - 7}" y1="${cy + 1}" x2="${cx + 7}" y2="${cy + 1}" stroke="rgba(99,102,241,0.30)" stroke-width="0.8"/>
       <text x="${cx}" y="${cy + 12}" text-anchor="middle" dominant-baseline="auto"
-        style="font-family:'Inter',sans-serif;font-size:9px;font-weight:600;fill:#94a3b8"
+        style="font-family:'IBM Plex Sans',sans-serif;font-size:9px;font-weight:600;fill:#94a3b8"
       >${totalN}</text>
     </svg>`
 
   el.innerHTML = `
     <div style="padding:13px 15px">
       <div style="font-size:10.5px;letter-spacing:0.10em;color:#0D7377;font-weight:700;text-transform:uppercase;margin-bottom:3px">PA Site</div>
-      <div style="font-family:'Inter',sans-serif;font-size:11.5px;color:#0f172a;word-break:break-all;line-height:1.5;font-weight:600;margin-bottom:10px">${site.unified_id}</div>
+      <div style="font-family:'IBM Plex Sans',sans-serif;font-size:11.5px;color:#0f172a;word-break:break-all;line-height:1.5;font-weight:600;margin-bottom:10px">${site.unified_id}</div>
       <div style="height:1px;background:rgba(13,115,119,0.15);margin-bottom:9px"></div>
       <div style="display:grid;grid-template-columns:auto 1fr;row-gap:6px;column-gap:16px;align-items:center">
         <span style="color:#475569;font-size:12.5px;white-space:nowrap">Rep. Position</span>
-        <span style="color:#0f172a;font-size:12.5px;font-weight:700;font-family:'Inter',sans-serif">${site.mode_site_position.toLocaleString()}</span>
+        <span style="color:#0f172a;font-size:12.5px;font-weight:700;font-family:'IBM Plex Sans',sans-serif">${site.mode_site_position.toLocaleString()}</span>
         <span style="color:#475569;font-size:12.5px">Classification</span>
         <span style="display:inline-block;padding:2px 9px;border-radius:20px;font-size:11.5px;font-weight:600;background:${classColor.bg};border:1px solid ${classColor.border};color:${classColor.text};letter-spacing:0.03em;justify-self:start;white-space:nowrap">${classification}</span>
         <span style="color:#475569;font-size:12.5px">Mean Abundance</span>
@@ -380,7 +381,7 @@ const showApaTooltip = (event, site, classification, meanAbundance, sampleDetail
           <div style="width:60px;height:5px;background:rgba(13,115,119,0.15);border-radius:3px;overflow:hidden">
             <div style="width:${pct}%;height:100%;background:linear-gradient(90deg,#0D7377,#14919B);border-radius:3px"></div>
           </div>
-          <span style="color:#0D7377;font-size:12.5px;font-weight:700;font-family:'Inter',sans-serif">${pct}%</span>
+          <span style="color:#0D7377;font-size:12.5px;font-weight:700;font-family:'IBM Plex Sans',sans-serif">${pct}%</span>
         </div>
       </div>
 
@@ -389,7 +390,7 @@ const showApaTooltip = (event, site, classification, meanAbundance, sampleDetail
       <div style="background:rgba(99,102,241,0.06);border:1px solid rgba(99,102,241,0.18);border-radius:8px;padding:9px 11px;display:flex;align-items:center;gap:12px">
         ${donutSvg}
         <div>
-          <div style="font-family:'Inter',sans-serif;font-size:13px;font-weight:700;color:#0f172a;line-height:1.3">
+          <div style="font-family:'IBM Plex Sans',sans-serif;font-size:13px;font-weight:700;color:#0f172a;line-height:1.3">
             <span style="color:${ringColor};font-size:16px;font-weight:800">${detected}</span>
             <span style="color:#94a3b8;font-size:12px;font-weight:500"> / ${totalN} samples</span>
           </div>
@@ -409,7 +410,7 @@ const showApaTooltip = (event, site, classification, meanAbundance, sampleDetail
   el.style.minWidth = '240px'
   el.style.maxWidth = '310px'
   el.style.fontSize = '13px'
-  el.style.fontFamily = 'Roboto, sans-serif'
+  el.style.fontFamily = 'IBM Plex Sans, sans-serif'
   el.style.color = '#0f172a'
   el.style.display = 'block'
 
@@ -437,15 +438,15 @@ const showExonTooltip = (event, displayNum, exon, txId) => {
   el.innerHTML = `
     <div style="padding:13px 15px">
       <div style="font-size:10.5px;letter-spacing:0.10em;color:#0D7377;font-weight:700;text-transform:uppercase;margin-bottom:3px">Exon</div>
-      <div style="font-family:'Inter',sans-serif;font-size:14px;color:#0f172a;font-weight:700;margin-bottom:10px">Exon ${displayNum}</div>
+      <div style="font-family:'IBM Plex Sans',sans-serif;font-size:14px;color:#0f172a;font-weight:700;margin-bottom:10px">Exon ${displayNum}</div>
       <div style="height:1px;background:rgba(13,115,119,0.15);margin-bottom:9px"></div>
       <div style="display:grid;grid-template-columns:auto 1fr;row-gap:6px;column-gap:16px;align-items:center">
         <span style="color:#475569;font-size:12.5px;white-space:nowrap">Transcript</span>
-        <span style="color:#0f172a;font-size:12.5px;font-weight:600;font-family:'Inter',sans-serif">${txId}</span>
+        <span style="color:#0f172a;font-size:12.5px;font-weight:600;font-family:'IBM Plex Sans',sans-serif">${txId}</span>
         <span style="color:#475569;font-size:12.5px;white-space:nowrap">Position</span>
-        <span style="color:#0f172a;font-size:12.5px;font-weight:700;font-family:'Inter',sans-serif">${exon.start.toLocaleString()} – ${exon.end.toLocaleString()}</span>
+        <span style="color:#0f172a;font-size:12.5px;font-weight:700;font-family:'IBM Plex Sans',sans-serif">${exon.start.toLocaleString()} – ${exon.end.toLocaleString()}</span>
         <span style="color:#475569;font-size:12.5px">Length</span>
-        <span style="color:#0f172a;font-size:12.5px;font-weight:700;font-family:'Inter',sans-serif">${(exon.end - exon.start + 1).toLocaleString()} bp</span>
+        <span style="color:#0f172a;font-size:12.5px;font-weight:700;font-family:'IBM Plex Sans',sans-serif">${(exon.end - exon.start + 1).toLocaleString()} bp</span>
       </div>
     </div>
   `
@@ -460,7 +461,7 @@ const showExonTooltip = (event, displayNum, exon, txId) => {
   el.style.minWidth = '220px'
   el.style.maxWidth = '300px'
   el.style.fontSize = '13px'
-  el.style.fontFamily = 'Roboto, sans-serif'
+  el.style.fontFamily = 'IBM Plex Sans, sans-serif'
   el.style.color = '#0f172a'
   el.style.display = 'block'
 
@@ -535,7 +536,7 @@ const renderRuler = () => {
   axisGroup.selectAll('.domain').attr('stroke', 'rgba(0,0,0,0.2)').attr('stroke-width', 1)
   axisGroup.selectAll('line').attr('stroke', '#999')
   axisGroup.selectAll('text')
-    .style('font-family', 'Roboto, sans-serif')
+    .style('font-family', 'IBM Plex Sans, sans-serif')
     .style('font-size', '12px')
     .style('font-weight', '500')
     .style('fill', 'rgba(0,0,0,0.6)')
@@ -552,7 +553,7 @@ const renderLabels = () => {
     .attr('x', labelWidth.value / 2)
     .attr('y', trackOffsets.value.ruler + rulerHeight / 2 - 7)
     .attr('text-anchor', 'middle')
-    .style('font-family', 'Roboto, sans-serif')
+    .style('font-family', 'IBM Plex Sans, sans-serif')
 
   chrText.append('tspan')
     .attr('x', labelWidth.value / 2)
@@ -580,7 +581,7 @@ const renderLabels = () => {
       .attr('y', offsets.exon + exonTrackHeight / 2)
       .attr('dy', '0.35em')
       .attr('text-anchor', 'middle')
-      .style('font-family', 'Roboto, sans-serif')
+      .style('font-family', 'IBM Plex Sans, sans-serif')
       .style('font-size', '13.5px')
       .style('font-weight', '600')
       .style('fill', CDS_COLOR)
@@ -592,7 +593,7 @@ const renderLabels = () => {
       .attr('y', offsets.apa + apaTrackHeight / 2)
       .attr('dy', '0.35em')
       .attr('text-anchor', 'middle')
-      .style('font-family', 'Roboto, sans-serif')
+      .style('font-family', 'IBM Plex Sans, sans-serif')
       .style('font-size', '12.5px')
       .style('font-weight', '500')
       .style('fill', 'rgba(0,0,0,0.54)')
@@ -963,9 +964,7 @@ watch(dynamicMarginLeft, (newLeft) => {
   position: relative;
   width: 100%;
   overflow: hidden;
-  border: 1px solid rgba(0, 0, 0, 0.08);
-  border-radius: 8px;
-  background: rgba(255, 255, 255, 0.5);
+  border-radius: 16px;
   padding: 12px;
 }
 
@@ -987,20 +986,20 @@ watch(dynamicMarginLeft, (newLeft) => {
 .stat-card {
   text-align: center;
   padding: 8px 20px;
-  border-radius: 8px;
+  border-radius: 12px;
   background: rgba(13, 115, 119, 0.04);
   border: 1px solid rgba(13, 115, 119, 0.15);
   min-width: 90px;
 }
 
 .stat-shared {
-  background: rgba(99, 102, 241, 0.08);
-  border-color: rgba(99, 102, 241, 0.28);
+  background: rgba(53, 92, 125, 0.08);
+  border-color: rgba(53, 92, 125, 0.28);
 }
 
 .stat-private {
-  background: rgba(244, 63, 94, 0.07);
-  border-color: rgba(244, 63, 94, 0.28);
+  background: rgba(182, 63, 90, 0.07);
+  border-color: rgba(182, 63, 90, 0.28);
 }
 
 .stat-value {
@@ -1008,7 +1007,7 @@ watch(dynamicMarginLeft, (newLeft) => {
   font-weight: 700;
   color: #0f172a;
   line-height: 1.2;
-  font-family: 'Inter', sans-serif;
+  font-family: var(--aa-font-display);
 }
 
 .stat-label {
@@ -1017,7 +1016,7 @@ watch(dynamicMarginLeft, (newLeft) => {
   margin-top: 2px;
   text-transform: uppercase;
   letter-spacing: 0.06em;
-  font-family: 'Roboto', sans-serif;
+  font-family: var(--aa-font-display);
 }
 
 :deep(.exon-box) {

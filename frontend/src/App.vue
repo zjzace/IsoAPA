@@ -72,14 +72,14 @@ import ApaAtlasIcon from '@/components/ApaAtlasIcon.vue'
 
 <style>
 html, body, #app {
-  font-family: 'Inter', 'Roboto', sans-serif !important;
+  font-family: var(--aa-font-sans) !important;
   overflow-y: auto !important;
 }
 * {
-  font-family: 'Inter', 'Roboto', sans-serif;
+  font-family: inherit;
 }
 :root {
-  --v-font-family: 'Inter', 'Roboto', sans-serif;
+  --v-font-family: var(--aa-font-sans);
 }
 a {
   color: inherit;
@@ -87,17 +87,19 @@ a {
 
 /* ── Glassmorphism navbar ─────────────────────────────────── */
 .glass-navbar {
-  background: rgba(255, 255, 255, 0.72) !important;
-  backdrop-filter: blur(18px) saturate(180%) !important;
-  -webkit-backdrop-filter: blur(18px) saturate(180%) !important;
-  border-bottom: 1px solid rgba(0, 0, 0, 0.07) !important;
+  background: rgba(248, 252, 252, 0.78) !important;
+  backdrop-filter: blur(22px) saturate(180%) !important;
+  -webkit-backdrop-filter: blur(22px) saturate(180%) !important;
+  border-bottom: 1px solid rgba(13, 115, 119, 0.12) !important;
+  box-shadow: 0 10px 32px rgba(15, 23, 42, 0.05) !important;
 }
 
 .nav-logo-wrap {
   width: 32px;
   height: 32px;
-  border-radius: 8px;
-  background: rgba(13, 115, 119, 0.10);
+  border-radius: 10px;
+  background: linear-gradient(135deg, rgba(13, 115, 119, 0.12), rgba(20, 145, 155, 0.18));
+  border: 1px solid rgba(13, 115, 119, 0.12);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -106,8 +108,8 @@ a {
 .nav-brand {
   font-size: 18px;
   font-weight: 700;
-  letter-spacing: -0.3px;
-  color: #0D7377;
+  letter-spacing: 0.01em;
+  color: var(--aa-teal-800);
 }
 
 .nav-links {
@@ -117,14 +119,14 @@ a {
 .nav-link {
   display: inline-flex;
   align-items: center;
-  padding: 6px 14px;
+  padding: 7px 15px;
   border-radius: 8px;
-  font-size: 14.5px;
-  font-weight: 500;
-  color: #4B5563;
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--aa-slate-600);
   text-decoration: none;
   transition: background 150ms, color 150ms;
-  letter-spacing: 0.1px;
+  letter-spacing: 0.03em;
 }
 
 .nav-link:hover {
@@ -133,15 +135,17 @@ a {
 }
 
 .nav-link--active {
-  background: rgba(13, 115, 119, 0.10);
-  color: #0D7377 !important;
-  font-weight: 600;
+  background: rgba(13, 115, 119, 0.11);
+  color: var(--aa-teal-800) !important;
+  font-weight: 700;
 }
 
 /* ── Footer ───────────────────────────────────────────────── */
 .app-footer {
-  background: #F8FAFB;
-  border-top: 1px solid rgba(0, 0, 0, 0.07);
+  background:
+    linear-gradient(180deg, rgba(248,250,252,0.86), rgba(241,245,249,0.96)),
+    radial-gradient(circle at 8% 20%, rgba(13,115,119,0.08), transparent 24%);
+  border-top: 1px solid rgba(13, 115, 119, 0.12);
   padding: 48px 0 28px;
 }
 
@@ -163,7 +167,7 @@ a {
   font-size: 16px;
   font-weight: 700;
   letter-spacing: -0.2px;
-  color: #1E293B;
+  color: var(--aa-slate-800);
 }
 
 .footer-heading {
@@ -171,21 +175,20 @@ a {
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.8px;
-  color: #94A3B8;
+  color: var(--aa-slate-500);
   margin-bottom: 14px;
 }
 
 .footer-desc {
   font-size: 14.5px;
-  color: #64748B;
+  color: var(--aa-slate-600);
   line-height: 1.6;
   margin: 0 0 8px;
 }
 
 .footer-version {
   font-size: 12.5px;
-  color: #94A3B8;
-  font-family: 'Fira Code', monospace;
+  color: var(--aa-slate-500);
 }
 
 .footer-links {
@@ -196,18 +199,18 @@ a {
 
 .footer-link {
   font-size: 14.5px;
-  color: #64748B;
+  color: var(--aa-slate-600);
   text-decoration: none;
   transition: color 150ms;
 }
 
 .footer-link:hover {
-  color: #0D7377;
+  color: var(--aa-teal-700);
 }
 
 .footer-email {
   font-size: 14.5px;
-  color: #0D7377;
+  color: var(--aa-teal-700);
   text-decoration: none;
   font-weight: 500;
 }
@@ -218,34 +221,24 @@ a {
 
 .footer-divider {
   height: 1px;
-  background: rgba(0, 0, 0, 0.07);
+  background: rgba(13, 115, 119, 0.12);
   margin-bottom: 20px;
 }
 
 .footer-copy {
   font-size: 13.5px;
-  color: #94A3B8;
+  color: var(--aa-slate-500);
   text-align: center;
   margin: 0;
 }
 
 /* ── Global glass card system (used across all pages) ─────── */
 .glass-card {
-  background: rgba(255, 255, 255, 0.70) !important;
-  backdrop-filter: blur(16px) saturate(160%) !important;
-  -webkit-backdrop-filter: blur(16px) saturate(160%) !important;
-  border: 1px solid rgba(255, 255, 255, 0.60) !important;
   border-radius: 16px !important;
-  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.06), 0 1px 4px rgba(0, 0, 0, 0.04) !important;
 }
 
 .glass-card-subtle {
-  background: rgba(255, 255, 255, 0.50) !important;
-  backdrop-filter: blur(10px) !important;
-  -webkit-backdrop-filter: blur(10px) !important;
-  border: 1px solid rgba(255, 255, 255, 0.45) !important;
   border-radius: 12px !important;
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.05) !important;
 }
 
 </style>

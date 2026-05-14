@@ -6,13 +6,13 @@ import * as directives from 'vuetify/directives'
 const apaAtlasTheme = {
   dark: false,
   colors: {
-    background: '#F0F2F5',
+    background: '#F5F8FA',
     surface: '#FFFFFF',
-    'surface-variant': '#E8ECF0',
+    'surface-variant': '#E7EEF1',
     primary: '#0D7377',
     'primary-darken-1': '#0A5C5F',
     secondary: '#14919B',
-    accent: '#4A6FA5',
+    accent: '#355C7D',
     error: '#D64545',
     info: '#3D7EBF',
     success: '#3D9970',
@@ -32,10 +32,12 @@ export default createVuetify({
   defaults: {
     VBtn: {
       rounded: 'lg',
+      style: 'letter-spacing: 0.01em; font-weight: 600;',
     },
     VCard: {
       rounded: 'xl',
       elevation: 0,
+      class: 'aa-card',
     },
     VTextField: {
       variant: 'outlined',
@@ -46,6 +48,17 @@ export default createVuetify({
       variant: 'outlined',
       density: 'comfortable',
       rounded: 'lg',
+    },
+    VAutocomplete: {
+      variant: 'outlined',
+      density: 'comfortable',
+      rounded: 'lg',
+    },
+    VDataTable: {
+      density: 'comfortable',
+    },
+    VTable: {
+      density: 'comfortable',
     }
   }
 })
