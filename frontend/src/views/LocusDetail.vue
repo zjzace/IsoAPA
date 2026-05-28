@@ -77,7 +77,7 @@
         </div>
 
         <!-- ── Genome Browser ───────────────────────────── -->
-        <div class="section-card mb-6" v-if="transcriptStructure">
+        <div class="section-card genome-browser-frame mb-6" v-if="transcriptStructure">
           <div class="section-title">
             <v-icon size="18" class="mr-2" style="color: #0D7377;">mdi-chart-gantt</v-icon>
             Genome Browser
@@ -135,6 +135,10 @@
                   <span class="ld-site-id-tag">{{ item.unified_id }}</span>
                 </template>
 
+                <template v-slot:item.cluster_range="{ item }">
+                  <span class="ld-cluster-range">{{ item.cluster_range }}</span>
+                </template>
+
                 <template v-slot:item.mode_site_position="{ item }">
                   <code class="code-plain">{{ item.mode_site_position }}</code>
                 </template>
@@ -180,7 +184,7 @@
                       rounded
                       style="width: 80px;"
                     ></v-progress-linear>
-                    <span class="text-body-2 font-weight-medium">
+                    <span class="ld-abundance-value">
                       {{ (item.site_abundance * 100).toFixed(1) }}%
                     </span>
                   </div>
@@ -236,6 +240,27 @@
                   </div>
                 </template>
 
+                <template v-slot:header.cluster_range="{ column }">
+                  <div class="ld-header-cell-row">
+                    {{ column.title }}
+                    <v-menu location="bottom end" :close-on-content-click="true" max-width="355">
+                      <template #activator="{ props }">
+                        <v-icon
+                          v-bind="props"
+                          size="13"
+                          class="tx-info-icon"
+                          @click.stop
+                        >mdi-help-circle-outline</v-icon>
+                      </template>
+                      <v-card class="tx-info-popover" elevation="0" rounded="lg">
+                        <v-card-text class="tx-info-popover-text">
+                          Genomic start and end coordinates of the PA cluster. This range groups nearby cleavage positions that represent the same polyadenylation event.
+                        </v-card-text>
+                      </v-card>
+                    </v-menu>
+                  </div>
+                </template>
+
                 <template v-slot:expanded-row="{ item }">
                   <tr class="seq-expanded-row">
                     <td :colspan="tableHeaders.length" class="pa-0">
@@ -253,7 +278,7 @@
                             <div class="sample-abundance-list">
                               <div v-for="sd in item.sample_details" :key="sd.sample_name" class="sample-abundance-row">
                                 <div class="sample-abundance-label">
-                                  <v-chip size="x-small" variant="tonal" color="primary" class="sample-name-chip">{{ sd.sample_name }}</v-chip>
+                                  <v-chip size="x-small" variant="tonal" color="primary" class="sample-name-chip">{{ formatSampleName(sd.sample_name) }}</v-chip>
                                   <span class="sample-type-text">{{ sd.sample_type ? sd.sample_type.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase()) : '' }}</span>
                                 </div>
                                 <div class="sample-abundance-bar">
@@ -345,13 +370,6 @@
               <span class="heatmap-stats-sep">×</span>
               {{ heatmapData.samples.length }} sample{{ heatmapData.samples.length !== 1 ? 's' : '' }}
             </div>
-            <v-tooltip location="bottom" max-width="320">
-              <template #activator="{ props }">
-                <v-icon v-bind="props" icon="mdi-information-outline" size="small" class="ml-2" style="color: rgba(0,0,0,0.38);"></v-icon>
-              </template>
-              Colour intensity shows relative abundance (0–100%) of each PA site in each sample.
-              Darker = higher usage. Hatched = site not detected in that sample.
-            </v-tooltip>
           </div>
           <div class="panel-box" style="overflow: visible;">
             <div class="panel-body pa-5">
@@ -371,12 +389,13 @@
                     :key="sample"
                     class="heatmap-col-header"
                     :class="{ 'hm-col-active': hoverSampleName === sample }"
+                    :title="formatSampleName(sample)"
                   >
                     <span
                       class="heatmap-sample-dot"
                       :style="{ background: heatmapSampleColor(si) }"
                     ></span>
-                    <span class="heatmap-col-text">{{ sample }}</span>
+                    <span class="heatmap-col-text">{{ formatSampleName(sample) }}</span>
                   </div>
 
                   <!-- ┌─ Data rows ────────────────────────────────────── -->
@@ -505,9 +524,10 @@ const seqNtStyle = (nt, idx, data) => {
 const tableHeaders = [
   { title: '', key: 'expand', sortable: false, width: 48 },
   { title: 'Site ID', key: 'unified_id', sortable: true },
+  { title: 'Cluster Range', key: 'cluster_range', sortable: true },
   { title: 'Rep. Position', key: 'mode_site_position', sortable: true },
   { title: 'PAS Motif', key: 'pas_motif', sortable: true },
-  { title: 'Samples', key: 'sample_count', sortable: true, width: 88 },
+  { title: 'Samples', key: 'sample_count', sortable: true, width: 88, align: 'center' },
   { title: 'Mean Abundance', key: 'site_abundance', sortable: true, width: 150 },
 ]
 
@@ -519,6 +539,14 @@ const displayBiotype = computed(() => {
   return raw
 })
 
+const formatSampleName = (name) =>
+  String(name ?? '').replace(/_/g, ' ')
+
+const formatClusterRange = (site) => {
+  if (site.cluster_start == null || site.cluster_end == null) return '—'
+  return `${site.cluster_start}:${site.cluster_end}`
+}
+
 const flattenedTableData = computed(() => {
   if (!locusData.value) return []
   return locusData.value.apa_sites.map(site => {
@@ -528,6 +556,7 @@ const flattenedTableData = computed(() => {
       : site.site_abundance || 0
     return {
       unified_id: site.unified_id,
+      cluster_range: formatClusterRange(site),
       mode_site_position: site.mode_site_position,
       pas_motif: site.pas_motif,
       pas_position: site.pas_position,
@@ -574,11 +603,10 @@ const heatmapData = computed(() => {
 
 const heatmapGridStyle = computed(() => {
   const n = heatmapData.value.samples.length
-  // Use fixed-width columns so few-sample layouts don't stretch awkwardly.
-  // Each sample column is clamped between 80 px and 140 px.
+  // Fixed sample columns keep cell geometry stable while labels wrap in the header.
   return {
     display: 'grid',
-    gridTemplateColumns: `max-content repeat(${n}, 72px)`,
+    gridTemplateColumns: `max-content repeat(${n}, 92px)`,
     gap: '3px'
   }
 })
@@ -700,7 +728,7 @@ onMounted(async () => {
 <style scoped>
 .locus-detail-page {
   min-height: 100vh;
-  background: rgb(var(--v-theme-background));
+  background: #f8fafc;
 }
 
 a {
@@ -720,13 +748,13 @@ code {
 
 /* ── Gene/Transcript header card ─────────────────────────────────── */
 .gene-header-card {
-  background: rgba(255, 255, 255, 0.78);
-  backdrop-filter: blur(16px) saturate(160%);
-  -webkit-backdrop-filter: blur(16px) saturate(160%);
-  border: 1px solid rgba(255, 255, 255, 0.62);
+  background: rgba(255, 255, 255, 0.88) !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  border: 1px solid rgba(203, 213, 225, 0.72) !important;
   border-radius: 16px;
   padding: 20px 24px;
-  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.07), 0 1px 4px rgba(0, 0, 0, 0.04);
+  box-shadow: 0 8px 26px rgba(15, 23, 42, 0.055) !important;
 }
 
 .gene-header-title {
@@ -798,13 +826,13 @@ code {
 
 /* ── Section card ─────────────────────────────────────────────────── */
 .section-card {
-  background: rgba(255, 255, 255, 0.72);
-  backdrop-filter: blur(16px) saturate(160%);
-  -webkit-backdrop-filter: blur(16px) saturate(160%);
-  border: 1px solid rgba(255, 255, 255, 0.58);
+  background: rgba(255, 255, 255, 0.88) !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  border: 1px solid rgba(203, 213, 225, 0.72) !important;
   border-radius: 16px;
   padding: 24px;
-  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.06), 0 1px 4px rgba(0, 0, 0, 0.04);
+  box-shadow: 0 8px 26px rgba(15, 23, 42, 0.055) !important;
 }
 
 .section-title {
@@ -823,9 +851,10 @@ code {
   border: 1px solid rgba(13, 115, 119, 0.14);
   border-radius: 12px;
   overflow: hidden;
-  background: rgba(250, 252, 252, 0.85);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
+  background: #f8fbfb !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  box-shadow: none !important;
 }
 
 .panel-header {
@@ -834,7 +863,7 @@ code {
   justify-content: space-between;
   gap: 12px;
   padding: 14px 18px;
-  background: rgba(13, 115, 119, 0.06);
+  background: #f1f8f8;
   border-bottom: 1px solid rgba(13, 115, 119, 0.12);
   flex-wrap: wrap;
 }
@@ -888,8 +917,8 @@ code {
   display: inline-flex;
   align-items: center;
   gap: 5px;
-  padding: 2px 8px 2px 6px;
-  border-radius: 20px;
+  padding: 2px 9px;
+  border-radius: 10px;
   font-size: 13px;
   font-weight: 600;
   font-family: 'IBM Plex Mono', 'Courier New', monospace;
@@ -954,9 +983,12 @@ code {
 
 .elegant-table :deep(code.code-plain) {
   background: none;
-  border-radius: 0;
-  padding: 0;
+  border-radius: 10px;
+  padding: 2px 9px;
   font-family: 'IBM Plex Sans', sans-serif;
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1.6;
 }
 
 .light-card-bg {
@@ -976,7 +1008,7 @@ code {
   font-weight: 600 !important;
   letter-spacing: 0.4px;
   text-transform: uppercase;
-  color: rgba(0, 0, 0, 0.60) !important;
+  color: #475569 !important;
   border-bottom: 1px solid rgba(13, 115, 119, 0.10) !important;
   white-space: nowrap;
   font-family: 'IBM Plex Sans', sans-serif;
@@ -1061,16 +1093,17 @@ code {
 
 /* ── Column headers ── */
 .heatmap-col-header {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: flex-end;
-  padding: 12px 6px 12px;
-  gap: 7px;
+  display: grid;
+  grid-template-rows: 12px minmax(0, auto);
+  justify-items: center;
+  align-items: start;
+  padding: 8px 7px 9px;
+  gap: 5px;
   background: rgba(13, 115, 119, 0.04);
   border-bottom: 2px solid rgba(13, 115, 119, 0.12);
   border-right: 1px solid rgba(13, 115, 119, 0.07);
-  min-height: 96px;
+  min-height: 72px;
+  min-width: 0;
 }
 
 .heatmap-sample-dot {
@@ -1078,20 +1111,23 @@ code {
   height: 9px;
   border-radius: 50%;
   flex-shrink: 0;
+  align-self: center;
   box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.85), 0 1px 4px rgba(0, 0, 0, 0.15);
 }
 
 .heatmap-col-text {
-  font-size: 12px;
+  display: block;
+  width: 100%;
+  font-size: 11.5px;
   font-family: 'IBM Plex Sans', sans-serif;
   font-weight: 600;
   color: rgba(0, 0, 0, 0.62);
   letter-spacing: 0.2px;
-  writing-mode: vertical-lr;
-  text-orientation: mixed;
-  transform: rotate(180deg);
-  white-space: nowrap;
-  max-height: 80px;
+  line-height: 1.25;
+  text-align: center;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  word-break: normal;
 }
 
 /* ── Row labels ── */
@@ -1297,7 +1333,9 @@ code {
 .ld-site-id-tag {
   display: inline-block;
   font-family: 'IBM Plex Sans', sans-serif;
+  font-size: 13px;
   font-weight: 500;
+  line-height: 1.6;
   color: #0D7377;
   background: rgba(13, 115, 119, 0.10);
   border: 1px solid rgba(13, 115, 119, 0.22);
@@ -1305,6 +1343,27 @@ code {
   padding: 2px 9px;
   white-space: nowrap;
   cursor: default;
+}
+
+.ld-cluster-range {
+  display: inline-block;
+  color: rgba(15, 23, 42, 0.78);
+  background: rgba(53, 92, 125, 0.08);
+  border: 1px solid rgba(53, 92, 125, 0.16);
+  border-radius: 10px !important;
+  padding: 2px 9px;
+  font-family: 'IBM Plex Sans', sans-serif;
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1.6;
+  white-space: nowrap;
+}
+
+.ld-abundance-value {
+  font-family: 'IBM Plex Sans', sans-serif;
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1.6;
 }
 
 /* ── Row expand chevron ──────────────────────────────────────────── */
@@ -1338,16 +1397,21 @@ code {
 .detail-panel {
   width: 100%;
   box-sizing: border-box;
-  background: rgba(13, 115, 119, 0.03);
+  background: #f6faf9;
   border-top: 1px solid rgba(13, 115, 119, 0.12);
+  padding: 14px 18px 18px 5%;
 }
 
 .detail-panel-inner {
   box-sizing: border-box;
   width: 100%;
-  padding: 12px 24px 16px 66px;
+  padding: 14px 18px 16px;
   display: flex;
   flex-direction: column;
+  background: #ffffff;
+  border: 1px solid rgba(13, 115, 119, 0.12);
+  border-radius: 10px;
+  box-shadow: 0 1px 0 rgba(15, 23, 42, 0.03);
 }
 
 .detail-section {
@@ -1485,7 +1549,7 @@ code {
   box-sizing: border-box;
   width: 100%;
   font-family: 'IBM Plex Mono', 'Courier New', monospace;
-  font-size: 13px;
+  font-size: 14.5px;
   line-height: 1.6;
   letter-spacing: 0.05em;
   white-space: nowrap;

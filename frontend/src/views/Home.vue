@@ -285,11 +285,11 @@ const performSearch = () => {
 
 // Database at a Glance — live counts from DB (updated 2026-04)
 const dbStats = [
-  { label: 'Species',     displayValue: '2',       desc: 'species, expanding continuously',   color: '#2E7D32' },
-  { label: 'Samples',     displayValue: '232',     desc: 'cell lines & tissue types',         color: '#355C7D' },
-  { label: 'Genes',       displayValue: '34,494',  desc: 'protein-coding & lncRNA loci',      color: '#0D7377' },
-  { label: 'Transcripts', displayValue: '102,164', desc: 'annotated isoforms',                color: '#14919B' },
-  { label: 'PA Sites',    displayValue: '235,377', desc: 'polyadenylation sites mapped',      color: '#B63F5A' },
+  { label: 'Species',     displayValue: '1',       desc: 'test species loaded',               color: '#2E7D32' },
+  { label: 'Samples',     displayValue: '71',      desc: 'mouse tissue samples',              color: '#355C7D' },
+  { label: 'Genes',       displayValue: '22,888',  desc: 'protein-coding & lncRNA loci',      color: '#0D7377' },
+  { label: 'Transcripts', displayValue: '67,929',  desc: 'annotated isoforms',                color: '#14919B' },
+  { label: 'PA Sites',    displayValue: '157,982', desc: 'polyadenylation clusters mapped',   color: '#B63F5A' },
 ]
 
 const taxonomyGroups = [
@@ -300,8 +300,7 @@ const taxonomyGroups = [
     color: '#0D7377',
     colorAlt: '#14919B',
     species: [
-      { name: 'Human', latin: 'Homo sapiens',  assembly: 'GRCh38', apaSites: '199,014', samples: 228 },
-      { name: 'Mouse', latin: 'Mus musculus',  assembly: 'GRCm39', apaSites: '36,363',  samples: 4   },
+      { name: 'Mouse', latin: 'Mus musculus', assembly: 'GRCm39', apaSites: '157,982', samples: 71 },
     ],
   },
 ]

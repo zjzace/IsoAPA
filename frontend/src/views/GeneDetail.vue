@@ -199,14 +199,22 @@
             <!-- Table -->
             <div class="tx-table-container">
               <table class="tx-table">
+                <colgroup>
+                  <col class="tx-col-expand">
+                  <col class="tx-col-transcript">
+                  <col class="tx-col-biotype">
+                  <col class="tx-col-sites">
+                  <col class="tx-col-samples">
+                  <col class="tx-col-dominant">
+                </colgroup>
                  <thead>
                    <tr>
-                     <th class="tx-th tx-th-sticky" style="width: 40px; text-align: center;"></th>
-                     <th class="tx-th tx-th-sticky" style="width: 210px;">Transcript</th>
-                     <th class="tx-th tx-th-sticky" style="width: 115px;">Biotype</th>
-                     <th class="tx-th tx-th-sticky" style="width: 115px; text-align: center;">PA Sites</th>
-                     <th class="tx-th tx-th-sticky" style="width: 155px; text-align: center;">Samples</th>
-                     <th class="tx-th tx-th-sticky" style="padding-left: 32px;">Dominant PA Site</th>
+                     <th class="tx-th tx-th-sticky tx-th-expand"></th>
+                     <th class="tx-th tx-th-sticky">Transcript</th>
+                     <th class="tx-th tx-th-sticky">Biotype</th>
+                     <th class="tx-th tx-th-sticky tx-th-center">PA Sites</th>
+                     <th class="tx-th tx-th-sticky tx-th-center">Samples</th>
+                     <th class="tx-th tx-th-sticky tx-th-dominant">Dominant PA Site</th>
                    </tr>
                  </thead>
                 <tbody>
@@ -253,7 +261,7 @@
                        </td>
 
                       <!-- Dominant PA site -->
-                       <td class="tx-td" style="padding-left: 32px;">
+                       <td class="tx-td tx-td-dominant">
                          <span class="tx-dominant-site-tag" v-if="dominantSite(tx)" :title="dominantSite(tx)?.unified_id">
                            <v-icon size="12" class="mr-1" color="amber-darken-2">mdi-star</v-icon>
                            <span class="tx-dominant-site-id">{{ dominantSite(tx)?.unified_id }}</span>
@@ -269,14 +277,38 @@
                           <div class="tx-expanded-content">
                             <table class="tx-inner-table">
                  <colgroup>
-                                  <col style="width: 40%">
-                                  <col style="width: 22%">
-                                  <col>
+                                  <col class="tx-inner-col-spacer">
+                                  <col class="tx-inner-col-site">
+                                  <col class="tx-inner-col-cluster">
+                                  <col class="tx-inner-col-pa-sites">
+                                  <col class="tx-inner-col-sample-count">
+                                  <col class="tx-inner-col-samples">
                                 </colgroup>
                                <thead>
                                  <tr>
-                                    <th class="tx-inner-th">Site ID</th>
-                                    <th class="tx-inner-th tx-inner-th-abundance">
+                                    <th class="tx-inner-th tx-inner-th-spacer" aria-hidden="true"></th>
+                                    <th class="tx-inner-th tx-inner-th-site">Site ID</th>
+                                    <th class="tx-inner-th tx-inner-th-cluster">
+                                      <div class="tx-inner-th-row">
+                                        Cluster Range
+                                        <v-menu location="bottom end" :close-on-content-click="true" max-width="355">
+                                          <template #activator="{ props }">
+                                            <v-icon
+                                              v-bind="props"
+                                              size="13"
+                                              class="tx-info-icon"
+                                              @click.stop
+                                            >mdi-help-circle-outline</v-icon>
+                                          </template>
+                                          <v-card class="tx-info-popover" elevation="0" rounded="lg">
+                                            <v-card-text class="tx-info-popover-text">
+                                              Genomic start and end coordinates of the PA cluster. This range groups nearby cleavage positions that represent the same polyadenylation event.
+                                            </v-card-text>
+                                          </v-card>
+                                        </v-menu>
+                                      </div>
+                                    </th>
+                                    <th class="tx-inner-th tx-inner-th-abundance" colspan="2">
                                       <div class="tx-inner-th-row">
                                         Mean Abundance
                                         <v-menu location="bottom end" :close-on-content-click="true" max-width="320">
@@ -296,38 +328,42 @@
                                         </v-menu>
                                       </div>
                                     </th>
-                                    <th class="tx-inner-th">Samples</th>
+                                    <th class="tx-inner-th tx-inner-th-samples">Samples</th>
                                  </tr>
                                </thead>
                               <tbody>
                                 <tr v-for="site in tx.apa_sites" :key="site.unified_id" class="tx-inner-row">
-                                    <td class="tx-inner-td">
+                                    <td class="tx-inner-td tx-inner-td-spacer" aria-hidden="true"></td>
+                                    <td class="tx-inner-td tx-inner-td-site">
                                       <span class="tx-site-id-tag" :title="site.unified_id">{{ site.unified_id }}</span>
                                     </td>
-                                   <td class="tx-inner-td">
+                                   <td class="tx-inner-td tx-inner-td-cluster">
+                                      <span class="tx-cluster-range-tag">{{ formatClusterRange(site) }}</span>
+                                    </td>
+                                   <td class="tx-inner-td tx-inner-td-abundance" colspan="2">
                                     <div class="tx-abundance-wrapper">
                                       <div class="tx-abundance-bar">
-                                        <div class="tx-abundance-fill" :style="{ width: (meanSiteAbundance(site) / maxTxAbundance(tx)) * 80 + 'px' }"></div>
+                                        <div class="tx-abundance-fill" :style="{ width: abundanceBarWidth(site, tx) }"></div>
                                       </div>
                                       <span class="tx-abundance-val">{{ (meanSiteAbundance(site) * 100).toFixed(1) }}%</span>
                                     </div>
                                   </td>
-                                   <td class="tx-inner-td">
+                                   <td class="tx-inner-td tx-inner-td-samples">
                                      <div class="tx-sample-chips">
                                        <span
-                                         v-for="s in visibleSamples(site)"
+                                         v-for="s in visibleSamples(site, tx)"
                                          :key="s.sample_name"
                                          class="tx-sample-pill"
-                                       >{{ s.sample_name }}</span>
+                                       >{{ formatSampleName(s.sample_name) }}</span>
                                          <button
-                                           v-if="(site.sample_details?.length ?? 0) > 4 && !expandedSampleSites.includes(site.unified_id)"
+                                           v-if="(site.sample_details?.length ?? 0) > 4 && !isSampleExpanded(site, tx)"
                                            class="tx-sample-more-btn"
-                                           @click.stop="toggleSampleExpand(site.unified_id)"
-                                         >+{{ (site.sample_details?.length ?? 0) - 6 }} more</button>
+                                           @click.stop="toggleSampleExpand(site, tx)"
+                                         >+{{ hiddenSampleCount(site, tx) }} more</button>
                                          <button
-                                           v-if="(site.sample_details?.length ?? 0) > 4 && expandedSampleSites.includes(site.unified_id)"
+                                           v-if="(site.sample_details?.length ?? 0) > 4 && isSampleExpanded(site, tx)"
                                            class="tx-sample-more-btn tx-sample-more-btn--collapse"
-                                           @click.stop="toggleSampleExpand(site.unified_id)"
+                                           @click.stop="toggleSampleExpand(site, tx)"
                                          >− show less</button>
                                      </div>
                                    </td>
@@ -482,19 +518,37 @@ const toggleExpand = (txId) => {
 
 const expandedSampleSites = ref([])
 
-const toggleSampleExpand = (siteId) => {
-  const idx = expandedSampleSites.value.indexOf(siteId)
+const sampleExpansionKey = (site, tx) =>
+  `${tx?.transcript_id ?? 'unknown'}::${site?.unified_id ?? 'unknown'}`
+
+const isSampleExpanded = (site, tx) =>
+  expandedSampleSites.value.includes(sampleExpansionKey(site, tx))
+
+const toggleSampleExpand = (site, tx) => {
+  const key = sampleExpansionKey(site, tx)
+  const idx = expandedSampleSites.value.indexOf(key)
   if (idx >= 0) {
     expandedSampleSites.value.splice(idx, 1)
   } else {
-    expandedSampleSites.value.push(siteId)
+    expandedSampleSites.value.push(key)
   }
 }
 
-const visibleSamples = (site) => {
+const visibleSamples = (site, tx) => {
   if (!site.sample_details) return []
-  if (expandedSampleSites.value.includes(site.unified_id)) return site.sample_details
+  if (isSampleExpanded(site, tx)) return site.sample_details
   return site.sample_details.slice(0, 4)
+}
+
+const hiddenSampleCount = (site, tx) =>
+  Math.max(0, (site.sample_details?.length ?? 0) - visibleSamples(site, tx).length)
+
+const formatSampleName = (name) =>
+  String(name ?? '').replace(/_/g, ' ')
+
+const formatClusterRange = (site) => {
+  if (site.cluster_start == null || site.cluster_end == null) return '—'
+  return `${site.cluster_start}:${site.cluster_end}`
 }
 
 
@@ -516,6 +570,12 @@ const maxTxAbundance = (tx) => {
   if (!tx.apa_sites || tx.apa_sites.length === 0) return 1
   const max = Math.max(...tx.apa_sites.map(s => meanSiteAbundance(s)))
   return max > 0 ? max : 1
+}
+
+const abundanceBarWidth = (site, tx) => {
+  const ratio = meanSiteAbundance(site) / maxTxAbundance(tx)
+  const bounded = Math.min(1, Math.max(0, ratio || 0))
+  return `${bounded * 100}%`
 }
 
 const formatBiotype = (biotype) => {
@@ -599,13 +659,13 @@ code {
 
 /* ── Gene header card ────────────────────────────────────────────── */
 .gene-header-card {
-  background: rgba(255, 255, 255, 0.78);
-  backdrop-filter: blur(16px) saturate(160%);
-  -webkit-backdrop-filter: blur(16px) saturate(160%);
-  border: 1px solid rgba(255, 255, 255, 0.62);
+  background: rgba(255, 255, 255, 0.88) !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  border: 1px solid rgba(203, 213, 225, 0.72) !important;
   border-radius: 16px;
   padding: 20px 24px;
-  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.07), 0 1px 4px rgba(0, 0, 0, 0.04);
+  box-shadow: 0 8px 26px rgba(15, 23, 42, 0.055) !important;
 }
 
 .gene-header-title {
@@ -668,13 +728,13 @@ code {
 
 /* ── Outer section card ──────────────────────────────────────────── */
 .section-card {
-  background: rgba(255, 255, 255, 0.72);
-  backdrop-filter: blur(16px) saturate(160%);
-  -webkit-backdrop-filter: blur(16px) saturate(160%);
-  border: 1px solid rgba(255, 255, 255, 0.58);
+  background: rgba(255, 255, 255, 0.88) !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  border: 1px solid rgba(203, 213, 225, 0.72) !important;
   border-radius: 16px;
   padding: 24px;
-  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.06), 0 1px 4px rgba(0, 0, 0, 0.04);
+  box-shadow: 0 8px 26px rgba(15, 23, 42, 0.055) !important;
 }
 
 .section-title {
@@ -693,9 +753,10 @@ code {
   border: 1px solid rgba(13, 115, 119, 0.14);
   border-radius: 12px;
   overflow: hidden;
-  background: rgba(250, 252, 252, 0.85);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
+  background: #f8fbfb !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  box-shadow: none !important;
 }
 
 /* ── Unified panel header ────────────────────────────────────────── */
@@ -705,7 +766,7 @@ code {
   justify-content: space-between;
   gap: 12px;
   padding: 14px 18px;
-  background: rgba(13, 115, 119, 0.06);
+  background: #f1f8f8;
   border-bottom: 1px solid rgba(13, 115, 119, 0.12);
   flex-wrap: wrap;
 }
@@ -723,7 +784,7 @@ code {
   justify-content: center;
   width: 32px;
   height: 32px;
-  border-radius: 8px;
+  border-radius: 10px;
   flex-shrink: 0;
 }
 
@@ -761,9 +822,34 @@ code {
 .tx-table {
   width: 100%;
   min-width: 860px;
+  table-layout: fixed;
   border-collapse: collapse;
   font-family: 'IBM Plex Sans', sans-serif;
   font-size: 14.5px;
+}
+
+.tx-col-expand {
+  width: 5%;
+}
+
+.tx-col-transcript {
+  width: 26%;
+}
+
+.tx-col-biotype {
+  width: 13%;
+}
+
+.tx-col-sites {
+  width: 11%;
+}
+
+.tx-col-samples {
+  width: 15%;
+}
+
+.tx-col-dominant {
+  width: 30%;
 }
 
 .tx-th-sticky {
@@ -775,16 +861,25 @@ code {
 .tx-th {
   padding: 9px 16px;
   text-align: left;
-  font-size: 13.5px;
-  font-weight: 600;
-  letter-spacing: 0.4px;
-  text-transform: uppercase;
-  color: rgba(0, 0, 0, 0.60);
-  background: rgba(240, 245, 245, 0.95);
+  font-size: 13.5px !important;
+  font-weight: 600 !important;
+  letter-spacing: 0.4px !important;
+  text-transform: uppercase !important;
+  color: #475569 !important;
+  background: #f1f8f8 !important;
   backdrop-filter: blur(8px);
   border-bottom: 1px solid rgba(13, 115, 119, 0.10);
   white-space: nowrap;
-  font-family: 'IBM Plex Sans', sans-serif;
+  font-family: 'IBM Plex Sans', sans-serif !important;
+}
+
+.tx-th-expand,
+.tx-th-center {
+  text-align: center;
+}
+
+.tx-th-dominant {
+  padding-left: 24px;
 }
 
 .tx-row {
@@ -793,7 +888,7 @@ code {
 }
 
 .tx-row:hover, .tx-row-expanded {
-  background: rgba(13, 115, 119, 0.04);
+  background: #f3fafa;
 }
 
 .tx-row:last-child {
@@ -804,6 +899,10 @@ code {
   padding: 11px 16px;
   vertical-align: middle;
   color: rgba(0, 0, 0, 0.82);
+}
+
+.tx-td-dominant {
+  padding-left: 24px;
 }
 
 .tx-chevron-cell {
@@ -898,22 +997,37 @@ code {
 
 .tx-sample-chips {
   display: flex;
-  flex-wrap: nowrap;
-  gap: 4px;
-  overflow: hidden;
+  flex-wrap: wrap;
+  align-items: center;
+  align-content: center;
+  gap: 7px;
+  overflow: visible;
+  max-width: 100%;
+  min-width: 0;
+  line-height: 1.35;
+}
+
+.tx-site-id-tag,
+.tx-cluster-range-tag,
+.tx-sample-pill {
+  display: inline-flex;
+  align-items: center;
+  height: 25px;
+  padding: 4px 9px;
+  border-radius: 10px;
+  font-family: 'IBM Plex Sans', sans-serif;
+  font-size: 11.5px;
+  font-weight: 700;
+  line-height: 1;
+  white-space: nowrap;
+  max-width: 100%;
 }
 
 .tx-sample-pill {
-  display: inline-block;
-  background: rgba(13, 115, 119, 0.10);
-  color: #0D7377;
-  border: 1px solid rgba(13, 115, 119, 0.22);
-  border-radius: 10px;
-  font-size: 12.5px;
-  font-weight: 500;
-  padding: 2px 9px;
-  font-family: 'IBM Plex Sans', sans-serif;
-  white-space: nowrap;
+  background: rgba(255, 255, 255, 0.72);
+  color: rgba(15, 46, 48, 0.78);
+  border: 1px solid rgba(13, 115, 119, 0.16);
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
 }
 
 .tx-pos-list {
@@ -961,32 +1075,36 @@ code {
 
 /* Site ID tag in inner table */
 .tx-site-id-tag {
-  display: inline-block;
-  font-family: 'IBM Plex Sans', sans-serif;
-  font-size: 12.5px;
-  font-weight: 500;
   color: #0D7377;
   background: rgba(13, 115, 119, 0.10);
   border: 1px solid rgba(13, 115, 119, 0.22);
-  border-radius: 10px;
-  padding: 2px 9px;
-  white-space: nowrap;
   cursor: default;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.tx-cluster-range-tag {
+  color: rgba(15, 23, 42, 0.78);
+  background: rgba(53, 92, 125, 0.08);
+  border: 1px solid rgba(53, 92, 125, 0.16);
+  font-family: 'IBM Plex Mono', monospace;
+  min-width: max-content;
 }
 
 /* Sample "+N more" / "show less" toggle button in inner table */
 .tx-sample-more-btn {
-  display: inline-block;
-  font-size: 12px;
-  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  font-size: 11.5px;
+  font-weight: 700;
   font-family: 'IBM Plex Sans', sans-serif;
   color: #0D7377;
-  background: rgba(13, 115, 119, 0.08);
-  border: 1px solid rgba(13, 115, 119, 0.22);
-  border-radius: 10px;
-  padding: 2px 9px;
+  background: rgba(13, 115, 119, 0.075);
+  border: 1px solid rgba(13, 115, 119, 0.18);
+  border-radius: 999px;
+  padding: 3px 9px;
   cursor: pointer;
-  transition: background 0.15s, color 0.15s;
+  transition: background 0.15s, border-color 0.15s, color 0.15s;
   white-space: nowrap;
   line-height: 1.5;
 }
@@ -1016,8 +1134,8 @@ code {
 
 /* Expanded row */
 .tx-expanded-row-container {
-  background: rgba(250, 252, 252, 0.6);
-  border-bottom: 1px solid rgba(0, 0, 0, 0.055);
+  background: #f6faf9;
+  border-bottom: 1px solid rgba(13, 115, 119, 0.11);
 }
 
 .tx-expanded-td {
@@ -1025,8 +1143,13 @@ code {
 }
 
 .tx-expanded-content {
-  padding: 16px 24px 24px 48px;
+  position: relative;
+  padding: 14px 18px 18px 5%;
   overflow-x: auto;
+}
+
+.tx-expanded-content::before {
+  content: none;
 }
 
 .tx-expand-enter-active, .tx-expand-leave-active {
@@ -1042,33 +1165,93 @@ code {
   min-width: 720px;
   table-layout: fixed;
   border-collapse: collapse;
-  background: rgba(255, 255, 255, 0.6);
-  border: 1px solid rgba(13, 115, 119, 0.1);
-  border-radius: 8px;
+  background: #ffffff;
+  border: 1px solid rgba(13, 115, 119, 0.12);
+  border-radius: 10px;
   overflow: hidden;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
+  box-shadow: 0 1px 0 rgba(15, 23, 42, 0.03);
+}
+
+.tx-inner-col-spacer {
+  width: 0;
+}
+
+.tx-inner-col-site {
+  width: 27.368%;
+}
+
+.tx-inner-col-cluster {
+  width: 13.684%;
+}
+
+.tx-inner-col-pa-sites {
+  width: 11.579%;
+}
+
+.tx-inner-col-sample-count {
+  width: 15.789%;
+}
+
+.tx-inner-col-samples {
+  width: 31.579%;
 }
 
 .tx-inner-th {
+  height: 36px;
   padding: 8px 12px;
+  vertical-align: middle;
   text-align: left;
-  font-size: 12.5px;
-  font-weight: 600;
-  color: rgba(0, 0, 0, 0.55);
-  background: rgba(13, 115, 119, 0.03);
-  border-bottom: 1px solid rgba(13, 115, 119, 0.08);
-  text-transform: uppercase;
-  letter-spacing: 0.3px;
+  font-size: 11px !important;
+  font-weight: 700 !important;
+  color: #475569 !important;
+  background: #eef7f7 !important;
+  border-bottom: 1px solid rgba(13, 115, 119, 0.11) !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.52px !important;
 }
 
 .tx-inner-th-abundance {
+  text-align: center;
   white-space: nowrap;
+}
+
+.tx-inner-th-abundance .tx-inner-th-row {
+  justify-content: flex-start;
+  width: 142px;
+}
+
+.tx-inner-td-abundance .tx-abundance-wrapper {
+  justify-content: flex-start;
+  width: 142px;
+  margin: 0 auto;
+}
+
+.tx-inner-th-spacer,
+.tx-inner-td-spacer {
+  padding: 0;
+  background: #f6faf9 !important;
+  border: 0 !important;
+  box-shadow: none !important;
+}
+
+.tx-inner-th-site,
+.tx-inner-th-cluster {
+  padding-left: 16px;
+}
+
+.tx-inner-th-cluster {
+  white-space: nowrap;
+}
+
+.tx-inner-th-samples {
+  padding-left: 24px;
 }
 
 .tx-inner-th-row {
   display: inline-flex;
   align-items: center;
-  gap: 5px;
+  gap: 4px;
+  height: 100%;
 }
 
 .tx-info-icon {
@@ -1102,46 +1285,80 @@ code {
 }
 
 .tx-inner-row {
-  border-bottom: 1px solid rgba(0, 0, 0, 0.04);
+  transition: background 0.16s ease;
 }
 
-.tx-inner-row:last-child {
-  border-bottom: none;
+.tx-inner-row:hover .tx-inner-td:not(.tx-inner-td-spacer) {
+  background: #f8fcfc !important;
+  border-color: rgba(13, 115, 119, 0.18);
+  box-shadow: none;
 }
 
 .tx-inner-td {
-  padding: 8px 12px;
+  padding: 10px 12px;
   vertical-align: middle;
-  font-size: 13.5px;
-  color: rgba(0, 0, 0, 0.8);
+  font-size: 13px;
+  color: rgba(15, 23, 42, 0.78);
+  background: #ffffff !important;
+  border-top: 0;
+  border-bottom: 1px solid rgba(203, 213, 225, 0.55);
+  transition: background 0.16s ease, border-color 0.16s ease, box-shadow 0.16s ease;
+}
+
+.tx-inner-td-site,
+.tx-inner-td-cluster {
+  padding-left: 16px;
+}
+
+.tx-inner-td-samples {
+  padding-left: 24px;
+}
+
+.tx-inner-row .tx-inner-td:nth-child(2) {
+  border-left: 0;
+  border-top-left-radius: 0;
+  border-bottom-left-radius: 0;
+}
+
+.tx-inner-row .tx-inner-td:last-child {
+  border-right: 0;
+  border-top-right-radius: 0;
+  border-bottom-right-radius: 0;
+}
+
+.tx-inner-row:last-child .tx-inner-td {
+  border-bottom: 0;
 }
 
 .tx-abundance-wrapper {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 9px;
+  min-height: 26px;
 }
 
 .tx-abundance-bar {
-  width: 80px;
-  height: 6px;
-  background: rgba(0, 0, 0, 0.06);
-  border-radius: 3px;
+  width: 94px;
+  height: 8px;
+  background: rgba(15, 23, 42, 0.075);
+  border-radius: 999px;
   overflow: hidden;
+  box-shadow: inset 0 1px 2px rgba(15, 23, 42, 0.08);
 }
 
 .tx-abundance-fill {
   height: 100%;
-  background: #0D7377;
-  border-radius: 3px;
+  background: linear-gradient(90deg, #0D7377, #35A29F);
+  border-radius: 999px;
   transition: width 0.3s ease;
 }
 
 .tx-abundance-val {
-  font-size: 12px;
-  color: rgba(0, 0, 0, 0.6);
-  font-family: 'IBM Plex Sans', sans-serif;
-  width: 40px;
+  font-size: 11.5px;
+  font-weight: 600;
+  color: rgba(15, 23, 42, 0.58);
+  font-family: 'IBM Plex Mono', monospace;
+  width: 44px;
 }
 
 /* ── Gene Summary definition list ───────────────────────────────── */

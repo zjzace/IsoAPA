@@ -31,7 +31,7 @@
   --aa-radius-xl: 22px;
   --aa-shadow-card: 0 18px 48px rgba(15, 23, 42, 0.08), 0 2px 10px rgba(15, 23, 42, 0.04);
   --aa-shadow-soft: 0 10px 30px rgba(13, 115, 119, 0.10);
-  --aa-glass-bg: linear-gradient(180deg, rgba(255,255,255,0.84), rgba(246,252,252,0.72));
+  --aa-glass-bg: rgba(255, 255, 255, 0.88);
   --aa-glass-border: rgba(255, 255, 255, 0.72);
 }
 
@@ -175,7 +175,7 @@ table th {
   letter-spacing: 0.09em !important;
   text-transform: uppercase !important;
   color: var(--aa-slate-600) !important;
-  background: linear-gradient(180deg, rgba(13, 115, 119, 0.08), rgba(13, 115, 119, 0.035)) !important;
+  background: #f1f8f8 !important;
   border-bottom: 1px solid rgba(13, 115, 119, 0.14) !important;
 }
 
@@ -195,9 +195,7 @@ table tbody tr:hover td {
 .chart-shell,
 .browser-svg-container,
 .genome-browser-wrapper {
-  background:
-    linear-gradient(180deg, rgba(255,255,255,0.78), rgba(248,250,252,0.74)),
-    repeating-linear-gradient(90deg, rgba(13,115,119,0.035) 0, rgba(13,115,119,0.035) 1px, transparent 1px, transparent 42px);
+  background: #ffffff !important;
   border: 1px solid rgba(203, 213, 225, 0.72);
   border-radius: var(--aa-radius-lg);
 }

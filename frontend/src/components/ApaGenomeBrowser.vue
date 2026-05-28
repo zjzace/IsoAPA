@@ -83,7 +83,7 @@
                       @click.stop="toggleSample(sample.name)"
                     />
                   </template>
-                  <v-list-item-title class="text-body-2">{{ sample.name }}</v-list-item-title>
+                  <v-list-item-title class="text-body-2">{{ formatSampleName(sample.name) }}</v-list-item-title>
                 </v-list-item>
               </v-list>
             </v-card-text>
@@ -153,7 +153,7 @@
                       @click.stop="toggleSample(sample.name)"
                     />
                   </template>
-                  <v-list-item-title class="text-body-2">{{ sample.name }}</v-list-item-title>
+                  <v-list-item-title class="text-body-2">{{ formatSampleName(sample.name) }}</v-list-item-title>
                 </v-list-item>
               </v-list>
             </v-card-text>
@@ -257,22 +257,34 @@ const props = defineProps({
 
 // ── Sample selection state ─────────────────────────────────────────────────────
 
+const normalizeSampleType = (sampleType) => {
+  const value = String(sampleType ?? '').trim().toLowerCase().replace(/[\s-]+/g, '_')
+  if (value === 'tissue' || value.includes('tissue')) return 'tissue'
+  return 'cell_culture'
+}
+
+const normalizeSampleInfo = (sample) => {
+  if (typeof sample === 'string') return { name: sample, sample_type: 'cell_culture' }
+  return {
+    ...sample,
+    sample_type: normalizeSampleType(sample?.sample_type)
+  }
+}
+
 // Normalise allSamplesInfo: API may return plain strings or {name, sample_type} objects
 const normalisedSamplesInfo = computed(() =>
-  (props.allSamplesInfo || []).map(s =>
-    typeof s === 'string' ? { name: s, sample_type: 'cell_culture' } : s
-  )
+  (props.allSamplesInfo || []).map(normalizeSampleInfo).filter(s => s.name)
 )
 
 // Derived lists by type
 const tissueList = computed(() =>
   normalisedSamplesInfo.value
-    .filter(s => s.sample_type === 'tissue')
+    .filter(s => normalizeSampleType(s.sample_type) === 'tissue')
     .sort((a, b) => (a.name ?? '').localeCompare(b.name ?? ''))
 )
 const cellCultureList = computed(() =>
   normalisedSamplesInfo.value
-    .filter(s => s.sample_type !== 'tissue')
+    .filter(s => normalizeSampleType(s.sample_type) !== 'tissue')
     .sort((a, b) => (a.name ?? '').localeCompare(b.name ?? ''))
 )
 
@@ -285,11 +297,9 @@ watch(() => props.allSamplesInfo, (newVal) => {
     selectedSampleNames.value = []
     return
   }
-  const normalised = (newVal).map(s =>
-    typeof s === 'string' ? { name: s, sample_type: 'cell_culture' } : s
-  )
-  const tissue = normalised.filter(s => s.sample_type === 'tissue').map(s => s.name).sort()
-  const cell = normalised.filter(s => s.sample_type !== 'tissue').map(s => s.name).sort()
+  const normalised = newVal.map(normalizeSampleInfo).filter(s => s.name)
+  const tissue = normalised.filter(s => normalizeSampleType(s.sample_type) === 'tissue').map(s => s.name).sort()
+  const cell = normalised.filter(s => normalizeSampleType(s.sample_type) !== 'tissue').map(s => s.name).sort()
   // Show tissue tracks only if any exist; otherwise show cell culture tracks only.
   // Never mix types on initial load — up to 5 of whichever group is present.
   const defaultGroup = tissue.length > 0 ? tissue : cell
@@ -351,10 +361,16 @@ const cellSearch = ref('')
 const fuzzyFilter = (list, query) => {
   if (!query) return list
   const q = query.toLowerCase()
-  return list.filter(s => s.name.toLowerCase().includes(q))
+  return list.filter(s =>
+    s.name.toLowerCase().includes(q) ||
+    formatSampleName(s.name).toLowerCase().includes(q)
+  )
 }
 const filteredTissueList = computed(() => fuzzyFilter(tissueList.value, tissueSearch.value))
 const filteredCellList = computed(() => fuzzyFilter(cellCultureList.value, cellSearch.value))
+
+const formatSampleName = (name) =>
+  String(name ?? '').replace(/_/g, ' ')
 
 // Toggle a sample on/off
 const toggleSample = (name) => {
@@ -549,7 +565,7 @@ const showPaSiteTooltip = (event, site, sampleName, abundance) => {
         <span style="color:#0f172a;font-size:12.5px;font-weight:700;font-family:'IBM Plex Sans',sans-serif">${site.mode_site_position.toLocaleString()}</span>
 
         <span style="color:#475569;font-size:12.5px">Sample</span>
-        <span style="color:#0f172a;font-size:12.5px;font-weight:600;font-family:'IBM Plex Sans',sans-serif">${sampleName}</span>
+        <span style="color:#0f172a;font-size:12.5px;font-weight:600;font-family:'IBM Plex Sans',sans-serif">${formatSampleName(sampleName)}</span>
 
         <span style="color:#475569;font-size:12.5px">Abundance</span>
         <div style="display:flex;align-items:center;gap:7px">
@@ -788,8 +804,8 @@ const renderLabels = () => {
     .attr('x', labelWidth.value / 2)
     .attr('dy', '0')
     .style('font-size', '12.5px')
-    .style('font-weight', '500')
-    .style('fill', 'rgba(0, 0, 0, 0.45)')
+    .style('font-weight', '600')
+    .style('fill', '#475569')
     .text('Chromosome')
 
   chrText.append('tspan')
@@ -830,8 +846,8 @@ const renderLabels = () => {
       .style('font-family', 'IBM Plex Sans, sans-serif')
       .style('font-size', '12px')
       .style('font-weight', '500')
-      .style('fill', 'rgba(0, 0, 0, 0.87)')
-      .text(sample)
+      .style('fill', '#475569')
+      .text(formatSampleName(sample))
   })
 
   // Vertical separator line
@@ -999,17 +1015,24 @@ const renderSampleTracks = () => {
       const abundance = sampleData.site_abundance
       const xRep = xScale.value(site.mode_site_position)
 
-      // Parse site bounds from unified_id e.g. "GENE:CHR:start-end:strand"
-      const rangeMatch = site.unified_id.match(/:(\d+)-(\d+):/)
       let xStart, xEnd
-      if (rangeMatch) {
-        const gStart = parseInt(rangeMatch[1])
-        const gEnd = parseInt(rangeMatch[2])
+      if (site.cluster_start != null && site.cluster_end != null) {
+        const gStart = Number(site.cluster_start)
+        const gEnd = Number(site.cluster_end)
         xStart = gStart === gEnd ? xRep - MIN_HALF_PX : Math.min(xScale.value(gStart), xRep - MIN_HALF_PX)
         xEnd = gStart === gEnd ? xRep + MIN_HALF_PX : Math.max(xScale.value(gEnd), xRep + MIN_HALF_PX)
       } else {
-        xStart = xRep - MIN_HALF_PX
-        xEnd = xRep + MIN_HALF_PX
+        // Backward-compatible fallback for legacy IDs formatted as chr:start-end:strand.
+        const rangeMatch = site.unified_id.match(/:(\d+)-(\d+):/)
+        if (rangeMatch) {
+          const gStart = parseInt(rangeMatch[1])
+          const gEnd = parseInt(rangeMatch[2])
+          xStart = gStart === gEnd ? xRep - MIN_HALF_PX : Math.min(xScale.value(gStart), xRep - MIN_HALF_PX)
+          xEnd = gStart === gEnd ? xRep + MIN_HALF_PX : Math.max(xScale.value(gEnd), xRep + MIN_HALF_PX)
+        } else {
+          xStart = xRep - MIN_HALF_PX
+          xEnd = xRep + MIN_HALF_PX
+        }
       }
 
       const sigmaL = (xRep - xStart) / 2.5
@@ -1333,7 +1356,7 @@ watch(dynamicMarginLeft, (newLeft) => {
 
 .fancy-selector-btn--active {
   border-color: rgba(13, 115, 119, 0.75);
-  background: linear-gradient(135deg, rgba(13, 115, 119, 0.10) 0%, rgba(20, 145, 155, 0.08) 100%);
+  background: rgba(13, 115, 119, 0.08);
   box-shadow: 0 2px 10px rgba(13, 115, 119, 0.22), inset 0 0 0 1px rgba(13, 115, 119, 0.15);
 }
 
@@ -1417,6 +1440,8 @@ watch(dynamicMarginLeft, (newLeft) => {
   overflow: hidden;
   border-radius: 16px;
   padding: 12px;
+  background: #ffffff !important;
+  border: 1px solid rgba(203, 213, 225, 0.72);
 }
 
 .genome-svg {

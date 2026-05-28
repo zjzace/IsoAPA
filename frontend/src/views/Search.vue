@@ -148,7 +148,8 @@
           <template v-slot:item.gene_name="{ item }">
             <router-link 
               :to="{ name: 'GeneDetail', params: { geneId: item.gene_db_id } }"
-              class="text-primary font-weight-medium"
+              class="text-primary font-weight-medium search-id-link"
+              :title="item.gene_name"
             >
               {{ item.gene_name }}
             </router-link>
@@ -157,37 +158,29 @@
           <template v-slot:item.transcript_id="{ item }">
             <router-link 
               :to="{ name: 'LocusDetail', params: { transcriptId: item.transcript_id } }"
-              class="text-primary font-weight-medium text-decoration-underline"
+              class="text-primary font-weight-medium text-decoration-underline search-id-link"
+              :title="item.transcript_id"
             >
               {{ item.transcript_id }}
             </router-link>
           </template>
           
           <template v-slot:item.chromosome="{ item }">
-            <v-chip size="small" variant="tonal">{{ item.chromosome }}</v-chip>
-            <v-chip size="small" variant="tonal" class="ml-1">{{ item.strand }}</v-chip>
+            <v-chip size="small" variant="tonal" :title="item.chromosome">{{ item.chromosome }}</v-chip>
+          </template>
+
+          <template v-slot:item.strand="{ item }">
+            <v-chip size="small" variant="tonal" :title="item.strand">{{ item.strand }}</v-chip>
           </template>
           
           <template v-slot:item.apa_site_count="{ item }">
-            <v-badge 
-              :content="item.apa_site_count" 
-              color="primary" 
-              inline
-            ></v-badge>
-          </template>
-          
-          <template v-slot:item.samples="{ item }">
-            <v-chip 
-              v-for="sample in item.cell_lines.slice(0, 3)" 
-              :key="sample"
-              size="x-small" 
-              class="mr-1"
-            >
-              {{ sample }}
-            </v-chip>
-            <span v-if="item.cell_lines.length > 3" class="text-caption">
-              +{{ item.cell_lines.length - 3 }} more
-            </span>
+            <div class="search-pa-sites-content">
+              <v-badge 
+                :content="item.apa_site_count" 
+                color="primary" 
+                inline
+              ></v-badge>
+            </div>
           </template>
           
           <template v-slot:item.species="{ item }">
@@ -195,6 +188,7 @@
               size="small" 
               :color="getSpeciesColor(item.species)"
               variant="flat"
+              :title="item.species"
             >
               {{ item.species }}
             </v-chip>
@@ -241,7 +235,7 @@ const filters = reactive({
   sample: ''
 })
 
-const speciesList = ref(['Human', 'Mouse', 'Rat', 'Zebrafish'])
+const speciesList = ref(['Mouse'])
 const sampleList = ref(['A549', 'HepG2', 'K562'])
 
 const snackbar = ref(false)
@@ -251,12 +245,63 @@ const snackbarColor = ref('success')
 let searchTimeout = null
 
 const headers = [
-  { title: 'Gene Name', key: 'gene_name', sortable: true },
-  { title: 'Transcript ID', key: 'transcript_id', sortable: true },
-  { title: 'Chromosome', key: 'chromosome', sortable: false },
-  { title: 'PA Sites', key: 'apa_site_count', sortable: true },
-  { title: 'Samples', key: 'samples', sortable: false },
-  { title: 'Species', key: 'species', sortable: true },
+  {
+    title: 'Gene Name',
+    key: 'gene_name',
+    sortable: true,
+    nowrap: true,
+    width: 'calc((100% - 246px) / 4)',
+    cellProps: { class: 'search-cell-nowrap' },
+    headerProps: { class: 'search-cell-nowrap' },
+  },
+  {
+    title: 'Transcript ID',
+    key: 'transcript_id',
+    sortable: true,
+    nowrap: true,
+    width: 'calc((100% - 246px) / 4)',
+    cellProps: { class: 'search-cell-nowrap' },
+    headerProps: { class: 'search-cell-nowrap' },
+  },
+  {
+    title: 'Chromosome',
+    key: 'chromosome',
+    sortable: false,
+    nowrap: true,
+    width: 'calc((100% - 246px) / 4)',
+    align: 'center',
+    cellProps: { class: 'search-cell-nowrap' },
+    headerProps: { class: 'search-cell-nowrap' },
+  },
+  {
+    title: 'Strand',
+    key: 'strand',
+    sortable: false,
+    nowrap: true,
+    width: 96,
+    align: 'center',
+    cellProps: { class: 'search-cell-nowrap search-cell-strand' },
+    headerProps: { class: 'search-cell-nowrap search-cell-strand' },
+  },
+  {
+    title: 'No. PA Sites',
+    key: 'apa_site_count',
+    sortable: true,
+    width: 150,
+    nowrap: true,
+    align: 'center',
+    cellProps: { class: 'search-cell-nowrap search-cell-pa-sites' },
+    headerProps: { class: 'search-cell-nowrap search-cell-pa-sites' },
+  },
+  {
+    title: 'Species',
+    key: 'species',
+    sortable: true,
+    width: 'calc((100% - 246px) / 4)',
+    nowrap: true,
+    cellProps: { class: 'search-cell-nowrap' },
+    headerProps: { class: 'search-cell-nowrap' },
+  },
 ]
 
 const speciesColors = {
@@ -270,8 +315,12 @@ const getSpeciesColor = (species) => {
   return speciesColors[species] || 'primary'
 }
 
+const formatSampleName = (name) =>
+  String(name ?? '').replace(/_/g, ' ')
+
 const filterSubstring = (value, query) =>
-  value.toString().toLowerCase().includes(query.toLowerCase())
+  value.toString().toLowerCase().includes(query.toLowerCase()) ||
+  formatSampleName(value).toLowerCase().includes(query.toLowerCase())
 
 const debouncedSearch = () => {
   clearTimeout(searchTimeout)
@@ -531,9 +580,9 @@ const onTranscriptSearch = (val) => {
 
 .filter-card {
   position: relative;
-  background: linear-gradient(180deg, rgba(255,255,255,0.74) 0%, rgba(247,252,252,0.68) 100%);
-  backdrop-filter: blur(16px) saturate(165%);
-  -webkit-backdrop-filter: blur(16px) saturate(165%);
+  background: #ffffff;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
   border: 1px solid rgba(203, 213, 225, 0.56);
   border-radius: 12px;
   padding: 0;
@@ -545,16 +594,16 @@ const onTranscriptSearch = (val) => {
   transition: border-color 0.2s, box-shadow 0.2s, background 0.2s, border-radius 0.15s;
 }
 .filter-card:hover {
-  background: linear-gradient(180deg, rgba(255,255,255,0.80) 0%, rgba(243,250,250,0.72) 100%);
+  background: #ffffff;
   border-color: rgba(20, 145, 155, 0.22);
   box-shadow: 0 8px 24px rgba(13, 115, 119, 0.11), 0 2px 6px rgba(13, 115, 119, 0.05), inset 0 1px 0 rgba(255, 255, 255, 0.54);
 }
 .filter-card:focus-within {
-  background: linear-gradient(180deg, rgba(255,255,255,0.86) 0%, rgba(240,249,249,0.78) 100%);
+  background: #ffffff;
   border-color: rgba(20, 145, 155, 0.46);
   box-shadow: 0 0 0 3px rgba(20, 145, 155, 0.13), 0 8px 28px rgba(13, 115, 119, 0.14), inset 0 1px 0 rgba(255, 255, 255, 0.54);
-  backdrop-filter: blur(18px) saturate(180%);
-  -webkit-backdrop-filter: blur(18px) saturate(180%);
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
 }
 /* Flat-bottom only when Vuetify menu is actually open — not on mere focus */
 .filter-card--select:has([aria-expanded="true"]) {
@@ -702,24 +751,83 @@ const onTranscriptSearch = (val) => {
 .search-page :deep(.v-data-table) {
   background: transparent !important;
 }
+
+.search-page :deep(.v-table__wrapper) {
+  overflow-x: auto;
+}
+
+.search-page :deep(.v-table__wrapper > table) {
+  min-width: 760px;
+  table-layout: fixed;
+}
+
 .search-page :deep(.v-data-table__th) {
-  background: linear-gradient(180deg, rgba(13, 115, 119, 0.08), rgba(13, 115, 119, 0.035)) !important;
+  background: #f1f8f8 !important;
   font-family: var(--aa-font-display) !important;
   font-size: 12px !important;
   font-weight: 700 !important;
+  padding-left: 28px !important;
+  padding-right: 14px !important;
   letter-spacing: 0.09em;
   color: var(--aa-slate-600) !important;
   border-bottom: 1px solid rgba(13, 115, 119, 0.10) !important;
   white-space: nowrap;
 }
 .search-page :deep(.v-data-table__td) {
-  padding: 10px 16px !important;
+  padding: 10px 14px 10px 28px !important;
   background: transparent !important;
   border-bottom: 1px solid rgba(0, 0, 0, 0.05) !important;
   font-size: 14px;
   line-height: 1.45;
   color: var(--aa-slate-700);
 }
+
+.search-page :deep(.search-cell-nowrap) {
+  white-space: nowrap !important;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  width: calc((100% - 246px) / 4);
+}
+
+.search-page :deep(.search-cell-strand) {
+  width: 96px;
+  padding-left: 14px !important;
+  padding-right: 10px !important;
+}
+
+.search-page :deep(.search-cell-pa-sites) {
+  width: 150px;
+  padding-left: 14px !important;
+  padding-right: 10px !important;
+}
+
+.search-pa-sites-content {
+  display: flex;
+  justify-content: center;
+  width: 100%;
+}
+
+.search-id-link {
+  display: inline-block;
+  width: 100%;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  vertical-align: middle;
+}
+
+.search-page :deep(.search-cell-nowrap .v-chip) {
+  max-width: 100%;
+}
+
+.search-page :deep(.search-cell-nowrap .v-chip__content) {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .search-page :deep(.v-data-table__tr:hover .v-data-table__td) {
   background: rgba(13, 115, 119, 0.03) !important;
 }
@@ -796,9 +904,9 @@ const onTranscriptSearch = (val) => {
   overflow: hidden !important;
 }
 .search-select-menu .v-list {
-  background: linear-gradient(180deg, rgba(255,255,255,0.86) 0%, rgba(240,250,250,0.80) 100%) !important;
-  backdrop-filter: blur(20px) saturate(180%) !important;
-  -webkit-backdrop-filter: blur(20px) saturate(180%) !important;
+  background: #ffffff !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
   border: 1px solid rgba(20, 145, 155, 0.28) !important;
   border-top: 1px solid rgba(20, 145, 155, 0.12) !important;
   border-radius: 0 0 12px 12px !important;

@@ -18,6 +18,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 BACKEND_DIR="$SCRIPT_DIR/backend"
 FRONTEND_DIR="$SCRIPT_DIR/frontend"
 DATA_DIR="$SCRIPT_DIR/data"
+TEST_SPECIES="${TEST_SPECIES:-Mus_musculus}"
 ENV_NAME="apaatlas"
 DB_FILE="$BACKEND_DIR/apa_atlas.db"
 # Store hash alongside the DB so it travels with the project on the same machine
@@ -40,9 +41,9 @@ md5_cmd() {
     fi
 }
 
-# Hash all APA data files (TSV/TXT) – excludes large reference binaries
+# Hash APA data files for the test species – excludes large reference binaries
 get_data_hash() {
-    find "$DATA_DIR" -type f \( -name "*.txt" -o -name "*.tsv" \) \
+    find "$DATA_DIR/$TEST_SPECIES" -maxdepth 1 -type f \( -name "*.txt" -o -name "*.tsv" \) \
         ! -path "*/reference/*" -print0 2>/dev/null \
         | sort -z \
         | xargs -0 md5sum 2>/dev/null \
@@ -171,7 +172,7 @@ if should_reload_db; then
     info "Data change detected (or DB missing) — rebuilding database ..."
     rm -f "$DB_FILE"
     info "Running ETL pipeline ..."
-    (cd "$BACKEND_DIR" && "$PYTHON" -m app.services.etl) \
+    (cd "$BACKEND_DIR" && "$PYTHON" -m app.services.etl --species "$TEST_SPECIES") \
         || warn "ETL returned non-zero — database may be incomplete"
     get_data_hash > "$DATA_HASH_FILE"
     ok "Database ready"
@@ -184,7 +185,7 @@ fi
 log "[5/7] BED12 indices"
 
 _bed12_any_built=0
-for _bed in "$DATA_DIR"/*/reference/*.bed; do
+for _bed in "$DATA_DIR/$TEST_SPECIES"/*.bed; do
     [[ -f "$_bed" ]] || continue
     if [[ ! -f "${_bed}.bidx" ]]; then
         info "Building BED12 index: $(basename "$_bed") ..."

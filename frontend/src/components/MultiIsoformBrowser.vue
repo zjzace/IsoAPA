@@ -559,8 +559,8 @@ const renderLabels = () => {
     .attr('x', labelWidth.value / 2)
     .attr('dy', '0')
     .style('font-size', '12.5px')
-    .style('font-weight', '500')
-    .style('fill', 'rgba(0,0,0,0.45)')
+    .style('font-weight', '600')
+    .style('fill', '#475569')
     .text('Chromosome')
 
   chrText.append('tspan')
@@ -595,8 +595,8 @@ const renderLabels = () => {
       .attr('text-anchor', 'middle')
       .style('font-family', 'IBM Plex Sans, sans-serif')
       .style('font-size', '12.5px')
-      .style('font-weight', '500')
-      .style('fill', 'rgba(0,0,0,0.54)')
+      .style('font-weight', '600')
+      .style('fill', '#475569')
       .text('PA Sites')
   })
 
@@ -737,17 +737,24 @@ const renderApaTrack = (txIndex) => {
 
     const xRep = xScale.value(site.mode_site_position)
 
-    // Parse site bounds from unified_id e.g. "GENE:CHR:start-end:strand"
-    const rangeMatch = site.unified_id.match(/:(\d+)-(\d+):/)
     let xStart, xEnd
-    if (rangeMatch) {
-      const gStart = parseInt(rangeMatch[1])
-      const gEnd = parseInt(rangeMatch[2])
+    if (site.cluster_start != null && site.cluster_end != null) {
+      const gStart = Number(site.cluster_start)
+      const gEnd = Number(site.cluster_end)
       xStart = gStart === gEnd ? xRep - MIN_HALF_PX : Math.min(xScale.value(gStart), xRep - MIN_HALF_PX)
       xEnd   = gStart === gEnd ? xRep + MIN_HALF_PX : Math.max(xScale.value(gEnd),   xRep + MIN_HALF_PX)
     } else {
-      xStart = xRep - MIN_HALF_PX
-      xEnd   = xRep + MIN_HALF_PX
+      // Backward-compatible fallback for legacy IDs formatted as chr:start-end:strand.
+      const rangeMatch = site.unified_id.match(/:(\d+)-(\d+):/)
+      if (rangeMatch) {
+        const gStart = parseInt(rangeMatch[1])
+        const gEnd = parseInt(rangeMatch[2])
+        xStart = gStart === gEnd ? xRep - MIN_HALF_PX : Math.min(xScale.value(gStart), xRep - MIN_HALF_PX)
+        xEnd   = gStart === gEnd ? xRep + MIN_HALF_PX : Math.max(xScale.value(gEnd),   xRep + MIN_HALF_PX)
+      } else {
+        xStart = xRep - MIN_HALF_PX
+        xEnd   = xRep + MIN_HALF_PX
+      }
     }
 
     const sigmaL = (xRep - xStart) / 2.5
@@ -1013,6 +1020,7 @@ watch(dynamicMarginLeft, (newLeft) => {
 .stat-label {
   font-size: 12px;
   color: #475569;
+  font-weight: 700;
   margin-top: 2px;
   text-transform: uppercase;
   letter-spacing: 0.06em;

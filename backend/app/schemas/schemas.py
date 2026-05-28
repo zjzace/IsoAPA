@@ -1,5 +1,5 @@
 from pydantic import BaseModel
-from typing import Optional, List
+from typing import Optional, List, Union
 
 
 class SpeciesBase(BaseModel):
@@ -64,6 +64,8 @@ class APASiteBase(BaseModel):
     site_count: int = 0
     site_abundance: float = 0.0
     sample_data: Optional[str] = None
+    cluster_start: Optional[int] = None
+    cluster_end: Optional[int] = None
     sequence: Optional[str] = None
     pas_motif: Optional[str] = None
     pas_position: Optional[int] = None
@@ -134,7 +136,7 @@ class LocusDetail(BaseModel):
     gene: Gene
     transcript: Transcript
     apa_sites: List[APASiteWithDetails]
-    samples: List[str]
+    samples: List[Union[str, dict]]
     chromosomes: List[str]
 
     class Config:

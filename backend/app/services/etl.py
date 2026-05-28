@@ -21,7 +21,17 @@ SPECIES_MAP = {
         "latin_name": "Homo sapiens",
         "assembly": "GRCh38",
     },
+    "Homo_sapiens": {
+        "name": "Human",
+        "latin_name": "Homo sapiens",
+        "assembly": "GRCh38",
+    },
     "mus_musculus": {
+        "name": "Mouse",
+        "latin_name": "Mus musculus",
+        "assembly": "GRCm39",
+    },
+    "Mus_musculus": {
         "name": "Mouse",
         "latin_name": "Mus musculus",
         "assembly": "GRCm39",
@@ -41,6 +51,28 @@ SPECIES_MAP = {
 DATA_DIR = None
 
 BATCH_SIZE = 5000
+
+
+def _cell(row: dict, *names: str, default: str = "") -> str:
+    for name in names:
+        value = row.get(name)
+        if value not in (None, ""):
+            return str(value).strip()
+    return default
+
+
+def _int_cell(row: dict, *names: str, default: int = 0) -> int:
+    value = _cell(row, *names)
+    if value == "":
+        return default
+    return int(float(value))
+
+
+def _float_cell(row: dict, *names: str, default: float = 0.0) -> float:
+    value = _cell(row, *names)
+    if value == "":
+        return default
+    return float(value)
 
 
 def _unified_file_path(species_folder: str) -> str | None:
@@ -92,7 +124,7 @@ def _load_anno_index(species_path: str, species_folder: str) -> dict:
     index: dict = {}
     with open(ann_path) as fh:
         for row in csv.DictReader(fh, delimiter="\t"):
-            uid = row["unified_ID"].strip()
+            uid = _cell(row, "cluster_key", "unified_ID")
             pas_pos = row.get("pas_position", "").strip()
             c_start = row.get("cluster_start", "").strip()
             c_end = row.get("cluster_end", "").strip()
@@ -109,7 +141,7 @@ def _load_anno_index(species_path: str, species_folder: str) -> dict:
     return index
 
 
-def ingest_data(data_dir: str = None):
+def ingest_data(data_dir: str = None, species_filter: list[str] | None = None):
     global DATA_DIR
     DATA_DIR = data_dir or os.path.join(
         os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(__file__)))),
@@ -125,9 +157,13 @@ def ingest_data(data_dir: str = None):
             total_apa_sites
         ) = 0
 
+        wanted_species = set(species_filter or [])
+
         for species_folder in sorted(os.listdir(DATA_DIR)):
             species_path = os.path.join(DATA_DIR, species_folder)
             if not os.path.isdir(species_path) or species_folder.startswith("."):
+                continue
+            if wanted_species and species_folder not in wanted_species:
                 continue
 
             unified_path = _unified_file_path(species_folder)
@@ -154,16 +190,18 @@ def ingest_data(data_dir: str = None):
                     if row_count % 500_000 == 0:
                         print(f"    ... {row_count:,} rows read")
 
-                    transcript_id = row["transcript_id"]
-                    unified_id = row["unified_ID"]
+                    transcript_id = _cell(row, "transcript_id")
+                    unified_id = _cell(row, "cluster_key", "unified_ID")
                     cluster_key = (transcript_id, unified_id)
 
                     entry = {
-                        "sample_name": row["sample"],
-                        "sample_type": row["sample_attribute"],
-                        "original_site_position": int(row["original_site_position"]),
-                        "site_count": int(row["site_count"]),
-                        "site_abundance": float(row["site_abundance"]),
+                        "sample_name": _cell(row, "sample"),
+                        "sample_type": _cell(row, "sample_attribute"),
+                        "original_site_position": _int_cell(row, "original_site_position"),
+                        "site_count": _int_cell(row, "site_count"),
+                        "site_abundance": _float_cell(
+                            row, "cluster_relative_abundance", "site_abundance"
+                        ),
                     }
 
                     if cluster_key not in clusters:
@@ -174,7 +212,7 @@ def ingest_data(data_dir: str = None):
                     else:
                         clusters[cluster_key]["sample_entries"].append(entry)
 
-                    sample_map[row["sample"]] = row["sample_attribute"]
+                    sample_map[entry["sample_name"]] = entry["sample_type"]
 
             print(
                 f"  Rows: {row_count:,} | Clusters: {len(clusters):,} | "
@@ -203,16 +241,16 @@ def ingest_data(data_dir: str = None):
 
             for (transcript_id_str, unified_id), cluster in clusters.items():
                 row = cluster["row"]
-                gene_id_str = row["gene_id"]
+                gene_id_str = _cell(row, "gene_id")
 
                 if gene_id_str not in gene_id_cache:
                     obj = db.query(Gene).filter(Gene.gene_id == gene_id_str).first()
                     if not obj:
                         obj = Gene(
                             gene_id=gene_id_str,
-                            gene_name=row["gene_name"],
-                            chromosome=row["chromosome"],
-                            strand=row["strand"],
+                            gene_name=_cell(row, "gene_name"),
+                            chromosome=_cell(row, "chromosome"),
+                            strand=_cell(row, "strand"),
                         )
                         db.add(obj)
                         db.flush()
@@ -265,8 +303,8 @@ def ingest_data(data_dir: str = None):
                         "unified_id": unified_id,
                         "transcript_id": transcript_db_id,
                         "species_id": species_id,
-                        "mode_site_position": int(row["mode_site_position"]),
-                        "transcript_biotype": row.get("transcript_biotype") or None,
+                        "mode_site_position": _int_cell(row, "mode_site_position"),
+                        "transcript_biotype": _cell(row, "transcript_biotype") or None,
                         "site_count": total_count,
                         "site_abundance": mean_abundance,
                         "sample_data": json.dumps(sample_entries),
@@ -325,6 +363,12 @@ if __name__ == "__main__":
         description="Ingest APA sites data (unified format)"
     )
     parser.add_argument("--data-dir", default=default_data_dir, help="Data directory")
+    parser.add_argument(
+        "--species",
+        action="append",
+        dest="species_filter",
+        help="Species folder to ingest. Repeat for multiple species.",
+    )
     args = parser.parse_args()
 
-    ingest_data(args.data_dir)
+    ingest_data(args.data_dir, args.species_filter)

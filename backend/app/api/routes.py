@@ -105,8 +105,8 @@ DATA_DIR = os.path.join(
 )
 
 SPECIES_FOLDER_MAP = {
-    "Human": "homo_sapiens",
-    "Mouse": "mus_musculus",
+    "Human": "Homo_sapiens",
+    "Mouse": "Mus_musculus",
     "Rat": "rattus_norvegicus",
     "Zebrafish": "danio_rerio",
 }
@@ -118,17 +118,17 @@ def get_species_ref_path(species_name: str, file_type: str = "bed12") -> str:
     if not species_folder:
         return None
 
-    ref_dir = os.path.join(DATA_DIR, species_folder, "reference")
-    if not os.path.exists(ref_dir):
+    species_dir = os.path.join(DATA_DIR, species_folder)
+    if not os.path.exists(species_dir):
         return None
 
-    for f in os.listdir(ref_dir):
+    for f in os.listdir(species_dir):
         if file_type == "fasta" and (
             f.endswith(".fa") or f.endswith(".fasta") or f.endswith(".fna")
         ):
-            return os.path.join(ref_dir, f)
+            return os.path.join(species_dir, f)
         elif file_type == "bed12" and f.endswith(".bed") and not f.endswith(".bidx"):
-            return os.path.join(ref_dir, f)
+            return os.path.join(species_dir, f)
 
     return None
 
@@ -322,6 +322,8 @@ def get_gene_detail(gene_db_id: int, db: Session = Depends(get_db)):
                     "site_abundance": asite.site_abundance,
                     "site_count": asite.site_count,
                     "transcript_biotype": asite.transcript_biotype,
+                    "cluster_start": asite.cluster_start,
+                    "cluster_end": asite.cluster_end,
                     "sample_details": sample_details,
                 }
             )
@@ -509,6 +511,8 @@ def get_locus_detail(transcript_id: str, db: Session = Depends(get_db)):
                 site_count=int(asite.site_count),
                 site_abundance=float(asite.site_abundance),
                 sample_data=asite.sample_data,
+                cluster_start=asite.cluster_start,
+                cluster_end=asite.cluster_end,
                 sequence=asite.sequence,
                 pas_motif=asite.pas_motif,
                 pas_position=asite.pas_position,
@@ -521,7 +525,15 @@ def get_locus_detail(transcript_id: str, db: Session = Depends(get_db)):
             )
         )
 
-    samples = list(sample_names)
+    sample_type_map = {
+        sample.name: sample.sample_type
+        for sample in db.query(Sample).filter(Sample.name.in_(sample_names)).all()
+    } if sample_names else {}
+    samples = [
+        {"name": name, "sample_type": sample_type_map.get(name, "cell_culture")}
+        for name in sorted(sample_names)
+        if name
+    ]
     chromosomes = [gene.chromosome] if gene.chromosome else []
 
     return LocusDetail(
