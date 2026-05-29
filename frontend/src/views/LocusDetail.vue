@@ -25,7 +25,7 @@
         <!-- ── Transcript header card ─────────────────────────────── -->
         <div class="gene-header-card mb-6">
           <div class="gene-header-title">
-            <v-icon icon="mdi-dna" size="22" class="mr-2" style="color: #0D7377; opacity: 0.85;"></v-icon>
+            <v-icon icon="mdi-file-tree-outline" size="22" class="mr-2" style="color: #0D7377; opacity: 0.85;"></v-icon>
             <span class="gene-name-text">{{ locusData.transcript.transcript_id }}</span>
           </div>
           <div class="gene-meta-row">
@@ -33,7 +33,7 @@
               <span class="gene-meta-label">Gene Symbol</span>
               <span class="gene-meta-value font-weight-medium">
                 <router-link
-                  :to="{ name: 'GeneDetail', params: { geneId: locusData.gene.id } }"
+                  :to="{ name: 'GeneDetail', params: { geneId: locusData.gene.id }, query: { species: locusData.apa_sites[0]?.species?.name } }"
                   class="gene-id-link"
                 >{{ locusData.gene.gene_name }}</router-link>
               </span>
@@ -42,7 +42,7 @@
               <span class="gene-meta-label">Gene ID</span>
               <span class="gene-meta-value">
                 <router-link
-                  :to="{ name: 'GeneDetail', params: { geneId: locusData.gene.id } }"
+                  :to="{ name: 'GeneDetail', params: { geneId: locusData.gene.id }, query: { species: locusData.apa_sites[0]?.species?.name } }"
                   class="gene-id-link"
                 >{{ locusData.gene.gene_id }}</router-link>
               </span>
@@ -68,9 +68,8 @@
             <div class="gene-meta-item" style="align-items: flex-start;" v-if="locusData.apa_sites[0]?.species">
               <span class="gene-meta-label">Species</span>
               <span class="gene-meta-value">
-                {{ locusData.apa_sites[0].species.name }}
-                <span style="font-style: italic; opacity: 0.65; font-size: 13.5px;">{{ locusData.apa_sites[0].species.latin_name }}</span>
-                <v-chip size="x-small" variant="tonal" color="secondary" class="ml-1">{{ locusData.apa_sites[0].species.assembly }}</v-chip>
+                {{ formatSpeciesName(locusData.apa_sites[0].species) }}
+                <span v-if="formatSpeciesSubtitle(locusData.apa_sites[0].species)" style="font-style: italic; opacity: 0.65; font-size: 13.5px;">{{ formatSpeciesSubtitle(locusData.apa_sites[0].species) }}</span>
               </span>
             </div>
           </div>
@@ -279,7 +278,7 @@
                               <div v-for="sd in item.sample_details" :key="sd.sample_name" class="sample-abundance-row">
                                 <div class="sample-abundance-label">
                                   <v-chip size="x-small" variant="tonal" color="primary" class="sample-name-chip">{{ formatSampleName(sd.sample_name) }}</v-chip>
-                                  <span class="sample-type-text">{{ sd.sample_type ? sd.sample_type.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase()) : '' }}</span>
+                                  <span class="sample-type-text">{{ formatSampleType(sd.sample_type) }}</span>
                                 </div>
                                 <div class="sample-abundance-bar">
                                    <v-progress-linear
@@ -459,6 +458,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import { apiService } from '@/services/api'
+import { formatSampleName, formatSampleType, formatSpeciesName, formatSpeciesSubtitle } from '@/utils/formatters'
 import ApaGenomeBrowser from '@/components/ApaGenomeBrowser.vue'
 
 const route = useRoute()
@@ -488,7 +488,12 @@ const toggleSeqPanel = async (siteId) => {
     seqData.value = { ...seqData.value, [siteId]: { loading: true, data: null, error: null } }
     try {
       const transcriptId = locusData.value.transcript.transcript_id
-      const result = await apiService.getSiteSequence(transcriptId, siteId)
+      const result = await apiService.getSiteSequence(
+        transcriptId,
+        siteId,
+        50,
+        locusData.value.apa_sites?.[0]?.species?.name
+      )
       seqData.value = { ...seqData.value, [siteId]: { loading: false, data: result, error: null } }
     } catch (e) {
       seqData.value = { ...seqData.value, [siteId]: { loading: false, data: null, error: 'Failed to load sequence' } }
@@ -538,9 +543,6 @@ const displayBiotype = computed(() => {
   if (raw.toLowerCase().includes('lnc')) return 'lncRNA'
   return raw
 })
-
-const formatSampleName = (name) =>
-  String(name ?? '').replace(/_/g, ' ')
 
 const formatClusterRange = (site) => {
   if (site.cluster_start == null || site.cluster_end == null) return '—'
@@ -687,27 +689,28 @@ const heatmapCellClass = (siteId, sample) => {
 }
 
 const PAS_TYPE_META = {
-  canonical  : { label: 'Canonical',   bg: 'rgba(22,163,74,0.12)',   border: '#16A34A', text: '#15803D' },
-  variant    : { label: 'Variant',     bg: 'rgba(37,99,235,0.12)',   border: '#2563EB', text: '#1D4ED8' },
-  upstream   : { label: 'Upstream',    bg: 'rgba(234,88,12,0.10)',   border: '#EA580C', text: '#C2410C' },
-  downstream : { label: 'Downstream',  bg: 'rgba(139,92,246,0.10)',  border: '#8B5CF6', text: '#7C3AED' },
-  none       : { label: 'None',        bg: 'rgba(0,0,0,0.05)',       border: '#9CA3AF', text: '#6B7280' },
+  canonical  : { label: 'Canonical',   bg: 'rgba(13,115,119,0.18)',  border: '#269095', text: '#055B60' },
+  variant    : { label: 'Variant',     bg: 'rgba(53,92,125,0.18)',   border: '#4F7FA4', text: '#275A7B' },
+  upstream   : { label: 'Upstream',    bg: 'rgba(169,111,76,0.19)',  border: '#A96F4C', text: '#7A472B' },
+  downstream : { label: 'Downstream',  bg: 'rgba(116,106,158,0.18)', border: '#7F73B3', text: '#574C88' },
+  none       : { label: 'None',        bg: 'rgba(100,116,139,0.08)', border: '#CBD5E1', text: '#64748B' },
 }
 const pasTypeMeta = (type) => PAS_TYPE_META[type] ?? PAS_TYPE_META.none
 
 onMounted(async () => {
   const transcriptId = route.params.transcriptId
+  const species = route.query.species
   
   loading.value = true
   error.value = null
   
   try {
     // Fetch locus data first — this is required for the page
-    const locusResponse = await apiService.getLocusDetail(transcriptId)
+    const locusResponse = await apiService.getLocusDetail(transcriptId, species)
     locusData.value = locusResponse
 
     // Fetch transcript structure separately — failure is non-fatal
-    apiService.getTranscriptStructure(transcriptId)
+    apiService.getTranscriptStructure(transcriptId, species)
       .then(structureResponse => {
         transcriptStructure.value = structureResponse
       })

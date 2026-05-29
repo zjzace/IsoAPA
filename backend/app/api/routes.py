@@ -1,13 +1,17 @@
 from fastapi import APIRouter, Depends, Query, HTTPException
 from fastapi.responses import PlainTextResponse, StreamingResponse
 from sqlalchemy.orm import Session
-from sqlalchemy import func
+from sqlalchemy import func, or_, case
 from typing import List, Optional
 import os
 import json
 import csv
 import io
+from urllib.error import URLError
+from urllib.parse import urlencode
+from urllib.request import Request, urlopen
 from app.models.database import get_db, Gene, Transcript, APASite, Species, Sample
+from app.services.precompute_stats import STATS_CACHE_FILE, build_stats_cache
 from app.schemas.schemas import (
     SearchResult,
     SearchResponse,
@@ -20,6 +24,256 @@ from app.schemas.schemas import (
 router = APIRouter()
 
 _BED12_INDEX_CACHE: dict = {}
+_TAXID_CACHE: dict = {}
+_GENE_SUMMARY_CACHE: dict = {}
+_STATS_CACHE: dict | None = None
+
+_KNOWN_SPECIES_TAXIDS = {
+    "Human": "9606",
+    "Homo sapiens": "9606",
+    "Homo_sapiens": "9606",
+    "Mouse": "10090",
+    "Mus musculus": "10090",
+    "Mus_musculus": "10090",
+    "Rat": "10116",
+    "Rattus norvegicus": "10116",
+    "Rattus_norvegicus": "10116",
+    "Zebrafish": "7955",
+    "Danio rerio": "7955",
+    "Danio_rerio": "7955",
+}
+
+
+def _format_sample_name(name: str) -> str:
+    return str(name or "").replace("_", " ")
+
+
+def _format_species_name(name: str, latin_name: Optional[str] = None) -> str:
+    formal_names = {
+        "Human": "Homo sapiens",
+        "Mouse": "Mus musculus",
+    }
+    if name in formal_names:
+        return formal_names[name]
+
+    preferred = latin_name if latin_name and latin_name != name else name
+    return str(preferred or "").replace("_", " ")
+
+
+def _load_stats_cache() -> dict:
+    global _STATS_CACHE
+    if _STATS_CACHE is not None:
+        return _STATS_CACHE
+    if os.path.exists(STATS_CACHE_FILE):
+        with open(STATS_CACHE_FILE) as fh:
+            _STATS_CACHE = json.load(fh)
+    else:
+        _STATS_CACHE = build_stats_cache(STATS_CACHE_FILE)
+    return _STATS_CACHE
+
+
+def _multiplicity_bucket(count: int) -> str:
+    if count >= 5:
+        return "5+"
+    return str(count)
+
+
+def _build_multiplicity_stats(db: Session, species: Optional[str] = None) -> dict:
+    query = (
+        db.query(Transcript.id, func.count(func.distinct(APASite.unified_id)).label("apa_count"))
+        .outerjoin(APASite, APASite.transcript_id == Transcript.id)
+        .join(Species, Transcript.species_id == Species.id)
+    )
+    if species:
+        query = query.filter(Species.name == species)
+
+    rows = query.group_by(Transcript.id).all()
+    buckets = {"0": 0, "1": 0, "2": 0, "3": 0, "4": 0, "5+": 0}
+    single_count = 0
+    multi_count = 0
+    for _, count in rows:
+        count = int(count or 0)
+        buckets[_multiplicity_bucket(count)] += 1
+        if count == 1:
+            single_count += 1
+        if count >= 2:
+            multi_count += 1
+
+    total = len(rows)
+    return {
+        "buckets": buckets,
+        "total": total,
+        "single_count": single_count,
+        "multi_count": multi_count,
+        "pct_single_site": round((single_count / total) * 100, 1) if total else 0,
+        "pct_multi_site": round((multi_count / total) * 100, 1) if total else 0,
+    }
+
+
+def _build_top_gene_stats(db: Session, species: Optional[str] = None) -> list[dict]:
+    distinct_site_count = func.count(func.distinct(APASite.unified_id))
+    query = (
+        db.query(
+            Gene.gene_name,
+            Gene.gene_id,
+            Species.name.label("species"),
+            distinct_site_count.label("apa_count"),
+            Gene.id,
+        )
+        .select_from(APASite)
+        .join(Transcript, APASite.transcript_id == Transcript.id)
+        .join(Gene, Transcript.gene_id == Gene.id)
+        .join(Species, Gene.species_id == Species.id)
+    )
+    if species:
+        query = query.filter(Species.name == species)
+
+    rows = (
+        query.group_by(Gene.gene_name, Gene.gene_id, Species.name, Gene.id)
+        .order_by(distinct_site_count.desc())
+        .limit(10)
+        .all()
+    )
+    return [
+        {
+            "gene_name": gene_name,
+            "gene_id": gene_id,
+            "species": species_name,
+            "apa_count": apa_count,
+            "gene_db_id": gene_db_id,
+        }
+        for gene_name, gene_id, species_name, apa_count, gene_db_id in rows
+    ]
+
+
+def _build_pas_motif_stats(db: Session, species: Optional[str] = None) -> dict:
+    motif_rank = case(
+        (APASite.pas_type == "canonical", 1),
+        (APASite.pas_type == "variant", 2),
+        (APASite.pas_motif.is_(None), 4),
+        (APASite.pas_motif == "", 4),
+        else_=3,
+    )
+    site_choice = (
+        db.query(
+            APASite.unified_id.label("site_id"),
+            APASite.pas_motif.label("motif"),
+            APASite.pas_type.label("motif_type"),
+            func.row_number()
+            .over(partition_by=APASite.unified_id, order_by=motif_rank)
+            .label("rn"),
+        )
+        .join(Species, APASite.species_id == Species.id)
+    )
+    if species:
+        site_choice = site_choice.filter(Species.name == species)
+
+    deduped_sites = site_choice.subquery()
+    query = (
+        db.query(
+            deduped_sites.c.motif,
+            deduped_sites.c.motif_type,
+            func.count(deduped_sites.c.site_id).label("site_count"),
+        )
+        .filter(deduped_sites.c.rn == 1)
+        .group_by(deduped_sites.c.motif, deduped_sites.c.motif_type)
+    )
+
+    ranked_counts: dict[str, int] = {}
+    no_motif_count = 0
+    other_count = 0
+    for motif, pas_type, count in query.all():
+        count = int(count or 0)
+        label = (motif or "").strip()
+        motif_type = (pas_type or "").strip().lower()
+
+        if not label:
+            no_motif_count += count
+        elif motif_type in {"canonical", "variant"}:
+            ranked_counts[label] = ranked_counts.get(label, 0) + count
+        else:
+            other_count += count
+
+    total = sum(ranked_counts.values()) + no_motif_count + other_count
+    ranked = sorted(ranked_counts.items(), key=lambda item: item[1], reverse=True)
+    top = ranked[:10]
+    other_count += sum(count for _, count in ranked[10:])
+    if no_motif_count:
+        top.append(("No motif", no_motif_count))
+    if other_count:
+        top.append(("Other motifs", other_count))
+
+    return {
+        "total": total,
+        "motifs": [
+            {
+                "motif": motif,
+                "count": count,
+                "pct": round((count / total) * 100, 1) if total else 0,
+            }
+            for motif, count in top
+        ],
+    }
+
+
+def _http_json(url: str) -> dict:
+    req = Request(url, headers={"User-Agent": "ApaAtlas/1.0"})
+    with urlopen(req, timeout=8) as response:
+        return json.loads(response.read().decode("utf-8"))
+
+
+def _resolve_species_taxid(species_name: str, latin_name: Optional[str] = None) -> str | None:
+    candidates = [
+        species_name,
+        latin_name,
+        _format_species_name(species_name, latin_name),
+    ]
+    for candidate in candidates:
+        if not candidate:
+            continue
+        if candidate in _KNOWN_SPECIES_TAXIDS:
+            return _KNOWN_SPECIES_TAXIDS[candidate]
+
+    scientific_name = _format_species_name(species_name, latin_name)
+    if not scientific_name:
+        return None
+    if scientific_name in _TAXID_CACHE:
+        return _TAXID_CACHE[scientific_name]
+
+    params = urlencode(
+        {
+            "db": "taxonomy",
+            "term": f"{scientific_name}[Scientific Name]",
+            "retmode": "json",
+            "retmax": "1",
+        }
+    )
+    try:
+        data = _http_json(f"https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi?{params}")
+    except (OSError, URLError, TimeoutError, json.JSONDecodeError):
+        return None
+
+    idlist = data.get("esearchresult", {}).get("idlist", [])
+    taxid = idlist[0] if idlist else None
+    _TAXID_CACHE[scientific_name] = taxid
+    return taxid
+
+
+def _first_value(value):
+    if isinstance(value, list):
+        return value[0] if value else None
+    return value
+
+
+def _query_transcript_by_public_id(
+    db: Session, transcript_id: str, species: Optional[str] = None
+):
+    query = db.query(Transcript).filter(Transcript.transcript_id == transcript_id)
+    if species:
+        query = query.join(Species, Transcript.species_id == Species.id).filter(
+            Species.name == species
+        )
+    return query.first()
 
 
 def _load_bed12_index(bed12_path: str) -> dict:
@@ -114,9 +368,7 @@ SPECIES_FOLDER_MAP = {
 
 def get_species_ref_path(species_name: str, file_type: str = "bed12") -> str:
     """Get reference file path for a species."""
-    species_folder = SPECIES_FOLDER_MAP.get(species_name)
-    if not species_folder:
-        return None
+    species_folder = SPECIES_FOLDER_MAP.get(species_name, species_name.replace(" ", "_"))
 
     species_dir = os.path.join(DATA_DIR, species_folder)
     if not os.path.exists(species_dir):
@@ -135,39 +387,8 @@ def get_species_ref_path(species_name: str, file_type: str = "bed12") -> str:
 
 @router.get("/stats", response_model=DashboardStats)
 def get_dashboard_stats(db: Session = Depends(get_db)):
-    """Get dashboard statistics."""
-    total_genes = db.query(Gene).count()
-    total_transcripts = db.query(Transcript).count()
-    total_apa_sites = db.query(APASite).count()
-    total_samples = db.query(Sample).count()
-    total_species = db.query(Species).count()
-
-    apa_by_species = (
-        db.query(Species.name, func.count(APASite.id).label("count"))
-        .join(APASite, APASite.species_id == Species.id)
-        .group_by(Species.name)
-        .all()
-    )
-
-    apa_per_transcript = (
-        db.query(Transcript.transcript_id, func.count(APASite.id).label("count"))
-        .join(APASite, APASite.transcript_id == Transcript.id)
-        .group_by(Transcript.transcript_id)
-        .all()
-    )
-
-    return DashboardStats(
-        total_genes=total_genes,
-        total_transcripts=total_transcripts,
-        total_apa_sites=total_apa_sites,
-        total_cell_lines=total_samples,
-        total_species=total_species,
-        apa_sites_by_species=[{"name": s[0], "count": s[1]} for s in apa_by_species],
-        apa_sites_by_cell_line=[],
-        apa_sites_per_transcript=[
-            {"transcript_id": t[0], "count": t[1]} for t in apa_per_transcript
-        ],
-    )
+    """Get dashboard statistics from the precomputed cache."""
+    return DashboardStats(**_load_stats_cache()["basic"])
 
 
 @router.get("/search", response_model=SearchResponse)
@@ -192,11 +413,14 @@ def search_transcripts(
             Gene.strand,
             func.count(APASite.id).label("apa_site_count"),
             Species.name.label("species"),
+            Species.id.label("species_id"),
+            Transcript.id.label("transcript_db_id"),
             Gene.id.label("gene_db_id"),
         )
-        .join(Gene)
-        .join(APASite)
-        .join(Species)
+        .select_from(Transcript)
+        .join(Gene, Transcript.gene_id == Gene.id)
+        .join(APASite, APASite.transcript_id == Transcript.id)
+        .join(Species, APASite.species_id == Species.id)
     )
 
     if gene_name:
@@ -214,24 +438,28 @@ def search_transcripts(
 
     _count_subq = query.group_by(
         Transcript.transcript_id,
+        Transcript.id,
         Gene.id,
         Gene.gene_id,
         Gene.gene_name,
         Gene.chromosome,
         Gene.strand,
         Species.name,
+        Species.id,
     ).subquery()
     total_count = db.query(func.count()).select_from(_count_subq).scalar() or 0
 
     results = (
         query.group_by(
             Transcript.transcript_id,
+            Transcript.id,
             Gene.id,
             Gene.gene_id,
             Gene.gene_name,
             Gene.chromosome,
             Gene.strand,
             Species.name,
+            Species.id,
         )
         .offset((page - 1) * limit)
         .limit(limit)
@@ -240,17 +468,7 @@ def search_transcripts(
 
     search_results = []
     for r in results:
-        apa_sites = (
-            db.query(APASite)
-            .filter(
-                APASite.transcript_id
-                == db.query(Transcript)
-                .filter(Transcript.transcript_id == r[0])
-                .first()
-                .id
-            )
-            .all()
-        )
+        apa_sites = db.query(APASite).filter(APASite.transcript_id == r[8]).all()
         sample_names = set()
         for asite in apa_sites:
             if asite.sample_data:
@@ -272,7 +490,7 @@ def search_transcripts(
                 apa_site_count=r[5],
                 cell_lines=list(sample_names),
                 species=r[6],
-                gene_db_id=r[7],
+                gene_db_id=r[9],
             )
         )
 
@@ -280,22 +498,25 @@ def search_transcripts(
 
 
 @router.get("/gene/{gene_db_id}", response_model=GeneDetail)
-def get_gene_detail(gene_db_id: int, db: Session = Depends(get_db)):
+def get_gene_detail(
+    gene_db_id: int,
+    species: Optional[str] = None,
+    db: Session = Depends(get_db),
+):
     """Get detailed information about a gene and all its transcripts with APA sites."""
-    gene = db.query(Gene).filter(Gene.id == gene_db_id).first()
+    gene_query = db.query(Gene).filter(Gene.id == gene_db_id)
+    if species:
+        gene_query = gene_query.join(Species, Gene.species_id == Species.id).filter(
+            Species.name == species
+        )
+    gene = gene_query.first()
     if not gene:
         raise HTTPException(status_code=404, detail="Gene not found")
 
     transcripts = db.query(Transcript).filter(Transcript.gene_id == gene.id).all()
 
-    species_name = None
-    for transcript in transcripts:
-        asite = db.query(APASite).filter(APASite.transcript_id == transcript.id).first()
-        if asite and asite.species_id:
-            sp = db.query(Species).filter(Species.id == asite.species_id).first()
-            if sp:
-                species_name = sp.name
-                break
+    species_obj = db.query(Species).filter(Species.id == gene.species_id).first()
+    species_name = species_obj.name if species_obj else species
 
     transcript_data = []
     for transcript in transcripts:
@@ -346,6 +567,91 @@ def get_gene_detail(gene_db_id: int, db: Session = Depends(get_db)):
         species=species_name,
         transcripts=transcript_data,
     )
+
+
+@router.get("/gene/{gene_db_id}/summary")
+def get_gene_summary(
+    gene_db_id: int,
+    species: Optional[str] = None,
+    db: Session = Depends(get_db),
+):
+    """Fetch species-aware gene summary from MyGene.info."""
+    gene_query = db.query(Gene).filter(Gene.id == gene_db_id)
+    if species:
+        gene_query = gene_query.join(Species, Gene.species_id == Species.id).filter(
+            Species.name == species
+        )
+    gene = gene_query.first()
+    if not gene:
+        raise HTTPException(status_code=404, detail="Gene not found")
+
+    species_obj = db.query(Species).filter(Species.id == gene.species_id).first()
+    taxid = _resolve_species_taxid(
+        species_obj.name if species_obj else species,
+        species_obj.latin_name if species_obj else None,
+    )
+    if not taxid:
+        return {
+            "taxid": None,
+            "summary": None,
+            "source": "MyGene.info",
+            "message": "No NCBI taxonomy ID was found for this species.",
+        }
+
+    cache_key = (gene.gene_name, taxid)
+    if cache_key in _GENE_SUMMARY_CACHE:
+        return _GENE_SUMMARY_CACHE[cache_key]
+
+    params = urlencode(
+        {
+            "q": f"symbol:{gene.gene_name}",
+            "fields": "name,summary,pathway.kegg,uniprot,entrezgene,HGNC,symbol,alias,type_of_gene,refseq,ensembl,taxid",
+            "species": taxid,
+            "size": "1",
+        }
+    )
+    try:
+        data = _http_json(f"https://mygene.info/v3/query?{params}")
+    except (OSError, URLError, TimeoutError, json.JSONDecodeError):
+        raise HTTPException(status_code=502, detail="Gene summary lookup failed")
+
+    hit = (data.get("hits") or [None])[0]
+    if not hit:
+        result = {
+            "taxid": taxid,
+            "summary": None,
+            "source": "MyGene.info",
+            "message": "No species-specific gene summary found.",
+        }
+        _GENE_SUMMARY_CACHE[cache_key] = result
+        return result
+
+    uniprot_raw = (hit.get("uniprot") or {}).get("Swiss-Prot")
+    refseq_rna = (hit.get("refseq") or {}).get("rna") or []
+    refseq_rna = refseq_rna if isinstance(refseq_rna, list) else [refseq_rna]
+    pathways = (hit.get("pathway") or {}).get("kegg") or []
+    pathways = pathways if isinstance(pathways, list) else [pathways]
+    aliases = hit.get("alias") or []
+    aliases = aliases if isinstance(aliases, list) else [aliases]
+    ensembl = hit.get("ensembl") or {}
+
+    result = {
+        "taxid": taxid,
+        "symbol": hit.get("symbol"),
+        "fullName": hit.get("name"),
+        "aliases": aliases,
+        "geneType": hit.get("type_of_gene"),
+        "summary": hit.get("summary"),
+        "pathways": pathways,
+        "entrezgene": hit.get("entrezgene"),
+        "uniprot": _first_value(uniprot_raw),
+        "hgnc": hit.get("HGNC"),
+        "refseqMrna": next((rna for rna in refseq_rna if str(rna).startswith("NM_")), _first_value(refseq_rna)),
+        "ensemblGene": ensembl.get("gene") if isinstance(ensembl, dict) else None,
+        "source": "MyGene.info",
+    }
+    _GENE_SUMMARY_CACHE[cache_key] = result
+    return result
 
 
 @router.get("/autocomplete")
@@ -416,10 +722,12 @@ if _BACKEND_ROOT not in sys.path:
 
 
 @router.get("/transcript/{transcript_id}/structure")
-def get_transcript_structure(transcript_id: str, db: Session = Depends(get_db)):
-    transcript = (
-        db.query(Transcript).filter(Transcript.transcript_id == transcript_id).first()
-    )
+def get_transcript_structure(
+    transcript_id: str,
+    species: Optional[str] = None,
+    db: Session = Depends(get_db),
+):
+    transcript = _query_transcript_by_public_id(db, transcript_id, species)
     if not transcript:
         raise HTTPException(status_code=404, detail="Transcript not found")
 
@@ -473,11 +781,13 @@ def get_transcript_structure(transcript_id: str, db: Session = Depends(get_db)):
 
 
 @router.get("/transcript/{transcript_id}", response_model=LocusDetail)
-def get_locus_detail(transcript_id: str, db: Session = Depends(get_db)):
+def get_locus_detail(
+    transcript_id: str,
+    species: Optional[str] = None,
+    db: Session = Depends(get_db),
+):
     """Get detailed information about a transcript and its APA sites."""
-    transcript = (
-        db.query(Transcript).filter(Transcript.transcript_id == transcript_id).first()
-    )
+    transcript = _query_transcript_by_public_id(db, transcript_id, species)
     if not transcript:
         raise HTTPException(status_code=404, detail="Transcript not found")
 
@@ -490,7 +800,7 @@ def get_locus_detail(transcript_id: str, db: Session = Depends(get_db)):
     sample_names = set()
     apa_sites_with_details = []
     for asite in apa_sites:
-        species = db.query(Species).filter(Species.id == asite.species_id).first()
+        species_obj = db.query(Species).filter(Species.id == asite.species_id).first()
 
         sample_details = []
         if asite.sample_data:
@@ -520,14 +830,19 @@ def get_locus_detail(transcript_id: str, db: Session = Depends(get_db)):
                 search_level=asite.search_level,
                 id=int(asite.id),
                 transcript=transcript,
-                species=species,
+                species=species_obj,
                 sample_details=sample_details,
             )
         )
 
+    site_species_id = apa_sites[0].species_id if apa_sites else None
+    sample_type_query = db.query(Sample)
+    if sample_names:
+        sample_type_query = sample_type_query.filter(Sample.name.in_(sample_names))
+    if site_species_id:
+        sample_type_query = sample_type_query.filter(Sample.species_id == site_species_id)
     sample_type_map = {
-        sample.name: sample.sample_type
-        for sample in db.query(Sample).filter(Sample.name.in_(sample_names)).all()
+        sample.name: sample.sample_type for sample in sample_type_query.all()
     } if sample_names else {}
     samples = [
         {"name": name, "sample_type": sample_type_map.get(name, "cell_culture")}
@@ -550,7 +865,13 @@ def get_species(db: Session = Depends(get_db)):
     """Get all species."""
     species = db.query(Species).all()
     return [
-        {"id": s.id, "name": s.name, "latin_name": s.latin_name, "assembly": s.assembly}
+        {
+            "id": s.id,
+            "name": s.name,
+            "display_name": _format_species_name(s.name, s.latin_name),
+            "latin_name": _format_sample_name(s.latin_name),
+            "assembly": s.assembly,
+        }
         for s in species
     ]
 
@@ -562,124 +883,57 @@ def get_samples(species: Optional[str] = None, db: Session = Depends(get_db)):
     if species:
         query = query.filter(Species.name == species)
     samples = query.distinct().all()
-    return [{"id": s.id, "name": s.name, "species": s.species.name} for s in samples]
+    return [
+        {
+            "id": s.id,
+            "name": s.name,
+            "display_name": _format_sample_name(s.name),
+            "species": s.species.name,
+            "species_display_name": _format_species_name(
+                s.species.name, s.species.latin_name
+            ),
+        }
+        for s in samples
+    ]
 
 
 @router.get("/stats/detailed")
 def get_detailed_stats(db: Session = Depends(get_db)):
-    """Get detailed database statistics."""
-    # Basic counts
-    total_genes = db.query(Gene).count()
-    total_transcripts = db.query(Transcript).count()
-    total_apa_sites = db.query(APASite).count()
-    total_samples = db.query(Sample).count()
-    total_species = db.query(Species).count()
+    """Get detailed database statistics from the precomputed cache."""
+    return _load_stats_cache()["detailed"]
 
-    # APA sites by species
-    apa_by_species = (
-        db.query(Species.name, func.count(APASite.id).label("count"))
-        .select_from(APASite)
-        .join(Species, APASite.species_id == Species.id)
-        .group_by(Species.name)
-        .all()
-    )
 
-    # APA sites by sample - need to parse from sample_data JSON
-    # Since Sample table might not have direct relation with APASite, we'll skip this for now
-    apa_by_sample = []
-    try:
-        all_apa_sites = db.query(APASite).all()
-        sample_counts = {}
-        for site in all_apa_sites:
-            if site.sample_data:
-                import json
+@router.get("/stats/multiplicity")
+def get_multiplicity_stats(
+    species: Optional[str] = None,
+    db: Session = Depends(get_db),
+):
+    """Get PA site multiplicity per transcript, optionally scoped to one species."""
+    return _build_multiplicity_stats(db, species)
 
-                try:
-                    sample_details = json.loads(site.sample_data)
-                    for sd in sample_details:
-                        sample_name = sd.get("sample_name", "Unknown")
-                        sample_counts[sample_name] = (
-                            sample_counts.get(sample_name, 0) + 1
-                        )
-                except:
-                    pass
-        apa_by_sample = [{"name": k, "count": v} for k, v in sample_counts.items()]
-    except:
-        pass
 
-    # APA sites by chromosome
-    apa_by_chromosome = (
-        db.query(Gene.chromosome, func.count(APASite.id).label("count"))
-        .select_from(APASite)
-        .join(Transcript, APASite.transcript_id == Transcript.id)
-        .join(Gene, Transcript.gene_id == Gene.id)
-        .filter(Gene.chromosome.isnot(None))
-        .group_by(Gene.chromosome)
-        .order_by(Gene.chromosome)
-        .all()
-    )
+@router.get("/stats/pas-motifs")
+def get_pas_motif_stats(
+    species: Optional[str] = None,
+    db: Session = Depends(get_db),
+):
+    """Get PAS motif distribution, optionally scoped to one species."""
+    return _build_pas_motif_stats(db, species)
 
-    # Top genes by APA sites
-    top_genes = (
-        db.query(
-            Gene.gene_name, Gene.gene_id, func.count(APASite.id).label("apa_count"), Gene.id
-        )
-        .select_from(APASite)
-        .join(Transcript, APASite.transcript_id == Transcript.id)
-        .join(Gene, Transcript.gene_id == Gene.id)
-        .group_by(Gene.gene_name, Gene.gene_id, Gene.id)
-        .order_by(func.count(APASite.id).desc())
-        .limit(20)
-        .all()
-    )
 
-    # Average APA sites per transcript - use subquery
-    from sqlalchemy import case
-
-    count_per_transcript = (
-        db.query(Transcript.id, func.count(APASite.id).label("apa_count"))
-        .outerjoin(APASite, APASite.transcript_id == Transcript.id)
-        .group_by(Transcript.id)
-        .subquery()
-    )
-
-    avg_result = db.query(func.avg(count_per_transcript.c.apa_count)).scalar()
-    avg_apa_per_transcript = float(avg_result) if avg_result else 0
-
-    # APA sites by strand
-    apa_by_strand = (
-        db.query(Gene.strand, func.count(APASite.id).label("count"))
-        .select_from(APASite)
-        .join(Transcript, APASite.transcript_id == Transcript.id)
-        .join(Gene, Transcript.gene_id == Gene.id)
-        .filter(Gene.strand.isnot(None))
-        .group_by(Gene.strand)
-        .all()
-    )
-
-    return {
-        "total_genes": total_genes,
-        "total_transcripts": total_transcripts,
-        "total_apa_sites": total_apa_sites,
-        "total_samples": total_samples,
-        "total_species": total_species,
-        "avg_apa_per_transcript": round(avg_apa_per_transcript, 2),
-        "apa_sites_by_species": [{"name": s[0], "count": s[1]} for s in apa_by_species],
-        "apa_sites_by_sample": apa_by_sample,
-        "apa_sites_by_chromosome": [
-            {"chromosome": c[0], "count": c[1]} for c in apa_by_chromosome
-        ],
-        "apa_sites_by_strand": [{"strand": s[0], "count": s[1]} for s in apa_by_strand],
-        "top_genes_by_apa": [
-            {"gene_name": g[0], "gene_id": g[1], "apa_count": g[2], "gene_db_id": g[3]} for g in top_genes
-        ],
-    }
+@router.get("/stats/top-genes")
+def get_top_gene_stats(
+    species: Optional[str] = None,
+    db: Session = Depends(get_db),
+):
+    """Get top genes by distinct PA site count, optionally scoped to one species."""
+    return _build_top_gene_stats(db, species)
 
 
 @router.get("/download/apa-sites")
 def download_apa_sites(
     species: Optional[str] = None,
-    sample: Optional[str] = None,
+    sample: Optional[List[str]] = Query(None),
     gene_name: Optional[str] = None,
     format: str = Query("csv", pattern="^(csv|tsv|txt)$"),
     db: Session = Depends(get_db),
@@ -691,6 +945,8 @@ def download_apa_sites(
             Gene.gene_id,
             Transcript.transcript_id,
             APASite.unified_id,
+            APASite.cluster_start,
+            APASite.cluster_end,
             APASite.mode_site_position,
             APASite.site_abundance,
             APASite.sample_data,
@@ -706,8 +962,13 @@ def download_apa_sites(
         query = query.filter(Species.name.ilike(f"%{species}%"))
     if gene_name:
         query = query.filter(Gene.gene_name.ilike(f"%{gene_name}%"))
-    if sample:
-        query = query.filter(APASite.sample_data.ilike(f"%{sample}%"))
+    selected_samples = [s for s in (sample or []) if s]
+    if selected_samples:
+        sample_filters = [
+            APASite.sample_data.ilike(f"%{sample_name}%")
+            for sample_name in selected_samples
+        ]
+        query = query.filter(or_(*sample_filters))
 
     results = query.all()
 
@@ -719,6 +980,7 @@ def download_apa_sites(
         "gene_id",
         "transcript_id",
         "site_id",
+        "cluster_range",
         "representative_position",
         "sample_site_position",
         "site_abundance",
@@ -729,6 +991,11 @@ def download_apa_sites(
     writer.writeheader()
 
     for row in results:
+        cluster_range = (
+            f"{row.cluster_start}:{row.cluster_end}"
+            if row.cluster_start is not None and row.cluster_end is not None
+            else ""
+        )
         sample_details = []
         if row.sample_data:
             try:
@@ -739,7 +1006,7 @@ def download_apa_sites(
         if sample_details:
             for sd in sample_details:
                 sample_name = sd.get("sample_name", "")
-                if sample and sample.lower() not in sample_name.lower():
+                if selected_samples and sample_name not in selected_samples:
                     continue
                 writer.writerow(
                     {
@@ -747,11 +1014,12 @@ def download_apa_sites(
                         "gene_id": row.gene_id or "",
                         "transcript_id": row.transcript_id or "",
                         "site_id": row.unified_id or "",
+                        "cluster_range": cluster_range,
                         "representative_position": row.mode_site_position or "",
                         "sample_site_position": sd.get("original_site_position", ""),
                         "site_abundance": sd.get("site_abundance", ""),
-                        "species": row.species or "",
-                        "sample": sample_name,
+                        "species": _format_species_name(row.species),
+                        "sample": _format_sample_name(sample_name),
                     }
                 )
         else:
@@ -761,10 +1029,11 @@ def download_apa_sites(
                     "gene_id": row.gene_id or "",
                     "transcript_id": row.transcript_id or "",
                     "site_id": row.unified_id or "",
+                    "cluster_range": cluster_range,
                     "representative_position": row.mode_site_position or "",
                     "sample_site_position": "",
                     "site_abundance": "",
-                    "species": row.species or "",
+                    "species": _format_species_name(row.species),
                     "sample": "",
                 }
             )
@@ -798,9 +1067,9 @@ def download_genes(
             func.count(Transcript.id).label("transcript_count"),
             func.count(APASite.id).label("apa_site_count"),
         )
-        .join(Species)
-        .outerjoin(Transcript)
-        .outerjoin(APASite)
+        .join(Species, Gene.species_id == Species.id)
+        .outerjoin(Transcript, Transcript.gene_id == Gene.id)
+        .outerjoin(APASite, APASite.transcript_id == Transcript.id)
         .group_by(
             Gene.gene_name, Gene.gene_id, Gene.chromosome, Gene.strand, Species.name
         )
@@ -833,7 +1102,7 @@ def download_genes(
                 "gene_id": row.gene_id or "",
                 "chromosome": row.chromosome or "",
                 "strand": row.strand or "",
-                "species": row.species or "",
+                "species": _format_species_name(row.species),
                 "transcript_count": row.transcript_count or 0,
                 "apa_site_count": row.apa_site_count or 0,
             }
@@ -868,9 +1137,9 @@ def download_transcripts(
             Species.name.label("species"),
             func.count(APASite.id).label("apa_site_count"),
         )
-        .join(Gene)
-        .join(Species)
-        .outerjoin(APASite)
+        .join(Gene, Transcript.gene_id == Gene.id)
+        .join(Species, Transcript.species_id == Species.id)
+        .outerjoin(APASite, APASite.transcript_id == Transcript.id)
         .group_by(
             Gene.gene_name,
             Gene.gene_id,
@@ -909,7 +1178,7 @@ def download_transcripts(
                 "transcript_id": row.transcript_id or "",
                 "chromosome": row.chromosome or "",
                 "strand": row.strand or "",
-                "species": row.species or "",
+                "species": _format_species_name(row.species),
                 "apa_site_count": row.apa_site_count or 0,
             }
         )
@@ -937,10 +1206,7 @@ def download_bed(
             Gene.chromosome,
             APASite.mode_site_position,
             APASite.unified_id,
-            APASite.site_count,
             Gene.strand,
-            Gene.gene_name,
-            Transcript.transcript_id,
         )
         .select_from(APASite)
         .join(Transcript, APASite.transcript_id == Transcript.id)
@@ -960,12 +1226,10 @@ def download_bed(
 
     for row in results:
         chrom = row.chromosome or "chrUnknown"
-        if not chrom.lower().startswith("chr"):
-            chrom = f"chr{chrom}"
         site_pos = int(row.mode_site_position) if row.mode_site_position else 0
         chrom_start = max(0, site_pos - 1)  # BED is 0-based
         chrom_end = site_pos               # half-open end
-        name = f"{row.gene_name}|{row.transcript_id}|{row.unified_id}"
+        name = row.unified_id or "."
         strand = row.strand or "."
         output.write(f"{chrom}\t{chrom_start}\t{chrom_end}\t{name}\t.\t{strand}\n")
 
@@ -983,12 +1247,16 @@ def download_bed(
 @router.get("/download/abundance-matrix")
 def download_abundance_matrix(
     species: Optional[str] = None,
+    sample: Optional[List[str]] = Query(None),
     db: Session = Depends(get_db),
 ):
     """Download PA site × sample abundance matrix (TSV) for differential APA analysis."""
+    selected_samples = sorted({s for s in (sample or []) if s})
     sample_query = db.query(Sample.name).join(Species)
     if species:
         sample_query = sample_query.filter(Species.name.ilike(f"%{species}%"))
+    if selected_samples:
+        sample_query = sample_query.filter(Sample.name.in_(selected_samples))
     sample_names = sorted({row[0] for row in sample_query.all()})
 
     query = (
@@ -1010,24 +1278,40 @@ def download_abundance_matrix(
 
     if species:
         query = query.filter(Species.name.ilike(f"%{species}%"))
+    if sample_names:
+        sample_filters = [
+            APASite.sample_data.ilike(f"%{sample_name}%")
+            for sample_name in sample_names
+        ]
+        query = query.filter(or_(*sample_filters))
 
     results = query.all()
 
     output = io.StringIO()
+    display_sample_names = [_format_sample_name(s) for s in sample_names]
+    sample_value_cols = [
+        col
+        for display_name in display_sample_names
+        for col in (f"{display_name}_count", f"{display_name}_relative_abundance")
+    ]
     header_cols = [
         "site_id", "transcript_id", "gene_name",
         "chromosome", "strand", "species",
-    ] + sample_names
+    ] + sample_value_cols
     output.write("\t".join(header_cols) + "\n")
 
     for row in results:
-        sample_counts: dict = {s: 0 for s in sample_names}
+        sample_values: dict = {
+            s: {"count": 0, "relative_abundance": 0}
+            for s in sample_names
+        }
         if row.sample_data:
             try:
                 for sd in json.loads(row.sample_data):
                     sname = sd.get("sample_name", "")
-                    if sname in sample_counts:
-                        sample_counts[sname] = int(sd.get("site_count", 0) or 0)
+                    if sname in sample_values:
+                        sample_values[sname]["count"] = int(sd.get("site_count", 0) or 0)
+                        sample_values[sname]["relative_abundance"] = sd.get("site_abundance", 0) or 0
             except Exception:
                 pass
 
@@ -1037,8 +1321,15 @@ def download_abundance_matrix(
             row.gene_name or "",
             row.chromosome or "",
             row.strand or "",
-            row.species or "",
-        ] + [str(sample_counts[s]) for s in sample_names]
+            _format_species_name(row.species),
+        ] + [
+            str(value)
+            for s in sample_names
+            for value in (
+                sample_values[s]["count"],
+                sample_values[s]["relative_abundance"],
+            )
+        ]
         output.write("\t".join(row_vals) + "\n")
 
     output.seek(0)
@@ -1112,11 +1403,12 @@ def _fetch_fasta_seq(fasta_path: str, chrom: str, start: int, end: int) -> str:
 
 @router.get("/transcript/{transcript_id}/site-sequence/{site_id}")
 def get_site_sequence_context(
-    transcript_id: str, site_id: str, db: Session = Depends(get_db)
+    transcript_id: str,
+    site_id: str,
+    species: Optional[str] = None,
+    db: Session = Depends(get_db),
 ):
-    transcript = (
-        db.query(Transcript).filter(Transcript.transcript_id == transcript_id).first()
-    )
+    transcript = _query_transcript_by_public_id(db, transcript_id, species)
     if not transcript:
         raise HTTPException(status_code=404, detail="Transcript not found")
 

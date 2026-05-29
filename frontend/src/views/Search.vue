@@ -49,7 +49,7 @@
           <div class="filter-card filter-card--select">
             <div class="filter-inner-label" :class="{ 'label-hidden': !!filters.transcript_id }">
               <span class="filter-col-icon" style="background: linear-gradient(135deg,#355C7D,#4A7898)">
-                <v-icon icon="mdi-identifier" size="13" color="white"></v-icon>
+                <v-icon icon="mdi-file-tree-outline" size="13" color="white"></v-icon>
               </span>
               <span>Transcript ID</span>
             </div>
@@ -79,7 +79,9 @@
             </div>
             <v-autocomplete
               v-model="filters.species"
-              :items="speciesList"
+              :items="speciesOptions"
+              item-title="title"
+              item-value="value"
               :custom-filter="filterSubstring"
               clearable
               variant="plain"
@@ -89,7 +91,14 @@
               class="filter-field"
               :menu-props="{ class: 'search-select-menu', width: filterSelectWidth || undefined, offset: 0 }"
               @update:model-value="debouncedSearch"
-            ></v-autocomplete>
+            >
+              <template #selection="{ item }">
+                {{ item?.raw?.title ?? formatSpeciesName(filters.species) }}
+              </template>
+              <template #item="{ props, item }">
+                <v-list-item v-bind="props" :title="item.raw.title"></v-list-item>
+              </template>
+            </v-autocomplete>
           </div>
 
           <div class="filter-card filter-card--select">
@@ -101,7 +110,9 @@
             </div>
             <v-autocomplete
               v-model="filters.sample"
-              :items="sampleList"
+              :items="sampleOptions"
+              item-title="title"
+              item-value="value"
               :custom-filter="filterSubstring"
               clearable
               variant="plain"
@@ -111,7 +122,14 @@
               class="filter-field"
               :menu-props="{ class: 'search-select-menu', width: filterSelectWidth || undefined, offset: 0 }"
               @update:model-value="debouncedSearch"
-            ></v-autocomplete>
+            >
+              <template #selection="{ item }">
+                {{ item?.raw?.title ?? formatSampleName(filters.sample) }}
+              </template>
+              <template #item="{ props, item }">
+                <v-list-item v-bind="props" :title="item.raw.title"></v-list-item>
+              </template>
+            </v-autocomplete>
           </div>
         </div>
 
@@ -147,7 +165,7 @@
         >
           <template v-slot:item.gene_name="{ item }">
             <router-link 
-              :to="{ name: 'GeneDetail', params: { geneId: item.gene_db_id } }"
+              :to="{ name: 'GeneDetail', params: { geneId: item.gene_db_id }, query: { species: item.species } }"
               class="text-primary font-weight-medium search-id-link"
               :title="item.gene_name"
             >
@@ -157,7 +175,7 @@
           
           <template v-slot:item.transcript_id="{ item }">
             <router-link 
-              :to="{ name: 'LocusDetail', params: { transcriptId: item.transcript_id } }"
+              :to="{ name: 'LocusDetail', params: { transcriptId: item.transcript_id }, query: { species: item.species } }"
               class="text-primary font-weight-medium text-decoration-underline search-id-link"
               :title="item.transcript_id"
             >
@@ -188,9 +206,9 @@
               size="small" 
               :color="getSpeciesColor(item.species)"
               variant="flat"
-              :title="item.species"
+              :title="formatSpeciesName(item.species)"
             >
-              {{ item.species }}
+              {{ formatSpeciesName(item.species) }}
             </v-chip>
           </template>
           
@@ -207,9 +225,10 @@
 </template>
 
 <script setup>
-import { ref, reactive, onMounted, onUnmounted, watch } from 'vue'
+import { computed, ref, reactive, onMounted, onUnmounted, watch } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { apiService } from '@/services/api'
+import { formatSampleName, formatSpeciesName } from '@/utils/formatters'
 
 const router = useRouter()
 const route = useRoute()
@@ -235,8 +254,24 @@ const filters = reactive({
   sample: ''
 })
 
-const speciesList = ref(['Mouse'])
-const sampleList = ref(['A549', 'HepG2', 'K562'])
+const speciesList = ref([{ title: 'Mus musculus', value: 'Mouse' }])
+const sampleList = ref([
+  { title: 'A549', value: 'A549' },
+  { title: 'HepG2', value: 'HepG2' },
+  { title: 'K562', value: 'K562' }
+])
+const sampleOptions = computed(() =>
+  sampleList.value.map(sample => ({
+    title: sample.title ?? formatSampleName(sample.value ?? sample),
+    value: sample.value ?? sample
+  }))
+)
+const speciesOptions = computed(() =>
+  speciesList.value.map(species => ({
+    title: species.title ?? formatSpeciesName(species.value ?? species),
+    value: species.value ?? species
+  }))
+)
 
 const snackbar = ref(false)
 const snackbarText = ref('')
@@ -315,12 +350,9 @@ const getSpeciesColor = (species) => {
   return speciesColors[species] || 'primary'
 }
 
-const formatSampleName = (name) =>
-  String(name ?? '').replace(/_/g, ' ')
-
 const filterSubstring = (value, query) =>
-  value.toString().toLowerCase().includes(query.toLowerCase()) ||
-  formatSampleName(value).toLowerCase().includes(query.toLowerCase())
+  String(value?.value ?? value ?? '').toLowerCase().includes(query.toLowerCase()) ||
+  String(value?.title ?? value?.display_name ?? formatSampleName(value)).toLowerCase().includes(query.toLowerCase())
 
 const debouncedSearch = () => {
   clearTimeout(searchTimeout)
@@ -387,8 +419,8 @@ const exportResults = () => {
     item.chromosome,
     item.strand,
     item.apa_site_count,
-    item.species,
-    item.cell_lines.join('; ')
+    formatSpeciesName(item.species),
+    item.cell_lines.map(formatSampleName).join('; ')
   ])
   
   const csvContent = [
@@ -417,10 +449,23 @@ onMounted(async () => {
     ])
     
     if (speciesData && speciesData.length > 0) {
-      speciesList.value = speciesData.map(s => s.name)
+      speciesList.value = speciesData.map(s => ({
+        title: s.display_name ?? formatSpeciesName(s),
+        value: s.name
+      }))
     }
     if (samplesData && samplesData.length > 0) {
-      sampleList.value = [...new Set(samplesData.map(s => s.name))]
+      const seen = new Set()
+      sampleList.value = samplesData
+        .filter(s => {
+          if (seen.has(s.name)) return false
+          seen.add(s.name)
+          return true
+        })
+        .map(s => ({
+          title: s.display_name ?? formatSampleName(s.name),
+          value: s.name
+        }))
     }
   } catch (error) {
     console.error('Failed to load filters:', error)

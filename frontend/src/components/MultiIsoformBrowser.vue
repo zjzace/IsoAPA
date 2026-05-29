@@ -74,13 +74,13 @@
         </v-col>
         <v-col cols="auto">
           <div class="stat-card stat-shared">
-            <div class="stat-value" style="color: #355C7D;">{{ stats.sharedSites }}</div>
+            <div class="stat-value" style="color: #A96F4C;">{{ stats.sharedSites }}</div>
             <div class="stat-label">Shared</div>
           </div>
         </v-col>
         <v-col cols="auto">
           <div class="stat-card stat-private">
-            <div class="stat-value" style="color: #B63F5A;">{{ stats.privateSites }}</div>
+            <div class="stat-value" style="color: #746A9E;">{{ stats.privateSites }}</div>
             <div class="stat-label">Private</div>
           </div>
         </v-col>
@@ -169,11 +169,12 @@ const apaTrackHeight = 40
 const isoformGap = 12
 
 // ── Colors ───────────────────────────────────────────────────────────────────
-const SHARED_COLOR = '#355C7D'
-const PRIVATE_COLOR = '#B63F5A'
+const SHARED_COLOR = '#A96F4C'
+const PRIVATE_COLOR = '#746A9E'
 const CDS_COLOR = '#0D7377'
 const UTR_COLOR = '#14919B'
 const INTRON_COLOR = '#B0B8C1'
+const TERMINAL_EXTENSION_COLOR = '#5C8797'
 
 // ── Reactive state ───────────────────────────────────────────────────────────
 const containerWidth = ref(1100)
@@ -274,6 +275,48 @@ const formatCoordinate = (value) => {
   }
 }
 
+const siteRange = (site) => {
+  const fallback = Number(site?.mode_site_position)
+  const start = site?.cluster_start != null ? Number(site.cluster_start) : fallback
+  const end = site?.cluster_end != null ? Number(site.cluster_end) : fallback
+  return {
+    start: Math.min(start, end),
+    end: Math.max(start, end),
+  }
+}
+
+const terminalExtensionFor = (tx, sortedExons, strand) => {
+  if (!sortedExons.length) return null
+
+  const terminalExon = strand === '-' ? sortedExons[0] : sortedExons[sortedExons.length - 1]
+  const ranges = (tx.apa_sites ?? []).map(siteRange).filter(r =>
+    Number.isFinite(r.start) && Number.isFinite(r.end)
+  )
+  if (!ranges.length) return null
+
+  if (strand === '-') {
+    const distalStart = Math.min(...ranges.map(r => r.start))
+    if (distalStart >= terminalExon.start) return null
+    return {
+      start: distalStart,
+      end: terminalExon.start,
+      anchor: terminalExon.start,
+      distal: distalStart,
+      direction: 'upstream',
+    }
+  }
+
+  const distalEnd = Math.max(...ranges.map(r => r.end))
+  if (distalEnd <= terminalExon.end) return null
+  return {
+    start: terminalExon.end,
+    end: distalEnd,
+    anchor: terminalExon.end,
+    distal: distalEnd,
+    direction: 'downstream',
+  }
+}
+
 const showTooltip = (event, title, items) => {
   const el = ensureTooltipEl()
 
@@ -328,8 +371,8 @@ const showApaTooltip = (event, site, classification, meanAbundance, sampleDetail
 
   const pct = (meanAbundance * 100).toFixed(1)
   const classColor = classification === 'Shared'
-    ? { bg: 'rgba(99,102,241,0.12)', border: 'rgba(99,102,241,0.35)', text: '#3730A3' }
-    : { bg: 'rgba(244,63,94,0.12)', border: 'rgba(244,63,94,0.35)', text: '#9F1239' }
+    ? { bg: 'rgba(169,111,76,0.11)', border: 'rgba(169,111,76,0.30)', text: '#87563A' }
+    : { bg: 'rgba(116,106,158,0.11)', border: 'rgba(116,106,158,0.30)', text: '#5F5682' }
 
   const detectedSet = new Set(sampleDetails.map(d => d.sample_name ?? d.sample ?? ''))
   const totalN = txSamples.length || detectedSet.size
@@ -343,7 +386,7 @@ const showApaTooltip = (event, site, classification, meanAbundance, sampleDetail
   const gap = circ - dash
   const cx = 32, cy = 32, size = 64
 
-  const ringColor = coveragePct === 100 ? '#355C7D' : coveragePct >= 50 ? '#4A7898' : '#B63F5A'
+  const ringColor = coveragePct === 100 ? '#355C7D' : coveragePct >= 50 ? '#4A7898' : PRIVATE_COLOR
   const tagLine = coveragePct === 100 ? 'in every sample'
     : coveragePct >= 75 ? 'in most samples'
     : coveragePct >= 50 ? 'in half the samples'
@@ -468,6 +511,61 @@ const showExonTooltip = (event, displayNum, exon, txId) => {
   const nativeEvent = event.sourceEvent || event
   const W = el.offsetWidth || 240
   const H = el.offsetHeight || 140
+  const vw = window.innerWidth
+  const vh = window.innerHeight
+  const OFFSET_X = 14, OFFSET_Y = -10
+
+  let x = nativeEvent.clientX + OFFSET_X
+  let y = nativeEvent.clientY + OFFSET_Y
+  if (x + W > vw - 8) x = nativeEvent.clientX - W - OFFSET_X
+  if (y + H > vh - 8) y = nativeEvent.clientY - H - Math.abs(OFFSET_Y)
+  if (y < 4) y = 4
+  if (x < 4) x = 4
+
+  el.style.left = x + 'px'
+  el.style.top  = y + 'px'
+}
+
+const showTerminalExtensionTooltip = (event, extension, txId) => {
+  const el = ensureTooltipEl()
+  const length = Math.abs(extension.end - extension.start)
+
+  el.innerHTML = `
+    <div style="padding:13px 15px">
+      <div style="font-size:10.5px;letter-spacing:0.10em;color:#B7791F;font-weight:700;text-transform:uppercase;margin-bottom:3px">APA-supported extension</div>
+      <div style="font-family:'IBM Plex Sans',sans-serif;font-size:14px;color:#0f172a;font-weight:700;margin-bottom:10px">Terminal exon extension</div>
+      <div style="height:1px;background:rgba(183,121,31,0.20);margin-bottom:9px"></div>
+      <div style="display:grid;grid-template-columns:auto 1fr;row-gap:6px;column-gap:16px;align-items:center">
+        <span style="color:#475569;font-size:12.5px;white-space:nowrap">Transcript</span>
+        <span style="color:#0f172a;font-size:12.5px;font-weight:600;font-family:'IBM Plex Sans',sans-serif">${txId}</span>
+        <span style="color:#475569;font-size:12.5px;white-space:nowrap">Extension</span>
+        <span style="color:#0f172a;font-size:12.5px;font-weight:700;font-family:'IBM Plex Sans',sans-serif">${extension.start.toLocaleString()} – ${extension.end.toLocaleString()}</span>
+        <span style="color:#475569;font-size:12.5px">Length</span>
+        <span style="color:#0f172a;font-size:12.5px;font-weight:700;font-family:'IBM Plex Sans',sans-serif">${length.toLocaleString()} bp</span>
+      </div>
+      <div style="margin-top:10px;color:#64748b;font-size:12px;line-height:1.45">
+        PA sites extend beyond the annotated terminal exon, suggesting an incomplete transcript end in the reference annotation.
+      </div>
+    </div>
+  `
+
+  el.style.padding = '0'
+  el.style.borderRadius = '12px'
+  el.style.background = 'rgba(255,255,255,0.84)'
+  el.style.backdropFilter = 'blur(24px) saturate(180%)'
+  el.style.webkitBackdropFilter = 'blur(24px) saturate(180%)'
+  el.style.border = '1px solid rgba(183,121,31,0.25)'
+  el.style.boxShadow = '0 8px 32px rgba(183,121,31,0.13), 0 2px 8px rgba(0,0,0,0.08), inset 0 1px 0 rgba(255,255,255,0.9)'
+  el.style.minWidth = '260px'
+  el.style.maxWidth = '340px'
+  el.style.fontSize = '13px'
+  el.style.fontFamily = 'IBM Plex Sans, sans-serif'
+  el.style.color = '#0f172a'
+  el.style.display = 'block'
+
+  const nativeEvent = event.sourceEvent || event
+  const W = el.offsetWidth || 290
+  const H = el.offsetHeight || 170
   const vw = window.innerWidth
   const vh = window.innerHeight
   const OFFSET_X = 14, OFFSET_Y = -10
@@ -634,6 +732,7 @@ const renderExonTrack = (txIndex) => {
   const sortedExons = [...struct.exons].sort((a, b) => a.start - b.start)
   const cdsSet = new Set((struct.cds ?? []).map(c => `${c.start}-${c.end}`))
   const strand = props.geneData?.strand ?? '+'
+  const terminalExtension = terminalExtensionFor(tx, sortedExons, strand)
 
   // Intron backbone
   if (sortedExons.length > 1) {
@@ -664,6 +763,60 @@ const renderExonTrack = (txIndex) => {
         }
       }
     }
+  }
+
+  if (terminalExtension) {
+    const x1 = xScale.value(terminalExtension.start)
+    const x2 = xScale.value(terminalExtension.end)
+    const x = Math.min(x1, x2)
+    const w = Math.max(3, Math.abs(x2 - x1))
+    const exonH = 20
+    const extensionStroke = 1
+    const extensionH = exonH - extensionStroke * 2
+
+    const ext = g.append('g')
+      .attr('class', 'terminal-extension')
+      .style('cursor', 'help')
+
+    ext.append('rect')
+      .attr('x', x).attr('y', trackY - extensionH / 2)
+      .attr('width', w).attr('height', extensionH)
+      .attr('fill', TERMINAL_EXTENSION_COLOR)
+      .attr('fill-opacity', 0.16)
+      .attr('stroke', TERMINAL_EXTENSION_COLOR)
+      .attr('stroke-width', extensionStroke)
+      .attr('stroke-dasharray', '4,3')
+      .attr('rx', 3)
+
+    ext.append('rect')
+      .attr('x', x).attr('y', 0)
+      .attr('width', w).attr('height', exonTrackHeight)
+      .attr('fill', 'transparent')
+
+    if (w > 72) {
+      ext.append('text')
+        .attr('x', x + w / 2).attr('y', trackY)
+        .attr('dy', '0.35em')
+        .attr('text-anchor', 'middle')
+        .style('font-size', '10.5px')
+        .style('font-weight', '700')
+        .style('fill', TERMINAL_EXTENSION_COLOR)
+        .style('pointer-events', 'none')
+        .text('APA extension')
+    }
+
+    ext
+      .on('mouseenter', function(event) {
+        d3.select(this).select('rect').attr('fill-opacity', 0.24)
+        showTerminalExtensionTooltip(event, terminalExtension, tx.transcript_id)
+      })
+      .on('mousemove', function(event) {
+        showTerminalExtensionTooltip(event, terminalExtension, tx.transcript_id)
+      })
+      .on('mouseleave', function() {
+        d3.select(this).select('rect').attr('fill-opacity', 0.16)
+        hideTooltip()
+      })
   }
 
   // Exons
@@ -1000,13 +1153,13 @@ watch(dynamicMarginLeft, (newLeft) => {
 }
 
 .stat-shared {
-  background: rgba(53, 92, 125, 0.08);
-  border-color: rgba(53, 92, 125, 0.28);
+  background: rgba(169, 111, 76, 0.10);
+  border-color: rgba(169, 111, 76, 0.26);
 }
 
 .stat-private {
-  background: rgba(182, 63, 90, 0.07);
-  border-color: rgba(182, 63, 90, 0.28);
+  background: rgba(116, 106, 158, 0.10);
+  border-color: rgba(116, 106, 158, 0.26);
 }
 
 .stat-value {

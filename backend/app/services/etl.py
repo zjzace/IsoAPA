@@ -75,6 +75,19 @@ def _float_cell(row: dict, *names: str, default: float = 0.0) -> float:
     return float(value)
 
 
+def _gene_key(row: dict) -> str:
+    gene_id = _cell(row, "gene_id")
+    if gene_id:
+        return gene_id
+    return "|".join(
+        [
+            _cell(row, "gene_name", default="unknown"),
+            _cell(row, "chromosome", default="unknown"),
+            _cell(row, "strand", default="unknown"),
+        ]
+    )
+
+
 def _unified_file_path(species_folder: str) -> str | None:
     species_dir = os.path.join(DATA_DIR, species_folder)
     for fname in os.listdir(species_dir):
@@ -242,31 +255,46 @@ def ingest_data(data_dir: str = None, species_filter: list[str] | None = None):
             for (transcript_id_str, unified_id), cluster in clusters.items():
                 row = cluster["row"]
                 gene_id_str = _cell(row, "gene_id")
+                gene_key = _gene_key(row)
 
-                if gene_id_str not in gene_id_cache:
-                    obj = db.query(Gene).filter(Gene.gene_id == gene_id_str).first()
+                if gene_key not in gene_id_cache:
+                    obj = (
+                        db.query(Gene)
+                        .filter(
+                            Gene.gene_key == gene_key,
+                            Gene.species_id == species_id,
+                        )
+                        .first()
+                    )
                     if not obj:
                         obj = Gene(
                             gene_id=gene_id_str,
+                            gene_key=gene_key,
                             gene_name=_cell(row, "gene_name"),
                             chromosome=_cell(row, "chromosome"),
                             strand=_cell(row, "strand"),
+                            species_id=species_id,
                         )
                         db.add(obj)
                         db.flush()
-                    gene_id_cache[gene_id_str] = obj.id
+                    gene_id_cache[gene_key] = obj.id
 
-                gene_db_id = gene_id_cache[gene_id_str]
+                gene_db_id = gene_id_cache[gene_key]
 
                 if transcript_id_str not in transcript_id_cache:
                     obj = (
                         db.query(Transcript)
-                        .filter(Transcript.transcript_id == transcript_id_str)
+                        .filter(
+                            Transcript.transcript_id == transcript_id_str,
+                            Transcript.species_id == species_id,
+                        )
                         .first()
                     )
                     if not obj:
                         obj = Transcript(
-                            transcript_id=transcript_id_str, gene_id=gene_db_id
+                            transcript_id=transcript_id_str,
+                            gene_id=gene_db_id,
+                            species_id=species_id,
                         )
                         db.add(obj)
                         db.flush()

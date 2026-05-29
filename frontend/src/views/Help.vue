@@ -6,7 +6,7 @@
       <v-container class="hero-content">
         <h1 class="text-h3 font-weight-bold text-white mb-2">User Guide & Documentation</h1>
         <p class="text-h6 text-white mb-6 opacity-90">Everything you need to explore isoform-level APA data</p>
-        
+
         <div class="d-flex flex-wrap gap-4">
           <v-chip class="mr-2" variant="outlined" color="white" style="background: rgba(255,255,255,0.9);">
             <strong style="color: #0D7377;">Quick Start</strong>
@@ -28,10 +28,10 @@
     <v-container class="py-12">
       <!-- 2. Jump Navigation Cards -->
       <div class="jump-nav-row">
-        <div 
-          v-for="item in jumpLinks" 
+        <div
+          v-for="item in jumpLinks"
           :key="item.id"
-          class="jump-card" 
+          class="jump-card"
           @click="scrollTo(item.id)"
         >
           <div class="jump-card-icon" :style="{ background: item.gradient }">
@@ -46,11 +46,11 @@
 
       <!-- 3. Quick Start Section -->
       <section id="getting-started" class="content-section">
-        <div class="section-eyebrow">01 · Quick Start</div>
+        <div class="section-eyebrow">Quick Start</div>
         <h2 class="section-heading mb-6">Get up and running in 4 steps</h2>
-        
+
         <div class="steps-grid">
-          <div v-for="(step, index) in steps" :key="index" class="glass-card step-card">
+          <div v-for="(step, index) in steps" :key="index" class="flat-card step-card">
             <div class="step-number">{{ String(index + 1).padStart(2, '0') }}</div>
             <div class="step-icon-badge" :style="{ background: step.gradient }">
               <v-icon :icon="step.icon" size="28" color="white"></v-icon>
@@ -66,11 +66,11 @@
 
       <!-- 4. Feature Guides Section -->
       <section id="features" class="content-section">
-        <div class="section-eyebrow">02 · Feature Guides</div>
+        <div class="section-eyebrow">Feature Guides</div>
         <h2 class="section-heading mb-6">How each feature works</h2>
-        
+
         <div class="accordion-container">
-          <div v-for="(guide, index) in guides" :key="index" class="glass-card accordion-item" :class="{ 'is-open': openGuide === index }">
+          <div v-for="(guide, index) in guides" :key="index" class="flat-card accordion-item" :class="{ 'is-open': openGuide === index }">
             <button class="accordion-header" @click="openGuide = openGuide === index ? null : index">
               <div class="d-flex align-center">
                 <div class="accordion-icon" :style="{ background: guide.gradient }">
@@ -80,9 +80,9 @@
               </div>
               <v-icon :icon="openGuide === index ? 'mdi-chevron-up' : 'mdi-chevron-down'" color="#64748b"></v-icon>
             </button>
-            
-            <v-expand-transition>
-              <div v-if="openGuide === index" class="accordion-content">
+
+            <div class="accordion-panel" :class="{ 'is-open': openGuide === index }">
+              <div class="accordion-content">
                 <!-- Guide 0 — Search & Filter -->
                 <template v-if="index === 0">
                   <p class="guide-p">ApaAtlas supports four search dimensions — combine any to narrow results.</p>
@@ -219,40 +219,40 @@
                 </template>
 
               </div>
-            </v-expand-transition>
+            </div>
           </div>
         </div>
       </section>
 
       <!-- 5. FAQ Section -->
       <section id="faq" class="content-section">
-        <div class="section-eyebrow">03 · FAQ</div>
+        <div class="section-eyebrow">FAQ</div>
         <h2 class="section-heading mb-6">Frequently asked questions</h2>
-        
+
         <div class="accordion-container">
-          <div v-for="(faq, index) in faqs" :key="index" class="glass-card faq-item">
+          <div v-for="(faq, index) in faqs" :key="index" class="flat-card faq-item">
             <button class="faq-header" @click="openFaq = openFaq === index ? null : index">
               <div class="faq-question">{{ faq.q }}</div>
               <div class="faq-icon-wrapper">
                 <v-icon :icon="openFaq === index ? 'mdi-minus' : 'mdi-plus'" color="#14919B" size="20"></v-icon>
               </div>
             </button>
-            <v-expand-transition>
-              <div v-if="openFaq === index" class="faq-content">
+            <div class="accordion-panel" :class="{ 'is-open': openFaq === index }">
+              <div class="faq-content">
                 <p>{{ faq.a }}</p>
               </div>
-            </v-expand-transition>
+            </div>
           </div>
         </div>
       </section>
 
       <!-- 6. Glossary Section -->
       <section id="glossary" class="content-section">
-        <div class="section-eyebrow">04 · Glossary</div>
+        <div class="section-eyebrow">Glossary</div>
         <h2 class="section-heading mb-6">Key terms & definitions</h2>
-        
+
         <div class="glossary-grid">
-          <div v-for="(item, index) in glossary" :key="index" class="glass-card glossary-card">
+          <div v-for="(item, index) in glossary" :key="index" class="flat-card glossary-card">
             <div class="glossary-term">{{ item.term }}</div>
             <div class="glossary-desc">{{ item.desc }}</div>
           </div>
@@ -261,9 +261,9 @@
 
       <!-- 7. Contact Section -->
       <section id="contact" class="content-section">
-        <div class="section-eyebrow">05 · Contact</div>
+        <div class="section-eyebrow">Contact</div>
         <h2 class="section-heading mb-6">Get in touch</h2>
-        
+
         <div class="contact-card">
           <div class="contact-left">
             <h3 class="contact-heading">Questions or feedback?</h3>
@@ -314,37 +314,37 @@ const jumpLinks = [
 ]
 
 const steps = [
-  { 
-    icon: 'mdi-magnify', 
-    gradient: 'linear-gradient(135deg,#0D7377,#14919B)', 
-    title: 'Search for a Gene or Transcript', 
-    desc: 'Enter a gene symbol (GAPDH, ACTB) or Ensembl transcript ID. Autocomplete helps narrow your query.', 
-    link: '/search', 
-    linkLabel: 'Open Search' 
+  {
+    icon: 'mdi-magnify',
+    gradient: 'linear-gradient(135deg,#0D7377,#14919B)',
+    title: 'Search for a Gene or Transcript',
+    desc: 'Enter a gene symbol (GAPDH, ACTB) or Ensembl transcript ID. Autocomplete helps narrow your query.',
+    link: '/search',
+    linkLabel: 'Open Search'
   },
-  { 
-    icon: 'mdi-table-eye', 
-    gradient: 'linear-gradient(135deg,#2E7D32,#388E3C)', 
-    title: 'Browse Results', 
-    desc: 'Scan the results table and click any row to open the full Locus Detail page for that transcript.', 
-    link: null, 
-    linkLabel: null 
+  {
+    icon: 'mdi-table-eye',
+    gradient: 'linear-gradient(135deg,#2E7D32,#388E3C)',
+    title: 'Browse Results',
+    desc: 'Scan the results table and click any row to open the full Locus Detail page for that transcript.',
+    link: null,
+    linkLabel: null
   },
-  { 
-    icon: 'mdi-chart-bar', 
-    gradient: 'linear-gradient(135deg,#355C7D,#4A7898)', 
-    title: 'Inspect APA Sites', 
-    desc: 'Explore the genome browser, sample abundance charts, UTR composition, and RBP motif scanner.', 
-    link: null, 
-    linkLabel: null 
+  {
+    icon: 'mdi-chart-bar',
+    gradient: 'linear-gradient(135deg,#355C7D,#4A7898)',
+    title: 'Inspect APA Sites',
+    desc: 'Explore the genome browser, sample abundance charts, UTR composition, and RBP motif scanner.',
+    link: null,
+    linkLabel: null
   },
-  { 
-    icon: 'mdi-download', 
-    gradient: 'linear-gradient(135deg,#E65100,#EF6C00)', 
-    title: 'Download Data', 
-    desc: 'Export PA sites as CSV/TSV, a BED genome track, or a sample abundance matrix for downstream analysis.', 
-    link: '/download', 
-    linkLabel: 'Go to Download' 
+  {
+    icon: 'mdi-download',
+    gradient: 'linear-gradient(135deg,#E65100,#EF6C00)',
+    title: 'Download Data',
+    desc: 'Export PA sites as CSV/TSV, a BED genome track, or a sample abundance matrix for downstream analysis.',
+    link: '/download',
+    linkLabel: 'Go to Download'
   }
 ]
 
@@ -357,29 +357,29 @@ const guides = [
 ]
 
 const faqs = [
-  { 
-    q: 'What is Alternative Polyadenylation (APA)?', 
-    a: 'APA is a post-transcriptional mechanism where the same pre-mRNA is cleaved and polyadenylated at different sites, producing isoforms with varying 3′ UTR lengths. This affects mRNA stability, translational efficiency, and sub-cellular localization.' 
+  {
+    q: 'What is Alternative Polyadenylation (APA)?',
+    a: 'APA is a post-transcriptional mechanism where the same pre-mRNA is cleaved and polyadenylated at different sites, producing isoforms with varying 3′ UTR lengths. This affects mRNA stability, translational efficiency, and sub-cellular localization.'
   },
-  { 
-    q: 'What makes ApaAtlas isoform-level?', 
-    a: 'Most APA databases aggregate PA sites at the gene level. ApaAtlas tracks every PA site individually per transcript isoform — so a gene with 10 isoforms maintains separate PA site records for each, preserving isoform-specific regulatory information.' 
+  {
+    q: 'What makes ApaAtlas isoform-level?',
+    a: 'Most APA databases aggregate PA sites at the gene level. ApaAtlas tracks every PA site individually per transcript isoform — so a gene with 10 isoforms maintains separate PA site records for each, preserving isoform-specific regulatory information.'
   },
-  { 
-    q: 'What data sources are used?', 
-    a: 'ApaAtlas integrates long-read transcriptomic data derived from Oxford Nanopore Technologies (ONT) direct RNA sequencing and Pacific Biosciences (PacBio) Iso-Seq platforms. These datasets encompass a diverse collection of human and multi-species cell lines and tissues, enabling high-resolution, isoform-level identification of polyadenylation sites. All transcript coordinates are anchored to NCBI/RefSeq reference annotations.' 
+  {
+    q: 'What data sources are used?',
+    a: 'ApaAtlas integrates long-read transcriptomic data derived from Oxford Nanopore Technologies (ONT) cDNA and direct RNA sequencing, together with Pacific Biosciences (PacBio) Iso-Seq platforms. These datasets encompass a diverse collection of human and multi-species cell lines and tissues, enabling high-resolution, isoform-level identification of polyadenylation sites. Transcript coordinates are primarily based on NCBI/RefSeq annotations, supplemented by Ensembl or published annotations where required.'
   },
-  { 
-    q: 'How is site abundance calculated?', 
-    a: 'Abundance = (reads at a specific PA site) ÷ (total reads at all PA sites for that transcript) × 100%. It represents the fractional usage of each cleavage site within a transcript in a given sample.' 
+  {
+    q: 'How is site abundance calculated?',
+    a: 'Abundance = (reads at a specific PA site) ÷ (total reads at all PA sites for that transcript) × 100%. It represents the fractional usage of each cleavage site within a transcript in a given sample.'
   },
-  { 
-    q: 'Can I use ApaAtlas data in publications?', 
-    a: 'Yes. ApaAtlas data is freely available for research and publication. Please cite our database when using it in your work.' 
+  {
+    q: 'Can I use ApaAtlas data in publications?',
+    a: 'Yes. ApaAtlas data is freely available for research and publication. Please cite our database when using it in your work.'
   },
-  { 
-    q: 'What do \'proximal\' and \'distal\' PAS mean?', 
-    a: 'Proximal PAS is the polyadenylation site closest to the stop codon, producing a shorter 3′ UTR (UTR shortening). Distal PAS is farthest from the stop codon, producing a longer 3′ UTR (UTR lengthening). Cells dynamically shift between these under stress, development, or disease conditions.' 
+  {
+    q: 'What do \'proximal\' and \'distal\' PAS mean?',
+    a: 'Proximal PAS is the polyadenylation site closest to the stop codon, producing a shorter 3′ UTR (UTR shortening). Distal PAS is farthest from the stop codon, producing a longer 3′ UTR (UTR lengthening). Cells dynamically shift between these under stress, development, or disease conditions.'
   }
 ]
 
@@ -449,13 +449,11 @@ const glossary = [
   margin-bottom: 80px;
 }
 
-.glass-card {
-  background: rgba(255, 255, 255, 0.80);
-  backdrop-filter: blur(16px) saturate(150%);
-  -webkit-backdrop-filter: blur(16px) saturate(150%);
-  border: 1px solid rgba(255, 255, 255, 0.55);
+.flat-card {
+  background: #fff;
+  border: 1px solid rgba(203, 213, 225, 0.72);
   border-radius: 20px;
-  box-shadow: 0 4px 20px rgba(0,0,0,0.06);
+  box-shadow: none;
 }
 
 .jump-nav-row {
@@ -565,7 +563,7 @@ const glossary = [
   gap: 16px;
 }
 .accordion-item {
-  transition: all 0.3s ease;
+  transition: border-color 160ms ease;
   overflow: hidden;
 }
 .accordion-item.is-open {
@@ -597,6 +595,30 @@ const glossary = [
   font-weight: 700;
   color: #1e293b;
   margin: 0;
+}
+.accordion-panel {
+  max-height: 0;
+  opacity: 0;
+  overflow: hidden;
+  transform: translateY(-6px);
+  transform-origin: top center;
+  transition:
+    max-height 320ms cubic-bezier(0.16, 1, 0.3, 1),
+    opacity 180ms ease,
+    transform 260ms cubic-bezier(0.16, 1, 0.3, 1);
+  will-change: max-height, opacity, transform;
+}
+.accordion-panel.is-open {
+  max-height: 720px;
+  opacity: 1;
+  transform: translateY(0);
+}
+.accordion-panel > * {
+  transform: translateY(-4px);
+  transition: transform 260ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+.accordion-panel.is-open > * {
+  transform: translateY(0);
 }
 .accordion-content {
   padding: 0 24px 24px 76px;

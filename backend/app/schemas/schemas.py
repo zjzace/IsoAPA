@@ -33,6 +33,7 @@ class GeneBase(BaseModel):
     gene_name: str
     chromosome: str
     strand: str
+    species_id: int
 
 
 class Gene(GeneBase):
@@ -45,6 +46,7 @@ class Gene(GeneBase):
 class TranscriptBase(BaseModel):
     transcript_id: str
     gene_id: int
+    species_id: int
 
 
 class Transcript(TranscriptBase):
@@ -130,6 +132,7 @@ class DashboardStats(BaseModel):
     apa_sites_by_species: List[dict]
     apa_sites_by_cell_line: List[dict]
     apa_sites_per_transcript: List[dict]
+    apa_site_multiplicity: Optional[dict] = None
 
 
 class LocusDetail(BaseModel):

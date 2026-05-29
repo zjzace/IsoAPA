@@ -44,24 +44,34 @@ class Gene(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     gene_id = Column(String(100), nullable=False, index=True)
+    gene_key = Column(String(300), nullable=False, index=True)
     gene_name = Column(String(100), nullable=False, index=True)
     chromosome = Column(String(50), nullable=False, index=True)
     strand = Column(String(1), nullable=False)
+    species_id = Column(Integer, ForeignKey("species.id"), nullable=False, index=True)
 
     transcripts = relationship("Transcript", back_populates="gene")
 
-    __table_args__ = (Index("idx_gene_name", "gene_name"),)
+    __table_args__ = (
+        Index("idx_gene_name", "gene_name"),
+        Index("idx_gene_species", "gene_key", "species_id", unique=True),
+    )
 
 
 class Transcript(Base):
     __tablename__ = "transcripts"
 
     id = Column(Integer, primary_key=True, index=True)
-    transcript_id = Column(String(100), unique=True, nullable=False, index=True)
+    transcript_id = Column(String(100), nullable=False, index=True)
     gene_id = Column(Integer, ForeignKey("genes.id"), nullable=False)
+    species_id = Column(Integer, ForeignKey("species.id"), nullable=False, index=True)
 
     gene = relationship("Gene", back_populates="transcripts")
     apa_sites = relationship("APASite", back_populates="transcript")
+
+    __table_args__ = (
+        Index("idx_transcript_species", "transcript_id", "species_id", unique=True),
+    )
 
 
 class APASite(Base):
@@ -95,7 +105,11 @@ class APASite(Base):
 
     __table_args__ = (
         Index(
-            "idx_apa_transcript_unified_id", "transcript_id", "unified_id", unique=True
+            "idx_apa_species_transcript_unified_id",
+            "species_id",
+            "transcript_id",
+            "unified_id",
+            unique=True,
         ),
     )
 

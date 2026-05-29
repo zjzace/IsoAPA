@@ -1,233 +1,388 @@
 <template>
   <div class="statistics-page">
-    <v-container class="py-12">
-      <!-- Loading / Error States -->
-      <div v-if="loading" class="d-flex justify-center align-center" style="min-height: 400px;">
-        <v-progress-circular indeterminate color="#14919B" size="64"></v-progress-circular>
-      </div>
+    <section class="hero-section">
+      <div class="hero-bg"></div>
+      <v-container class="hero-content">
+        <h1 class="text-h3 font-weight-bold text-white mb-2">ApaAtlas Statistics</h1>
+        <p class="text-h6 text-white mb-6 opacity-90">Database-scale view of isoform-level polyadenylation complexity</p>
+      </v-container>
+    </section>
 
-      <div v-else-if="error">
-        <v-alert type="error" variant="tonal" class="mb-8">
-          {{ error }}
-        </v-alert>
-      </div>
+    <div v-if="loading" class="stats-loading-shell">
+      <v-progress-circular indeterminate color="#14919B" size="58"></v-progress-circular>
+      <div class="stats-loading-text">Loading database metrics</div>
+    </div>
 
-      <div v-else>
-        <!-- SECTION 1: Minimal Header + 3 Derived Insight Callouts -->
-        <div class="mb-10">
-          <div class="section-eyebrow mb-2">Database Overview</div>
-          <h1 class="text-h3 font-weight-bold mb-8 text-primary">Isoform Regulatory Landscape</h1>
-          
-          <div class="insight-banners-row">
-            <div class="insight-banner">
-              <span class="insight-number">{{ isoformCount }}</span>
-              <span class="insight-text">isoforms profiled across <strong>{{ speciesCount }} species</strong></span>
-            </div>
-            <div class="insight-banner highlight">
-              <span class="insight-number">{{ avgPAPerIsoform }}×</span>
-              <span class="insight-text">avg PA sites per isoform — a metric impossible at gene-level resolution</span>
-            </div>
-            <div class="insight-banner">
-              <span class="insight-number">{{ pctWithMultiPA }}%</span>
-              <span class="insight-text">of isoforms carry 2 or more distinct PA sites</span>
-            </div>
-          </div>
-        </div>
-
-        <!-- SECTION 2: Data Hierarchy Flow -->
-        <div class="mb-12">
-          <div class="section-eyebrow">Database Depth</div>
-          <h2 class="section-title">Resolution from Gene to Cleavage Site</h2>
-          <div class="flow-container mt-6">
-            <div class="flow-node">
-              <div class="flow-node-number">{{ detailedStats.total_genes?.toLocaleString() || '—' }}</div>
-              <div class="flow-node-label">Genes</div>
-              <div class="flow-node-icon mt-2"><v-icon icon="mdi-dna" color="#14919B"></v-icon></div>
-            </div>
-
-            <div class="flow-arrow">
-              <div class="flow-arrow-label">avg {{ avgIsoformsPerGene }}×</div>
-              <div class="flow-arrow-line">──────────▶</div>
-              <div class="flow-arrow-sublabel">isoforms per gene</div>
-            </div>
-
-            <div class="flow-node">
-              <div class="flow-node-number">{{ detailedStats.total_transcripts?.toLocaleString() || '—' }}</div>
-              <div class="flow-node-label">Isoforms</div>
-              <div class="flow-node-icon mt-2"><v-icon icon="mdi-file-tree" color="#14919B"></v-icon></div>
-            </div>
-
-            <div class="flow-arrow">
-              <div class="flow-arrow-label">avg {{ avgSitesPerIsoform }}×</div>
-              <div class="flow-arrow-line">──────────▶</div>
-              <div class="flow-arrow-sublabel">sites per isoform</div>
-            </div>
-
-            <div class="flow-node">
-              <div class="flow-node-number">{{ detailedStats.total_apa_sites?.toLocaleString() || '—' }}</div>
-              <div class="flow-node-label">PA Sites</div>
-              <div class="flow-node-icon mt-2"><v-icon icon="mdi-map-marker" color="#14919B"></v-icon></div>
-            </div>
-          </div>
-        </div>
-
-        <!-- SECTION 3: Isoform PA Site Multiplicity Distribution -->
-        <v-card variant="outlined" class="data-section">
-          <div class="section-header">
-            <div class="section-eyebrow">Regulatory Complexity</div>
-            <h2 class="section-title">PA Site Multiplicity per Isoform</h2>
-            <p class="section-subtitle">How many PA sites does each transcript isoform carry? This distribution reveals the regulatory diversity hidden within the transcriptome.</p>
-          </div>
-          
-          <div class="chart-shell chart-shell--large">
-            <Bar v-if="multiplicityChartData" :data="multiplicityChartData" :options="multiplicityChartOptions" />
-          </div>
-
-          <div class="d-flex flex-wrap gap-4 mt-6">
-            <div class="multiplicity-annotation">
-              <div class="d-flex align-center mb-1">
-                <v-icon icon="mdi-numeric-1-box" color="#94a3b8" class="mr-2"></v-icon>
-                <span class="text-grey-darken-1 font-weight-medium">Isoforms with 1 site</span>
-              </div>
-              <div class="multiplicity-annotation-number">{{ pctSingleSite }}%</div>
-              <div class="text-caption text-grey mt-1">Single-site isoforms have fixed 3' end regulation</div>
-            </div>
-            
-            <div class="multiplicity-annotation" style="border-color: #14919B; background: #f0fdfa;">
-              <div class="d-flex align-center mb-1">
-                <v-icon icon="mdi-numeric-2-box-multiple" color="#14919B" class="mr-2"></v-icon>
-                <span class="text-teal-darken-3 font-weight-medium">Isoforms with 2+ sites</span>
-              </div>
-              <div class="multiplicity-annotation-number" style="color: #0D7377;">{{ pctWithMultiPA }}%</div>
-              <div class="text-caption text-teal-darken-2 mt-1">These isoforms can produce short OR long 3' UTR forms</div>
-            </div>
-
-            <div class="multiplicity-annotation">
-              <div class="d-flex align-center mb-1">
-                <v-icon icon="mdi-sigma" color="#0a5c5f" class="mr-2"></v-icon>
-                <span class="text-grey-darken-1 font-weight-medium">Most complex (5+ sites)</span>
-              </div>
-              <div class="multiplicity-annotation-number" style="color: #0a5c5f;">{{ multiplicityBuckets?.buckets['5+']?.toLocaleString() || 0 }}</div>
-              <div class="text-caption text-grey mt-1">Maximum regulatory flexibility</div>
-            </div>
-          </div>
-        </v-card>
-
-        <!-- SECTION 4: Species Data Richness Panel -->
-        <v-card variant="outlined" class="data-section">
-          <div class="section-header">
-            <div class="section-eyebrow">Taxonomic Scope</div>
-            <h2 class="section-title">Species Richness</h2>
-            <p class="section-subtitle">Relative abundance of profiled cleavage events across mapped species.</p>
-          </div>
-          
-          <div class="species-richness-container mt-4">
-            <div v-for="sp in speciesRichnessData" :key="sp.name" class="species-richness-row">
-              <div class="species-name-col">
-                <div class="species-common">{{ sp.name }}</div>
-                <div class="species-latin">{{ sp.latin_name }}</div>
-              </div>
-              <div class="species-bar-col">
-                <div class="species-bar-track">
-                  <div class="species-bar-fill" :style="{ width: sp.pct + '%', background: sp.color }"></div>
-                </div>
-                <div class="species-bar-count">{{ sp.apaCount?.toLocaleString() || '—' }}</div>
-              </div>
-              <div class="species-assembly-col">
-                <v-chip size="x-small" variant="outlined">{{ sp.assembly }}</v-chip>
-              </div>
-            </div>
-            <div v-if="!speciesRichnessData?.length" class="text-center text-grey py-4">No species data available</div>
-          </div>
-        </v-card>
-
-        <!-- SECTION 5: Two-Column Chart Row -->
-        <v-row class="mb-8">
-          <v-col cols="12" md="6">
-            <v-card variant="outlined" class="data-section h-100 mb-0">
-              <div class="section-eyebrow">Genomic Bias</div>
-              <h2 class="text-h6 font-weight-bold mb-6 text-primary">Strand Distribution</h2>
-              <div class="chart-shell">
-                <Doughnut v-if="strandChartData" :data="strandChartData" :options="doughnutOptions" />
-                <div v-else class="d-flex h-100 justify-center align-center text-grey">No strand data</div>
-              </div>
-            </v-card>
-          </v-col>
-          <v-col cols="12" md="6">
-            <v-card variant="outlined" class="data-section h-100 mb-0">
-              <div class="section-eyebrow">Genomic Topology</div>
-              <h2 class="text-h6 font-weight-bold mb-6 text-primary">Chromosome Distribution</h2>
-              <div class="chart-shell">
-                <Bar v-if="chromosomeChartData" :data="chromosomeChartData" :options="chromosomeBarOptions" />
-                <div v-else class="d-flex h-100 justify-center align-center text-grey">No chromosome data</div>
-              </div>
-            </v-card>
-          </v-col>
-        </v-row>
-
-        <!-- SECTION 6: Top Genes Leaderboard -->
-        <v-card variant="outlined" class="data-section">
-          <div class="section-header">
-            <div class="section-eyebrow">Database Highlights</div>
-            <h2 class="section-title">Most Highly Regulated Genes</h2>
-            <p class="section-subtitle">Genes producing transcripts with the highest number of distinct polyadenylation events.</p>
-          </div>
-          
-          <div class="leaderboard-container mt-6">
-            <div v-for="(gene, i) in detailedStats.top_genes_by_apa" :key="gene.gene_id" class="leaderboard-row">
-              <div class="rank-badge" :class="rankClass(i)">{{ i + 1 }}</div>
-              <router-link :to="{ name: 'GeneDetail', params: { geneId: gene.gene_db_id } }" class="gene-name-link">
-                {{ gene.gene_name }}
-              </router-link>
-              <code class="gene-id-badge">{{ gene.gene_id }}</code>
-              <div class="leaderboard-bar-track">
-                <div class="leaderboard-bar-fill" :style="{ width: ((gene.apa_count / maxGeneApaCount) * 100) + '%' }"></div>
-              </div>
-              <v-chip size="small" color="#14919B" variant="tonal" class="font-weight-bold">{{ gene.apa_count.toLocaleString() }}</v-chip>
-            </div>
-            <div v-if="!detailedStats.top_genes_by_apa?.length" class="text-center text-grey py-4">No top genes available</div>
-          </div>
-        </v-card>
-      </div>
+    <v-container v-else-if="error" class="py-10 py-md-12">
+      <v-alert type="error" variant="tonal" class="mb-8">
+        {{ error }}
+      </v-alert>
     </v-container>
+
+    <template v-else>
+      <v-container class="stats-content reveal-root">
+        <section class="metric-grid reveal-item" style="--delay: 80ms">
+          <div v-for="metric in heroMetrics" :key="metric.label" class="metric-card">
+            <div class="metric-icon" :style="{ background: metric.gradient }">
+              <v-icon :icon="metric.icon" size="20" color="white"></v-icon>
+            </div>
+            <div class="metric-value">{{ metric.value }}</div>
+            <div class="metric-label">{{ metric.label }}</div>
+            <div class="metric-note">{{ metric.note }}</div>
+          </div>
+        </section>
+
+        <section class="section-card stats-flow-card reveal-item" style="--delay: 160ms">
+          <div class="section-header compact">
+            <div>
+              <div class="section-eyebrow">Database Depth</div>
+              <div class="stats-card-title" role="heading" aria-level="2">Resolution From Gene To Cleavage Site</div>
+            </div>
+          </div>
+          <div class="flow-grid">
+            <div class="flow-node">
+              <span class="flow-node-value">{{ fmt(detailedStats.total_genes) }}</span>
+              <span class="flow-node-label">Genes</span>
+            </div>
+            <div class="flow-connector">
+              <span>avg {{ avgIsoformsPerGene }}x</span>
+            </div>
+            <div class="flow-node flow-node--strong">
+              <span class="flow-node-value">{{ fmt(detailedStats.total_transcripts) }}</span>
+              <span class="flow-node-label">Isoforms</span>
+            </div>
+            <div class="flow-connector">
+              <span>avg {{ avgSitesPerIsoform }}x</span>
+            </div>
+            <div class="flow-node">
+              <span class="flow-node-value">{{ fmt(detailedStats.total_apa_sites) }}</span>
+              <span class="flow-node-label">PA Sites</span>
+            </div>
+          </div>
+        </section>
+
+        <div class="stats-card-row reveal-item" style="--delay: 240ms">
+          <div class="stats-card-cell">
+            <section class="section-card">
+              <div class="section-header stats-filter-header">
+                <div class="stats-filter-topline">
+                  <div class="section-eyebrow">Regulatory Complexity</div>
+                  <v-menu
+                    location="bottom end"
+                    :close-on-content-click="true"
+                    :min-width="260"
+                    content-class="stats-species-menu"
+                  >
+                    <template #activator="{ props }">
+                      <button class="species-filter-trigger" type="button" v-bind="props">
+                        <span
+                          class="species-filter-value"
+                          :class="{ 'is-placeholder': !selectedMultiplicitySpecies }"
+                        >
+                          {{ selectedMultiplicitySpeciesLabel }}
+                        </span>
+                        <span class="species-filter-icon">
+                          <v-progress-circular
+                            v-if="multiplicityLoading"
+                            indeterminate
+                            size="12"
+                            width="2"
+                            color="#0D7377"
+                          />
+                          <v-icon v-else icon="mdi-chevron-down" size="14" />
+                        </span>
+                      </button>
+                    </template>
+
+                    <div class="species-menu-card">
+                      <div class="species-menu-header">
+                        <span>Filter multiplicity</span>
+                        <small>{{ multiplicitySpeciesOptions.length }} choices</small>
+                      </div>
+                      <button
+                        v-for="option in multiplicitySpeciesOptions"
+                        :key="option.value || 'all'"
+                        class="species-menu-option"
+                        :class="{ 'is-active': selectedMultiplicitySpecies === option.value }"
+                        type="button"
+                        @click="selectMultiplicitySpecies(option.value)"
+                      >
+                        <span class="species-menu-option-main">{{ option.title }}</span>
+                        <v-icon
+                          v-if="selectedMultiplicitySpecies === option.value"
+                          icon="mdi-check"
+                          size="17"
+                        />
+                      </button>
+                    </div>
+                  </v-menu>
+                </div>
+                <div>
+                  <div class="stats-card-title" role="heading" aria-level="2">PA Site Multiplicity Per Isoform</div>
+                  <p class="section-subtitle">{{ multiplicitySubtitle }}</p>
+                </div>
+              </div>
+              <div class="chart-shell chart-shell--large">
+                <Bar v-if="multiplicityChartData" :data="multiplicityChartData" :options="multiplicityChartOptions" />
+                <div v-else class="empty-chart">No multiplicity data available</div>
+              </div>
+              <div class="complexity-cards">
+                <div class="complexity-card">
+                  <span class="complexity-value">{{ pctSingleSite }}%</span>
+                  <span class="complexity-label">Single-site isoforms</span>
+                </div>
+                <div class="complexity-card complexity-card--accent">
+                  <span class="complexity-value">{{ pctWithMultiPA }}%</span>
+                  <span class="complexity-label">Isoforms with 2+ PA sites</span>
+                </div>
+                <div class="complexity-card">
+                  <span class="complexity-value">{{ fmt(multiplicityBuckets.buckets?.['5+']) }}</span>
+                  <span class="complexity-label">Isoforms with 5+ sites</span>
+                </div>
+              </div>
+            </section>
+          </div>
+
+          <div class="stats-card-cell">
+            <section class="section-card">
+              <div class="section-header stats-filter-header">
+                <div class="stats-filter-topline">
+                  <div class="section-eyebrow">Motif Composition</div>
+                  <v-menu
+                    location="bottom end"
+                    :close-on-content-click="true"
+                    :min-width="260"
+                    content-class="stats-species-menu"
+                  >
+                    <template #activator="{ props }">
+                      <button class="species-filter-trigger" type="button" v-bind="props">
+                        <span
+                          class="species-filter-value"
+                          :class="{ 'is-placeholder': !selectedMotifSpecies }"
+                        >
+                          {{ selectedMotifSpeciesLabel }}
+                        </span>
+                        <span class="species-filter-icon">
+                          <v-progress-circular
+                            v-if="motifLoading"
+                            indeterminate
+                            size="12"
+                            width="2"
+                            color="#0D7377"
+                          />
+                          <v-icon v-else icon="mdi-chevron-down" size="14" />
+                        </span>
+                      </button>
+                    </template>
+
+                    <div class="species-menu-card">
+                      <div class="species-menu-header">
+                        <span>Filter motifs</span>
+                        <small>{{ motifSpeciesOptions.length }} choices</small>
+                      </div>
+                      <button
+                        v-for="option in motifSpeciesOptions"
+                        :key="option.value || 'all'"
+                        class="species-menu-option"
+                        :class="{ 'is-active': selectedMotifSpecies === option.value }"
+                        type="button"
+                        @click="selectMotifSpecies(option.value)"
+                      >
+                        <span class="species-menu-option-main">{{ option.title }}</span>
+                        <v-icon
+                          v-if="selectedMotifSpecies === option.value"
+                          icon="mdi-check"
+                          size="17"
+                        />
+                      </button>
+                    </div>
+                  </v-menu>
+                </div>
+                <div>
+                  <div class="stats-card-title" role="heading" aria-level="2">PAS Motif Distribution</div>
+                  <p class="section-subtitle">{{ motifSubtitle }}</p>
+                </div>
+              </div>
+              <div class="chart-shell chart-shell--large motif-chart-shell">
+                <Pie v-if="motifChartData" :data="motifChartData" :options="motifChartOptions" />
+                <div v-else class="empty-chart">No PAS motif data available</div>
+              </div>
+              <div class="complexity-cards">
+                <div class="complexity-card">
+                  <span class="complexity-value">{{ fmt(motifStats?.total) }}</span>
+                  <span class="complexity-label">Annotated PA sites</span>
+                </div>
+                <div class="complexity-card complexity-card--accent">
+                  <span class="complexity-value">{{ noMotifPct }}%</span>
+                  <span class="complexity-label">Sites with no motif</span>
+                </div>
+                <div class="complexity-card">
+                  <span class="complexity-value">{{ topMotifPct }}%</span>
+                  <span class="complexity-label">{{ topMotifLabel }} share</span>
+                </div>
+              </div>
+            </section>
+          </div>
+        </div>
+
+        <div class="stats-card-row reveal-item" style="--delay: 400ms">
+          <div class="stats-card-cell">
+            <section class="section-card">
+              <div class="section-header stats-filter-header">
+                <div>
+                  <div class="section-eyebrow">Taxonomic Scope</div>
+                  <div class="stats-card-title" role="heading" aria-level="2">Top 10 Species Richness</div>
+                  <p class="section-subtitle">The ten species with the most profiled cleavage events.</p>
+                </div>
+              </div>
+              <div class="leaderboard-container">
+                <div v-for="(sp, i) in speciesRichnessData" :key="sp.name" class="leaderboard-row">
+                  <div class="rank-badge" :class="rankClass(i)">{{ i + 1 }}</div>
+                  <div class="species-leader-name">
+                    <div class="species-common">{{ sp.displayName }}</div>
+                    <div v-if="sp.subtitle" class="species-latin">{{ sp.subtitle }}</div>
+                  </div>
+                  <div class="leaderboard-bar-track">
+                    <div class="leaderboard-bar-fill species-leader-bar-fill" :style="{ width: sp.pct + '%' }"></div>
+                  </div>
+                  <v-chip size="small" color="#14919B" variant="tonal" class="font-weight-bold">{{ fmt(sp.apaCount) }}</v-chip>
+                </div>
+                <div v-if="!speciesRichnessData.length" class="empty-chart py-8">No species data available</div>
+              </div>
+            </section>
+          </div>
+
+          <div class="stats-card-cell">
+            <section class="section-card">
+              <div class="section-header stats-filter-header">
+                <div class="stats-filter-topline">
+                  <div class="section-eyebrow">Database Highlights</div>
+                  <v-menu
+                    location="bottom end"
+                    :close-on-content-click="true"
+                    :min-width="260"
+                    content-class="stats-species-menu"
+                  >
+                    <template #activator="{ props }">
+                      <button class="species-filter-trigger" type="button" v-bind="props">
+                        <span
+                          class="species-filter-value"
+                          :class="{ 'is-placeholder': !selectedGeneSpecies }"
+                        >
+                          {{ selectedGeneSpeciesLabel }}
+                        </span>
+                        <span class="species-filter-icon">
+                          <v-progress-circular
+                            v-if="topGeneLoading"
+                            indeterminate
+                            size="12"
+                            width="2"
+                            color="#0D7377"
+                          />
+                          <v-icon v-else icon="mdi-chevron-down" size="14" />
+                        </span>
+                      </button>
+                    </template>
+
+                    <div class="species-menu-card">
+                      <div class="species-menu-header">
+                        <span>Filter genes</span>
+                        <small>{{ geneSpeciesOptions.length }} choices</small>
+                      </div>
+                      <button
+                        v-for="option in geneSpeciesOptions"
+                        :key="option.value || 'all'"
+                        class="species-menu-option"
+                        :class="{ 'is-active': selectedGeneSpecies === option.value }"
+                        type="button"
+                        @click="selectGeneSpecies(option.value)"
+                      >
+                        <span class="species-menu-option-main">{{ option.title }}</span>
+                        <v-icon
+                          v-if="selectedGeneSpecies === option.value"
+                          icon="mdi-check"
+                          size="17"
+                        />
+                      </button>
+                    </div>
+                  </v-menu>
+                </div>
+                <div>
+                  <div class="stats-card-title" role="heading" aria-level="2">Top 10 Gene Richness</div>
+                  <p class="section-subtitle">Genes with the highest number of distinct PA sites across their transcripts.</p>
+                </div>
+              </div>
+              <div class="leaderboard-container">
+                <div v-for="(gene, i) in topGenesByApa" :key="`${gene.gene_db_id}-${gene.species}`" class="leaderboard-row">
+                  <div class="rank-badge" :class="rankClass(i)">{{ i + 1 }}</div>
+                  <router-link
+                    :to="{ name: 'GeneDetail', params: { geneId: gene.gene_db_id }, query: { species: gene.species } }"
+                    class="gene-name-link"
+                  >
+                    {{ gene.gene_name || 'Unknown' }}
+                  </router-link>
+                  <span class="gene-species-chip">{{ formatSpeciesName(gene.species) }}</span>
+                  <div class="leaderboard-bar-track">
+                    <div class="leaderboard-bar-fill" :style="{ width: ((gene.apa_count / maxGeneApaCount) * 100) + '%' }"></div>
+                  </div>
+                  <v-chip size="small" color="#14919B" variant="tonal" class="font-weight-bold">{{ fmt(gene.apa_count) }}</v-chip>
+                </div>
+                <div v-if="!topGenesByApa.length" class="empty-chart py-8">No top genes available</div>
+              </div>
+            </section>
+          </div>
+        </div>
+      </v-container>
+    </template>
   </div>
 </template>
 
 <script setup>
 import { ref, computed, onMounted } from 'vue'
-import { Bar, Doughnut } from 'vue-chartjs'
-import { 
-  Chart as ChartJS, 
-  BarElement, 
-  CategoryScale, 
-  LinearScale, 
-  Tooltip, 
+import { Bar, Pie } from 'vue-chartjs'
+import {
+  Chart as ChartJS,
+  BarElement,
+  ArcElement,
+  CategoryScale,
+  LinearScale,
+  Tooltip,
   Legend,
-  Title,
-  ArcElement
+  Title
 } from 'chart.js'
 import { apiService } from '@/services/api'
+import { formatSpeciesName, formatSpeciesSubtitle } from '@/utils/formatters'
 
-ChartJS.register(BarElement, CategoryScale, LinearScale, Tooltip, Legend, Title, ArcElement)
+ChartJS.register(BarElement, ArcElement, CategoryScale, LinearScale, Tooltip, Legend, Title)
 
 const loading = ref(true)
 const error = ref(null)
-
 const detailedStats = ref({})
-const basicStats = ref({})
 const speciesList = ref([])
+const selectedMultiplicitySpecies = ref('')
+const multiplicityStats = ref(null)
+const multiplicityLoading = ref(false)
+const selectedMotifSpecies = ref('')
+const motifStats = ref(null)
+const motifLoading = ref(false)
+const selectedGeneSpecies = ref('')
+const topGeneStats = ref(null)
+const topGeneLoading = ref(false)
+
+const fmt = (value) => Number(value ?? 0).toLocaleString()
 
 onMounted(async () => {
   try {
     loading.value = true
-    const [detailed, basic, species] = await Promise.all([
+    const [detailed, species] = await Promise.all([
       apiService.getDetailedStats(),
-      apiService.getStats(),
       apiService.getSpecies()
     ])
     detailedStats.value = detailed || {}
-    basicStats.value = basic || {}
     speciesList.value = species || []
+    multiplicityStats.value = detailed?.apa_site_multiplicity || null
+    topGeneStats.value = detailed?.top_genes_by_apa?.slice(0, 10) || []
+    motifStats.value = await apiService.getPasMotifStats()
   } catch (err) {
     console.error('Failed to load stats:', err)
     error.value = 'Failed to load statistics. Please try again.'
@@ -236,76 +391,172 @@ onMounted(async () => {
   }
 })
 
-// SECTION 1 COMPUTED
-const isoformCount = computed(() => detailedStats.value.total_transcripts?.toLocaleString() || '—')
-const speciesCount = computed(() => detailedStats.value.total_species || '—')
-const avgPAPerIsoform = computed(() => detailedStats.value.avg_apa_per_transcript || '—')
+const loadMultiplicityStats = async () => {
+  multiplicityLoading.value = true
+  try {
+    multiplicityStats.value = await apiService.getMultiplicityStats(selectedMultiplicitySpecies.value || undefined)
+  } catch (err) {
+    console.error('Failed to load multiplicity stats:', err)
+    multiplicityStats.value = detailedStats.value.apa_site_multiplicity || null
+  } finally {
+    multiplicityLoading.value = false
+  }
+}
 
-const pctWithMultiPA = computed(() => {
-  const items = basicStats.value.apa_sites_per_transcript || []
-  if (!items.length) return null
-  const multi = items.filter(x => x.count >= 2).length
-  return ((multi / items.length) * 100).toFixed(0)
+const loadMotifStats = async () => {
+  motifLoading.value = true
+  try {
+    motifStats.value = await apiService.getPasMotifStats(selectedMotifSpecies.value || undefined)
+  } catch (err) {
+    console.error('Failed to load PAS motif stats:', err)
+    motifStats.value = null
+  } finally {
+    motifLoading.value = false
+  }
+}
+
+const loadTopGeneStats = async () => {
+  topGeneLoading.value = true
+  try {
+    topGeneStats.value = await apiService.getTopGeneStats(selectedGeneSpecies.value || undefined)
+  } catch (err) {
+    console.error('Failed to load top gene stats:', err)
+    topGeneStats.value = detailedStats.value.top_genes_by_apa?.slice(0, 10) || []
+  } finally {
+    topGeneLoading.value = false
+  }
+}
+
+const avgIsoformsPerGene = computed(() => detailedStats.value.avg_isoforms_per_gene ?? '—')
+const avgSitesPerIsoform = computed(() => detailedStats.value.avg_apa_per_transcript ?? '—')
+const multiplicityBuckets = computed(() => multiplicityStats.value || detailedStats.value.apa_site_multiplicity || { buckets: {}, total: 0 })
+const pctWithMultiPA = computed(() => multiplicityBuckets.value.pct_multi_site ?? 0)
+const pctSingleSite = computed(() => multiplicityBuckets.value.pct_single_site ?? 0)
+const multiplicitySpeciesOptions = computed(() => [
+  { title: 'All species', value: '' },
+  ...speciesList.value.map(sp => ({
+    title: sp.display_name || formatSpeciesName(sp),
+    value: sp.name
+  }))
+])
+const selectedMultiplicitySpeciesLabel = computed(() =>
+  selectedMultiplicitySpecies.value
+    ? multiplicitySpeciesOptions.value.find(option => option.value === selectedMultiplicitySpecies.value)?.title || formatSpeciesName(selectedMultiplicitySpecies.value)
+    : 'Species'
+)
+const motifSpeciesOptions = multiplicitySpeciesOptions
+const selectedMotifSpeciesLabel = computed(() =>
+  selectedMotifSpecies.value
+    ? motifSpeciesOptions.value.find(option => option.value === selectedMotifSpecies.value)?.title || formatSpeciesName(selectedMotifSpecies.value)
+    : 'Species'
+)
+const geneSpeciesOptions = multiplicitySpeciesOptions
+const selectedGeneSpeciesLabel = computed(() =>
+  selectedGeneSpecies.value
+    ? geneSpeciesOptions.value.find(option => option.value === selectedGeneSpecies.value)?.title || formatSpeciesName(selectedGeneSpecies.value)
+    : 'Species'
+)
+const multiplicitySubtitle = computed(() => {
+  if (!selectedMultiplicitySpecies.value) {
+    return 'Isoforms grouped by PA site count.'
+  }
+  const selected = speciesList.value.find(sp => sp.name === selectedMultiplicitySpecies.value)
+  return `Distribution for ${selected ? formatSpeciesName(selected) : formatSpeciesName(selectedMultiplicitySpecies.value)} transcripts.`
+})
+const motifSubtitle = computed(() => {
+  if (!selectedMotifSpecies.value) {
+    return 'Distribution of annotated PAS motifs across all PA site clusters.'
+  }
+  const selected = speciesList.value.find(sp => sp.name === selectedMotifSpecies.value)
+  return `Distribution for ${selected ? formatSpeciesName(selected) : formatSpeciesName(selectedMotifSpecies.value)} PA sites.`
 })
 
-const pctSingleSite = computed(() => {
-  const items = basicStats.value.apa_sites_per_transcript || []
-  if (!items.length) return null
-  const single = items.filter(x => x.count === 1).length
-  return ((single / items.length) * 100).toFixed(0)
-})
+const selectMultiplicitySpecies = async (species) => {
+  if (selectedMultiplicitySpecies.value === species) return
+  selectedMultiplicitySpecies.value = species
+  await loadMultiplicityStats()
+}
 
-// SECTION 2 COMPUTED
-const avgIsoformsPerGene = computed(() => {
-  if (!detailedStats.value.total_genes || !detailedStats.value.total_transcripts) return '—'
-  return (detailedStats.value.total_transcripts / detailedStats.value.total_genes).toFixed(2)
-})
-const avgSitesPerIsoform = computed(() => detailedStats.value.avg_apa_per_transcript || '—')
+const selectMotifSpecies = async (species) => {
+  if (selectedMotifSpecies.value === species) return
+  selectedMotifSpecies.value = species
+  await loadMotifStats()
+}
 
-// SECTION 3 COMPUTED
-const multiplicityBuckets = computed(() => {
-  const items = basicStats.value.apa_sites_per_transcript || []
-  const buckets = { '1': 0, '2': 0, '3': 0, '4': 0, '5+': 0 }
-  let total = 0
-  items.forEach(({ count }) => {
-    total++
-    if (count <= 0) return
-    if (count >= 5) buckets['5+']++
-    else buckets[String(count)]++
-  })
-  return { buckets, total }
-})
+const selectGeneSpecies = async (species) => {
+  if (selectedGeneSpecies.value === species) return
+  selectedGeneSpecies.value = species
+  await loadTopGeneStats()
+}
+
+const heroMetrics = computed(() => [
+  {
+    label: 'Species',
+    value: fmt(detailedStats.value.total_species),
+    note: 'organisms loaded',
+    icon: 'mdi-paw',
+    gradient: 'linear-gradient(135deg,#0D7377,#14919B)'
+  },
+  {
+    label: 'Isoforms',
+    value: fmt(detailedStats.value.total_transcripts),
+    note: 'transcript-level records',
+    icon: 'mdi-file-tree-outline',
+    gradient: 'linear-gradient(135deg,#355C7D,#4A7898)'
+  },
+  {
+    label: 'PA Sites',
+    value: fmt(detailedStats.value.total_apa_sites),
+    note: 'polyadenylation clusters',
+    icon: 'mdi-map-marker-multiple-outline',
+    gradient: 'linear-gradient(135deg,#2F855A,#48A36D)'
+  },
+  {
+    label: 'Samples',
+    value: fmt(detailedStats.value.total_samples),
+    note: 'tissues and cell cultures',
+    icon: 'mdi-flask-outline',
+    gradient: 'linear-gradient(135deg,#A96F4C,#B7791F)'
+  }
+])
+
+const chartTooltip = {
+  backgroundColor: 'rgba(248, 252, 252, 0.96)',
+  titleColor: '#0f172a',
+  bodyColor: '#334155',
+  borderColor: 'rgba(13, 115, 119, 0.18)',
+  borderWidth: 1,
+  padding: 12,
+  titleFont: { family: 'IBM Plex Sans', size: 13, weight: '700' },
+  bodyFont: { family: 'IBM Plex Sans', size: 13, weight: '500' }
+}
 
 const multiplicityChartData = computed(() => {
+  const buckets = multiplicityBuckets.value.buckets || {}
   if (!multiplicityBuckets.value.total) return null
-  const { buckets } = multiplicityBuckets.value
   return {
     labels: ['1 PA site', '2 PA sites', '3 PA sites', '4 PA sites', '5+ PA sites'],
     datasets: [{
-      label: 'Number of Isoforms',
-      data: [buckets['1'], buckets['2'], buckets['3'], buckets['4'], buckets['5+']],
-      backgroundColor: ['#94a3b8', '#14919B', '#0D7377', '#0A5C5F', '#064346'],
-      hoverBackgroundColor: ['#64748b', '#0D7377', '#0A5C5F', '#064346', '#042f31'],
-      borderRadius: 8,
+      label: 'Isoforms',
+      data: [buckets['1'] || 0, buckets['2'] || 0, buckets['3'] || 0, buckets['4'] || 0, buckets['5+'] || 0],
+      backgroundColor: ['#94a3b8', '#6fa8a8', '#14919B', '#0D7377', '#0A5C5F'],
+      hoverBackgroundColor: ['#64748b', '#568f90', '#0D7377', '#0A5C5F', '#064346'],
+      categoryPercentage: 0.70,
+      barPercentage: 0.66,
+      borderRadius: 0,
       borderSkipped: false
     }]
   }
 })
 
-const multiplicityChartOptions = {
-  responsive: true, 
+const multiplicityChartOptions = computed(() => ({
+  responsive: true,
   maintainAspectRatio: false,
+  animation: { duration: 900, easing: 'easeOutQuart' },
   plugins: {
     legend: { display: false },
     tooltip: {
-      backgroundColor: 'rgba(248, 252, 252, 0.96)',
-      titleColor: '#0f172a',
-      bodyColor: '#334155',
-      borderColor: 'rgba(13, 115, 119, 0.18)',
-      borderWidth: 1,
-      padding: 12,
-      titleFont: { family: 'IBM Plex Sans', size: 13, weight: '700' },
-      bodyFont: { family: 'IBM Plex Sans', size: 13, weight: '500' },
+      ...chartTooltip,
       callbacks: {
         afterLabel: (ctx) => {
           const total = multiplicityBuckets.value.total
@@ -318,125 +569,113 @@ const multiplicityChartOptions = {
   scales: {
     y: {
       beginAtZero: true,
-      title: { display: true, text: 'Number of Isoforms', color: '#475569', font: { family: 'IBM Plex Sans', weight: '700' } },
-      grid: { color: 'rgba(148, 163, 184, 0.22)' },
-      ticks: { color: '#64748b', font: { family: 'IBM Plex Sans', size: 12 } }
+      border: { display: true, color: 'rgba(100, 116, 139, 0.34)' },
+      grid: { display: false, drawBorder: false },
+      ticks: {
+        color: '#64748b',
+        padding: 8,
+        font: { family: 'IBM Plex Sans', size: 11, weight: '500' }
+      }
     },
     x: {
-      grid: { display: false },
-      ticks: { color: '#475569', font: { family: 'IBM Plex Sans', size: 12, weight: '700' } }
+      border: { display: true, color: 'rgba(100, 116, 139, 0.34)' },
+      grid: { display: false, drawBorder: false },
+      ticks: {
+        color: '#475569',
+        padding: 8,
+        font: { family: 'IBM Plex Sans', size: 12, weight: '700' }
+      }
     }
   }
-}
+}))
 
-// SECTION 4 COMPUTED
-const speciesRichnessData = computed(() => {
-  const apaMap = {}
-  detailedStats.value.apa_sites_by_species?.forEach(s => { apaMap[s.name] = s.count })
-  const speciesWithCounts = speciesList.value.map(sp => ({
-    ...sp,
-    apaCount: apaMap[sp.name] ?? 0
-  }))
-  const maxCount = Math.max(...speciesWithCounts.map(s => s.apaCount), 1)
-  const colors = ['#0D7377', '#14919B', '#2F855A', '#355C7D', '#B63F5A', '#B7791F']
-  return speciesWithCounts
-    .sort((a, b) => b.apaCount - a.apaCount)
-    .map((sp, i) => ({ ...sp, pct: (sp.apaCount / maxCount) * 100, color: colors[i % colors.length] }))
-})
+const motifColors = [
+  '#66C2A5', '#C5A07A', '#DE927F', '#979EC1', '#BE94C7', '#DB98AF',
+  '#B2CA68', '#CED843', '#FDD738', '#ECCA78', '#D3BE9F', '#B3B3B3'
+]
 
-// SECTION 5 COMPUTED
-const strandChartData = computed(() => {
-  if (!detailedStats.value.apa_sites_by_strand?.length) return null
+const motifChartData = computed(() => {
+  const motifs = motifStats.value?.motifs || []
+  if (!motifs.length) return null
   return {
-    labels: detailedStats.value.apa_sites_by_strand.map(s => s.strand || 'Unknown'),
+    labels: motifs.map(item => item.motif),
     datasets: [{
-      data: detailedStats.value.apa_sites_by_strand.map(s => s.count),
-      backgroundColor: ['#0D7377', '#B63F5A', '#94A3B8'],
-      borderColor: 'rgba(255, 255, 255, 0.92)',
+      data: motifs.map(item => item.count),
+      backgroundColor: motifs.map((_, i) => motifColors[i % motifColors.length]),
+      hoverBackgroundColor: motifs.map((_, i) => motifColors[i % motifColors.length]),
+      borderColor: '#ffffff',
       borderWidth: 3,
-      borderWidth: 0,
-      hoverOffset: 4
+      hoverOffset: 8
     }]
   }
 })
 
-const doughnutOptions = {
+const noMotifPct = computed(() =>
+  motifStats.value?.motifs?.find(item => item.motif === 'No motif')?.pct ?? 0
+)
+
+const topMotif = computed(() =>
+  motifStats.value?.motifs?.find(item => !['No motif', 'Other motifs'].includes(item.motif)) || null
+)
+
+const topMotifLabel = computed(() => topMotif.value?.motif || 'Top motif')
+const topMotifPct = computed(() => topMotif.value?.pct ?? 0)
+
+const motifChartOptions = computed(() => ({
   responsive: true,
   maintainAspectRatio: false,
+  animation: { duration: 900, easing: 'easeOutQuart' },
   plugins: {
     legend: {
-      position: 'bottom',
+      position: 'right',
       labels: {
-        padding: 20,
-        font: { family: 'IBM Plex Sans', size: 12, weight: '700' },
+        boxWidth: 10,
+        boxHeight: 10,
+        padding: 12,
         color: '#475569',
-        usePointStyle: true,
-        pointStyle: 'circle'
+        font: { family: 'IBM Plex Sans', size: 11, weight: '600' }
       }
     },
     tooltip: {
-      backgroundColor: 'rgba(248, 252, 252, 0.96)',
-      titleColor: '#0f172a',
-      bodyColor: '#334155',
-      borderColor: 'rgba(13, 115, 119, 0.18)',
-      borderWidth: 1,
-      padding: 12,
-      titleFont: { family: 'IBM Plex Sans', size: 13, weight: '700' },
-      bodyFont: { family: 'IBM Plex Sans', size: 13, weight: '500' }
+      ...chartTooltip,
+      callbacks: {
+        label: (ctx) => {
+          const item = motifStats.value?.motifs?.[ctx.dataIndex]
+          return `${ctx.label}: ${fmt(ctx.raw)} sites (${item?.pct ?? 0}%)`
+        }
+      }
     }
-  },
-  cutout: '65%'
-}
-
-const chromosomeChartData = computed(() => {
-  if (!detailedStats.value.apa_sites_by_chromosome?.length) return null
-  const sorted = [...detailedStats.value.apa_sites_by_chromosome].sort((a, b) => b.count - a.count).slice(0, 20)
-  return {
-    labels: sorted.map(c => c.chromosome || 'Unknown'),
-    datasets: [{
-      label: 'APA Sites',
-      data: sorted.map(c => c.count),
-      backgroundColor: '#14919B',
-      hoverBackgroundColor: '#0D7377',
-      borderRadius: 7,
-      borderSkipped: false
-    }]
   }
+}))
+
+const speciesRichnessData = computed(() => {
+  const speciesMeta = new Map(speciesList.value.map(sp => [sp.name, sp]))
+  const rows = detailedStats.value.apa_sites_by_species || []
+  const maxCount = Math.max(...rows.map(s => s.count), 1)
+  const colors = ['#0D7377', '#14919B', '#355C7D', '#2F855A', '#A96F4C', '#746A9E']
+  return rows
+    .map((row, i) => {
+      const meta = speciesMeta.get(row.name) || row
+      return {
+        ...row,
+        displayName: row.display_name || formatSpeciesName(meta),
+        subtitle: formatSpeciesSubtitle(meta),
+        assembly: meta.assembly,
+        apaCount: row.count,
+        pct: (row.count / maxCount) * 100,
+        color: colors[i % colors.length]
+      }
+    })
+    .sort((a, b) => b.apaCount - a.apaCount)
+    .slice(0, 10)
 })
 
-const chromosomeBarOptions = {
-  responsive: true,
-  maintainAspectRatio: false,
-  indexAxis: 'y',
-  plugins: {
-    legend: { display: false },
-    tooltip: {
-      backgroundColor: 'rgba(248, 252, 252, 0.96)',
-      titleColor: '#0f172a',
-      bodyColor: '#334155',
-      borderColor: 'rgba(13, 115, 119, 0.18)',
-      borderWidth: 1,
-      padding: 12,
-      titleFont: { family: 'IBM Plex Sans', size: 13, weight: '700' },
-      bodyFont: { family: 'IBM Plex Sans', size: 13, weight: '500' }
-    }
-  },
-  scales: {
-    x: {
-      beginAtZero: true,
-      grid: { color: 'rgba(148, 163, 184, 0.22)' },
-      ticks: { color: '#64748b', font: { family: 'IBM Plex Sans', size: 12 } }
-    },
-    y: {
-      grid: { display: false },
-      ticks: { color: '#475569', font: { family: 'IBM Plex Sans', size: 12, weight: '700' } }
-    }
-  }
-}
+const maxGeneApaCount = computed(() =>
+  Math.max(...(topGenesByApa.value.map(g => g.apa_count) ?? [1]), 1)
+)
 
-// SECTION 6 COMPUTED
-const maxGeneApaCount = computed(() => 
-  Math.max(...(detailedStats.value.top_genes_by_apa?.map(g => g.apa_count) ?? [1]), 1)
+const topGenesByApa = computed(() =>
+  topGeneStats.value || detailedStats.value.top_genes_by_apa?.slice(0, 10) || []
 )
 
 const rankClass = (i) => {
@@ -451,364 +690,645 @@ const rankClass = (i) => {
 <style scoped>
 .statistics-page {
   min-height: 100vh;
-  background:
-    radial-gradient(circle at 10% 4%, rgba(20, 145, 155, 0.10), transparent 30%),
-    linear-gradient(180deg, #f8fbfc 0%, #f5f8fa 100%);
+  background: linear-gradient(180deg, #f8fafc 0%, #f4f8fa 100%);
 }
 
-.text-primary {
-  color: #0D7377 !important;
-}
-
-.gap-4 {
-  gap: 16px;
-}
-
-/* Data Section Base */
-.data-section {
-  border-radius: 20px;
-  padding: 32px;
-  margin-bottom: 32px;
-}
-
-.chart-shell {
-  height: 320px;
-  padding: 20px;
-  margin-bottom: 8px;
-}
-
-.chart-shell--large {
-  height: 360px;
-  margin-bottom: 24px;
-}
-
-.section-header {
-  margin-bottom: 32px;
-}
-
-.section-eyebrow {
-  font-size: 0.72rem;
-  font-weight: 700;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  color: #14919B;
-  margin-bottom: 4px;
-}
-
-.section-title {
-  font-size: 1.45rem;
-  font-weight: 700;
-  color: #1e293b;
-  margin-bottom: 6px;
-}
-
-.section-subtitle {
-  font-size: 0.9rem;
-  color: #64748b;
-  max-width: 680px;
-}
-
-/* Insight Banners */
-.insight-banners-row {
+.stats-loading-shell {
+  min-height: 460px;
   display: flex;
-  gap: 16px;
-  flex-wrap: wrap;
-  margin-bottom: 48px;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 18px;
 }
 
-.insight-banner {
-  background: rgba(255, 255, 255, 0.78);
-  border: 1px solid rgba(203, 213, 225, 0.72);
-  border-left: 4px solid #cbd5e1;
-  border-radius: 0 12px 12px 0;
-  padding: 16px 24px;
+.stats-loading-text {
+  color: #64748b;
+  font-weight: 600;
+  letter-spacing: 0.025em;
+}
+
+.reveal-item {
+  opacity: 0;
+  transform: translateY(12px) scale(0.992);
+  animation: statsReveal 560ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  animation-delay: var(--delay, 0ms);
+  will-change: opacity, transform;
+}
+
+@keyframes statsReveal {
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.hero-section {
+  position: relative;
+  min-height: 300px;
   display: flex;
   align-items: center;
-  gap: 16px;
-  flex: 1;
-  min-width: 280px;
-  box-shadow: 0 12px 28px rgba(15, 23, 42, 0.06);
+  overflow: hidden;
 }
 
-.insight-banner.highlight {
-  border-left-color: #14919B;
-  background: #f0fdfa;
+.hero-bg {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, #0a4f53 0%, #0D7377 40%, #1a2744 100%);
+  background-size: 300% 300%;
+  animation: gradientShift 18s ease infinite;
+}
+.hero-bg::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse 80% 60% at 60% 40%, rgba(20,145,155,0.18) 0%, transparent 70%);
 }
 
-.insight-number {
-  font-size: 2rem;
-  font-weight: 800;
-  color: #0D7377;
-  white-space: nowrap;
-  line-height: 1;
+.hero-content {
+  position: relative;
+  z-index: 1;
+  padding: 48px 0 56px;
 }
 
-.insight-text {
-  font-size: 0.95rem;
-  color: #475569;
-  line-height: 1.3;
+.stats-content {
+  position: relative;
+  padding-top: 48px;
+  padding-bottom: 56px;
+  --stats-card-gap: 28px;
+  display: flex;
+  flex-direction: column;
+  gap: var(--stats-card-gap);
 }
 
-/* Flow Nodes */
-.flow-container {
+/*
+.stats-hero {
+  position: relative;
+  overflow: hidden;
+  min-height: 300px;
+  display: flex;
+  align-items: center;
+  padding: 0;
+  color: white;
+  background: linear-gradient(135deg, #0a4f53 0%, #0D7377 40%, #1a2744 100%);
+  background-size: 300% 300%;
+  animation: gradientShift 18s ease infinite;
+}
+
+.stats-hero-bg {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse 80% 60% at 60% 40%, rgba(20,145,155,0.18) 0%, transparent 70%);
+  pointer-events: none;
+}
+*/
+
+@keyframes gradientShift {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+.stats-hero-container {
+  position: relative;
+  min-height: 300px;
+  display: flex;
+  align-items: center;
+  padding-top: 48px;
+  padding-bottom: 56px;
+}
+
+.stats-hero-copy {
+  position: relative;
+  z-index: 1;
+  max-width: 760px;
+}
+
+.stats-title {
+  font-size: 3rem;
+  line-height: 1.05;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  margin: 8px 0 10px;
+}
+
+.stats-subtitle {
+  max-width: 680px;
+  color: rgba(255,255,255,0.90);
+  font-size: 1.25rem;
+  line-height: 1.45;
+}
+
+.cache-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 18px;
+  padding: 8px 12px;
+  border-radius: 999px;
+  background: rgba(255,255,255,0.12);
+  border: 1px solid rgba(255,255,255,0.22);
+  color: rgba(255,255,255,0.86);
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.hero-orbit {
+  position: absolute;
+  right: clamp(24px, 7vw, 90px);
+  top: 50%;
+  width: 220px;
+  height: 220px;
+  transform: translateY(-50%);
+  opacity: 0.78;
+}
+
+.orbit-ring {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  border: 1px solid rgba(255,255,255,0.22);
+}
+
+.orbit-ring--inner { inset: 48px; }
+.orbit-dot {
+  position: absolute;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #9FE7E3;
+  box-shadow: 0 0 34px rgba(159,231,227,0.8);
+}
+.orbit-dot--a { top: 22px; right: 48px; }
+.orbit-dot--b { bottom: 40px; left: 26px; background: #E6B06D; }
+
+.metric-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 18px;
+  margin: 0;
+  position: relative;
+}
+
+.metric-card,
+.section-card {
+  background: #fff;
+  border: 1px solid rgba(203, 213, 225, 0.72);
+  box-shadow: none;
+}
+
+.metric-card {
+  border-radius: 22px;
+  padding: 22px;
+}
+
+.metric-icon {
+  width: 42px;
+  height: 42px;
+  border-radius: 14px;
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 0;
-  flex-wrap: wrap;
-  padding: 32px;
-  background: rgba(255, 255, 255, 0.78);
-  border-radius: 20px;
-  border: 1px solid #e2e8f0;
-  margin-bottom: 48px;
+  margin-bottom: 18px;
+}
+
+.metric-value {
+  font-family: var(--aa-font-display);
+  font-size: clamp(1.65rem, 2.8vw, 2.35rem);
+  line-height: 1.05;
+  font-weight: 700;
+  color: #0f172a;
+  letter-spacing: -0.012em;
+}
+
+.metric-label {
+  margin-top: 8px;
+  color: #0D7377;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  font-size: 0.72rem;
+}
+
+.metric-note {
+  color: #64748b;
+  font-size: 0.85rem;
+  margin-top: 5px;
+}
+
+.section-card {
+  border-radius: 24px;
+  padding: 24px;
+  margin-bottom: 0;
+}
+
+.stats-card-row {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--stats-card-gap);
+  align-items: stretch;
+}
+
+.stats-card-cell,
+.stats-card-cell > .section-card {
+  min-width: 0;
+  height: 100%;
+}
+
+.section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 18px;
+  margin-bottom: 20px;
+}
+
+.section-header.compact { margin-bottom: 18px; }
+.stats-filter-header {
+  display: block;
+}
+
+.stats-filter-topline {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  margin-bottom: 4px;
+}
+
+.stats-filter-topline .section-eyebrow {
+  min-height: 24px;
+  padding-top: 0;
+  padding-bottom: 0;
+  line-height: 1;
+}
+
+.species-filter-trigger {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  flex: 0 0 auto;
+  height: 24px;
+  padding: 0 7px 0 9px;
+  border: 1px solid rgba(13, 115, 119, 0.20);
+  border-radius: 8px;
+  background: #f8fcfc;
+  box-shadow: none;
+  color: #0f172a;
+  cursor: pointer;
+  text-align: left;
+  transition: border-color 160ms ease, background 160ms ease;
+}
+
+.species-filter-trigger:hover {
+  border-color: rgba(13, 115, 119, 0.34);
+  background: #eff8f8;
+}
+
+.species-filter-value {
+  min-width: 0;
+  color: #1e293b;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.10em;
+  line-height: 1;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.species-filter-value.is-placeholder {
+  color: #0D7377;
+}
+
+.species-filter-icon {
+  width: 15px;
+  height: 15px;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #0D7377;
+  background: rgba(13, 115, 119, 0.08);
+}
+
+:global(.stats-species-menu) {
+  width: 280px !important;
+  max-width: min(280px, calc(100vw - 32px));
+  opacity: 0;
+  transform: translateY(-6px) scale(0.985);
+  transform-origin: top right;
+  animation: statsDropdownIn 180ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  will-change: opacity, transform;
+}
+
+@keyframes statsDropdownIn {
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.species-menu-card {
+  max-height: 280px;
+  overflow-y: auto;
+  padding: 8px;
+  border: 1px solid rgba(13, 115, 119, 0.16);
+  border-radius: 14px;
+  background: #fff;
+  box-shadow: none;
+}
+
+.species-menu-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 14px;
+  padding: 8px 10px 10px;
+  border-bottom: 1px solid rgba(226, 232, 240, 0.86);
+  color: #1e293b;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.species-menu-header small {
+  color: #94a3b8;
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: none;
+}
+
+.species-menu-option {
+  width: 100%;
+  min-height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 5px;
+  padding: 8px 10px;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  color: #334155;
+  cursor: pointer;
+  font: inherit;
+  text-align: left;
+  transition: background 140ms ease, color 140ms ease, transform 140ms ease;
+}
+
+.species-menu-option:hover {
+  transform: translateX(2px);
+  background: rgba(13, 115, 119, 0.07);
+  color: #0D7377;
+}
+
+.species-menu-option.is-active {
+  background: linear-gradient(135deg, rgba(13, 115, 119, 0.12), rgba(20, 145, 155, 0.08));
+  color: #0D7377;
+}
+
+.species-menu-option-main {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 0.88rem;
+  font-weight: 600;
+}
+.section-eyebrow {
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.10em;
+  text-transform: uppercase;
+  color: #14919B;
+}
+.section-eyebrow--light { color: rgba(172, 244, 240, 0.95); }
+.stats-card-title {
+  font-family: var(--aa-font-sans);
+  font-size: 1.38rem;
+  font-weight: 600;
+  font-stretch: normal;
+  color: #1e293b;
+  letter-spacing: 0.025em;
+  font-variation-settings: normal;
+  margin: 4px 0 6px;
+  line-height: 1.3;
+}
+.section-subtitle {
+  color: #64748b;
+  font-size: 0.92rem;
+  line-height: 1.55;
+  max-width: 720px;
+}
+
+.flow-grid {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr auto 1fr;
+  align-items: stretch;
+  gap: 14px;
+}
+
+.flow-node,
+.flow-connector {
+  border-radius: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .flow-node {
-  background: linear-gradient(180deg, rgba(255,255,255,0.92), rgba(248,250,252,0.88));
-  border: 1px solid #e2e8f0;
-  border-top: 3px solid #14919B;
-  border-radius: 12px;
-  padding: 24px 32px;
-  text-align: center;
-  min-width: 160px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03);
-}
-
-.flow-node-number {
-  font-size: 1.8rem;
-  font-weight: 800;
-  color: #0D7377;
-  line-height: 1.1;
-}
-
-.flow-node-label {
-  font-size: 0.9rem;
-  font-weight: 600;
-  color: #64748b;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  margin-top: 4px;
-}
-
-.flow-node-icon {
-  margin-top: 8px;
-}
-
-.flow-arrow {
-  display: flex;
+  min-height: 118px;
   flex-direction: column;
-  align-items: center;
-  padding: 0 24px;
-  color: #94a3b8;
+  background: #f8fafc;
+  border: 1px solid rgba(13, 115, 119, 0.14);
 }
 
-.flow-arrow-label {
-  font-size: 0.85rem;
+.flow-node--strong { border-color: rgba(20, 145, 155, 0.34); }
+.flow-node-value {
+  color: #0D7377;
+  font-family: var(--aa-font-display);
+  font-size: 2rem;
   font-weight: 700;
-  color: #14919B;
-  white-space: nowrap;
+  letter-spacing: -0.01em;
+}
+.flow-node-label {
+  color: #64748b;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  font-size: 0.74rem;
+}
+.flow-connector {
+  min-width: 110px;
+  color: #475569;
+  font-weight: 700;
+  font-size: 0.82rem;
+  position: relative;
+}
+.flow-connector::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 50%;
+  border-top: 1px dashed rgba(13, 115, 119, 0.26);
+}
+.flow-connector span {
+  position: relative;
+  background: #fff;
+  padding: 4px 8px;
+  border-radius: 999px;
 }
 
-.flow-arrow-line {
-  font-size: 1.5rem;
-  color: #cbd5e1;
-  margin: 4px 0;
-  letter-spacing: -2px;
+.chart-shell {
+  height: 280px;
+  padding: 8px 0 0;
 }
-
-.flow-arrow-sublabel {
-  font-size: 0.72rem;
-  color: #94a3b8;
-  white-space: nowrap;
+.chart-shell--large { height: 315px; }
+.chart-shell--wide { height: 400px; }
+.motif-chart-shell {
+  padding-top: 4px;
 }
-
-@media (max-width: 768px) {
-  .flow-container {
-    flex-direction: column;
-    gap: 16px;
-  }
-  .flow-arrow {
-    padding: 16px 0;
-  }
-  .flow-arrow-line {
-    transform: rotate(90deg);
-    margin: 16px 0;
-  }
-}
-
-/* Multiplicity Annotations */
-.multiplicity-annotation {
-  background: white;
-  border: 1px solid #e2e8f0;
-  border-radius: 12px;
-  padding: 16px 20px;
-  flex: 1;
-  min-width: 200px;
-}
-
-.multiplicity-annotation-number {
-  font-size: 1.6rem;
-  font-weight: 800;
-  color: #0D7377;
-}
-
-/* Species Richness */
-.species-richness-container {
-  display: flex;
-  flex-direction: column;
-}
-
-.species-richness-row {
+.empty-chart {
+  height: 100%;
   display: flex;
   align-items: center;
-  gap: 16px;
-  padding: 14px 0;
-  border-bottom: 1px solid #f1f5f9;
+  justify-content: center;
+  color: #94a3b8;
+  font-weight: 600;
 }
 
-.species-richness-row:last-child { 
-  border-bottom: none; 
+.complexity-cards {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: 16px;
+}
+.complexity-card {
+  border-radius: 16px;
+  padding: 14px 12px;
+  background: #f8fafc;
+  border: 1px solid rgba(203,213,225,0.72);
+}
+.complexity-card--accent {
+  background: #f1fafa;
+  border-color: rgba(13,115,119,0.22);
+}
+.complexity-value {
+  display: block;
+  color: #0D7377;
+  font-size: 1.55rem;
+  font-weight: 700;
+  line-height: 1;
+}
+.complexity-label {
+  display: block;
+  color: #64748b;
+  font-size: 0.78rem;
+  margin-top: 7px;
+  white-space: nowrap;
 }
 
-.species-name-col { 
-  min-width: 160px; 
-}
-
-.species-common { 
-  font-weight: 600; 
-  font-size: 0.9rem; 
-  color: #1e293b; 
-}
-
-.species-latin { 
-  font-style: italic; 
-  font-size: 0.78rem; 
-  color: #94a3b8; 
-}
-
-.species-bar-col { 
-  flex: 1; 
-  display: flex; 
-  align-items: center; 
-  gap: 12px; 
-}
-
-.species-bar-track { 
-  flex: 1; 
-  height: 10px; 
-  background: #f1f5f9; 
-  border-radius: 9999px; 
-  overflow: hidden; 
-}
-
-.species-bar-fill { 
-  height: 100%; 
-  border-radius: 9999px; 
-  transition: width 0.8s ease; 
-}
-
-.species-bar-count { 
-  font-size: 0.85rem; 
-  font-weight: 700; 
-  color: #0D7377; 
-  min-width: 80px; 
-  text-align: right; 
-}
-
-.species-assembly-col { 
-  min-width: 80px; 
-  text-align: right; 
-}
-
-@media (max-width: 600px) {
-  .species-richness-row {
-    flex-direction: column;
-    align-items: stretch;
-    gap: 8px;
-  }
-  .species-bar-count, .species-assembly-col {
-    text-align: left;
-  }
-}
-
-/* Leaderboard */
+.species-richness-container,
 .leaderboard-container {
   display: flex;
   flex-direction: column;
 }
-
+.species-richness-row,
 .leaderboard-row {
   display: flex;
   align-items: center;
-  gap: 16px;
+  gap: 14px;
   padding: 12px 0;
-  border-bottom: 1px solid #f1f5f9;
+  border-bottom: 1px solid rgba(226,232,240,0.78);
 }
-
-.leaderboard-row:last-child { 
-  border-bottom: none; 
-}
-
-.gene-name-link {
-  font-weight: 600;
-  color: #0D7377;
-  text-decoration: none;
-  min-width: 80px;
-}
-
-.gene-name-link:hover { 
-  text-decoration: underline; 
-}
-
-.gene-id-badge {
-  font-size: 0.78rem;
-  background: #f1f5f9;
-  color: #475569;
-  padding: 3px 8px;
-  border-radius: 6px;
-  font-family: var(--aa-font-mono);
-  border: 1px solid #e2e8f0;
-  min-width: 160px;
-}
-
-.leaderboard-bar-track {
-  flex: 1;
-  height: 8px;
-  background: #f1f5f9;
-  border-radius: 9999px;
+.species-richness-row:last-child,
+.leaderboard-row:last-child { border-bottom: none; }
+.species-name-col { min-width: 168px; }
+.species-common { font-weight: 700; color: #1e293b; font-size: 0.9rem; }
+.species-latin { color: #94a3b8; font-size: 0.78rem; font-style: italic; }
+.species-leader-name {
+  min-width: 146px;
+  max-width: 146px;
   overflow: hidden;
 }
-
+.species-leader-name .species-common,
+.species-leader-name .species-latin {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.species-bar-col { flex: 1; display: flex; align-items: center; gap: 12px; min-width: 0; }
+.species-bar-track,
+.leaderboard-bar-track {
+  flex: 1;
+  height: 10px;
+  background: rgba(226,232,240,0.74);
+  border-radius: 999px;
+  overflow: hidden;
+}
+.species-bar-fill,
 .leaderboard-bar-fill {
   height: 100%;
-  background: linear-gradient(90deg, #0D7377, #14919B);
-  border-radius: 9999px;
-  transition: width 0.6s ease;
+  border-radius: 999px;
+  transform-origin: left center;
+  animation: barGrow 900ms cubic-bezier(0.22, 1, 0.36, 1) both;
 }
+@keyframes barGrow { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+.species-bar-count { min-width: 86px; text-align: right; color: #0D7377; font-weight: 700; font-size: 0.84rem; }
+.assembly-chip { min-width: 54px; justify-content: center; }
 
-.rank-badge { 
-  width: 32px; 
-  height: 32px; 
-  border-radius: 50%; 
-  display: flex; 
-  align-items: center; 
-  justify-content: center; 
-  font-weight: 700; 
-  font-size: 0.8rem; 
-  flex-shrink: 0; 
+.leaderboard-header { align-items: flex-start; }
+.rank-badge {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 800;
+  font-size: 0.8rem;
+  flex-shrink: 0;
 }
-
-.rank-gold { background: linear-gradient(135deg, #F59E0B, #D97706); color: white; }
+.rank-gold { background: linear-gradient(135deg, #D9A441, #A96F4C); color: white; }
 .rank-silver { background: linear-gradient(135deg, #94a3b8, #64748b); color: white; }
-.rank-bronze { background: linear-gradient(135deg, #CD7F32, #A0522D); color: white; }
-.rank-default { background: #f1f5f9; color: #64748b; }
+.rank-bronze { background: linear-gradient(135deg, #B7791F, #8A5A22); color: white; }
+.rank-default { background: rgba(226,232,240,0.9); color: #64748b; }
+.gene-name-link { min-width: 100px; color: #0D7377; font-weight: 700; text-decoration: none; }
+.gene-name-link:hover { text-decoration: underline; }
+.gene-species-chip {
+  min-width: 120px;
+  color: #64748b;
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+.leaderboard-bar-fill { background: linear-gradient(90deg, #0D7377, #14919B); }
+.species-leader-bar-fill { background: linear-gradient(90deg, #355C7D, #4A7898); }
 
-@media (max-width: 600px) {
-  .leaderboard-row {
-    flex-wrap: wrap;
-  }
-  .leaderboard-bar-track {
-    display: none;
-  }
+@media (max-width: 1024px) {
+  .metric-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .stats-card-row { grid-template-columns: 1fr; }
+  .hero-orbit { opacity: 0.28; }
+  .flow-grid { grid-template-columns: 1fr; }
+  .flow-connector { min-height: 46px; }
+  .flow-connector::before { left: 50%; right: auto; top: 0; bottom: 0; border-top: none; border-left: 1px dashed rgba(13,115,119,0.26); }
+}
+
+@media (max-width: 640px) {
+  .stats-hero,
+  .stats-hero-container { min-height: 300px; }
+  .stats-title { font-size: 2.25rem; }
+  .stats-subtitle { font-size: 1.05rem; }
+  .metric-grid,
+  .complexity-cards { grid-template-columns: 1fr; }
+  .species-richness-row,
+  .leaderboard-row { align-items: stretch; flex-direction: column; gap: 8px; }
+  .species-name-col,
+  .gene-species-chip,
+  .species-leader-name { min-width: 0; max-width: none; }
+  .species-bar-count { text-align: left; }
+  .leaderboard-bar-track { width: 100%; }
 }
 </style>

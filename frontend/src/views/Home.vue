@@ -228,7 +228,7 @@
               <div v-for="sp in group.species" :key="sp.latin" class="taxonomy-species-row d-flex align-center ga-3">
                 <div class="flex-grow-1" style="min-width:0">
                   <div class="text-body-2 font-weight-medium">{{ sp.name }}</div>
-                  <div class="text-caption text-grey-darken-1 font-italic">{{ sp.latin }}</div>
+                  <div v-if="sp.latin" class="text-caption text-grey-darken-1 font-italic">{{ sp.latin }}</div>
                 </div>
                 <div class="text-right flex-shrink-0">
                   <div class="text-caption font-weight-bold" :style="{ color: group.color }">{{ sp.apaSites }}</div>
@@ -300,7 +300,7 @@ const taxonomyGroups = [
     color: '#0D7377',
     colorAlt: '#14919B',
     species: [
-      { name: 'Mouse', latin: 'Mus musculus', assembly: 'GRCm39', apaSites: '157,982', samples: 71 },
+      { name: 'Mus musculus', latin: '', assembly: 'GRCm39', apaSites: '157,982', samples: 71 },
     ],
   },
 ]

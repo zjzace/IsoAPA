@@ -242,6 +242,7 @@
 <script setup>
 import { ref, computed, reactive, onMounted, onBeforeUnmount, watch, nextTick } from 'vue'
 import * as d3 from 'd3'
+import { formatSampleName } from '@/utils/formatters'
 
 const props = defineProps({
   transcriptId: { type: String, required: true },
@@ -369,9 +370,6 @@ const fuzzyFilter = (list, query) => {
 const filteredTissueList = computed(() => fuzzyFilter(tissueList.value, tissueSearch.value))
 const filteredCellList = computed(() => fuzzyFilter(cellCultureList.value, cellSearch.value))
 
-const formatSampleName = (name) =>
-  String(name ?? '').replace(/_/g, ' ')
-
 // Toggle a sample on/off
 const toggleSample = (name) => {
   const idx = selectedSampleNames.value.indexOf(name)
@@ -407,6 +405,10 @@ const margin = reactive({ top: 40, right: 16, bottom: 15, left: 150 })
 const rulerHeight = 40
 const trackPadding = 10
 const SAMPLE_TRACK_H = 28
+const CDS_COLOR = '#0D7377'
+const UTR_COLOR = '#14919B'
+const INTRON_COLOR = '#B0B8C1'
+const TERMINAL_EXTENSION_COLOR = '#5C8797'
 
 // labelWidth is the usable label area (margin.left minus separator gap)
 const labelWidth = computed(() => margin.left - 12)
@@ -442,7 +444,10 @@ const totalHeight = computed(() => {
 const genomicExtent = computed(() => {
   const allPositions = [
     ...props.exons.map(e => [e.start, e.end]).flat(),
-    ...props.apaSites.map(s => s.mode_site_position)
+    ...props.apaSites.flatMap(s => {
+      const range = siteRange(s)
+      return [s.mode_site_position, range.start, range.end]
+    })
   ]
   if (allPositions.length === 0) return [0, 1000]
   
@@ -451,6 +456,48 @@ const genomicExtent = computed(() => {
   const padding = Math.max((max - min) * 0.15, 1000)  // At least 1kb padding
   return [min - padding, max + padding]
 })
+
+const siteRange = (site) => {
+  const fallback = Number(site?.mode_site_position)
+  const start = site?.cluster_start != null ? Number(site.cluster_start) : fallback
+  const end = site?.cluster_end != null ? Number(site.cluster_end) : fallback
+  return {
+    start: Math.min(start, end),
+    end: Math.max(start, end),
+  }
+}
+
+const terminalExtensionFor = (sortedExons, strand) => {
+  if (!sortedExons.length) return null
+
+  const terminalExon = strand === '-' ? sortedExons[0] : sortedExons[sortedExons.length - 1]
+  const ranges = (props.apaSites ?? []).map(siteRange).filter(r =>
+    Number.isFinite(r.start) && Number.isFinite(r.end)
+  )
+  if (!ranges.length) return null
+
+  if (strand === '-') {
+    const distalStart = Math.min(...ranges.map(r => r.start))
+    if (distalStart >= terminalExon.start) return null
+    return {
+      start: distalStart,
+      end: terminalExon.start,
+      anchor: terminalExon.start,
+      distal: distalStart,
+      direction: 'upstream',
+    }
+  }
+
+  const distalEnd = Math.max(...ranges.map(r => r.end))
+  if (distalEnd <= terminalExon.end) return null
+  return {
+    start: terminalExon.end,
+    end: distalEnd,
+    anchor: terminalExon.end,
+    distal: distalEnd,
+    direction: 'downstream',
+  }
+}
 
 // D3 scale and zoom
 const xScale = ref(null)
@@ -675,6 +722,61 @@ const showExonTooltip = (event, displayNum, exon) => {
   el.style.top  = y + 'px'
 }
 
+const showTerminalExtensionTooltip = (event, extension) => {
+  const el = ensureTooltipEl()
+  const length = Math.abs(extension.end - extension.start)
+
+  el.innerHTML = `
+    <div style="padding:13px 15px">
+      <div style="font-size:10.5px;letter-spacing:0.10em;color:#B7791F;font-weight:700;text-transform:uppercase;margin-bottom:3px">APA-supported extension</div>
+      <div style="font-family:'IBM Plex Sans',sans-serif;font-size:14px;color:#0f172a;font-weight:700;margin-bottom:10px">Terminal exon extension</div>
+      <div style="height:1px;background:rgba(183,121,31,0.20);margin-bottom:9px"></div>
+      <div style="display:grid;grid-template-columns:auto 1fr;row-gap:6px;column-gap:16px;align-items:center">
+        <span style="color:#475569;font-size:12.5px;white-space:nowrap">Transcript</span>
+        <span style="color:#0f172a;font-size:12.5px;font-weight:600;font-family:'IBM Plex Sans',sans-serif">${props.transcriptId}</span>
+        <span style="color:#475569;font-size:12.5px;white-space:nowrap">Extension</span>
+        <span style="color:#0f172a;font-size:12.5px;font-weight:700;font-family:'IBM Plex Sans',sans-serif">${extension.start.toLocaleString()} – ${extension.end.toLocaleString()}</span>
+        <span style="color:#475569;font-size:12.5px">Length</span>
+        <span style="color:#0f172a;font-size:12.5px;font-weight:700;font-family:'IBM Plex Sans',sans-serif">${length.toLocaleString()} bp</span>
+      </div>
+      <div style="margin-top:10px;color:#64748b;font-size:12px;line-height:1.45">
+        PA sites extend beyond the annotated terminal exon, suggesting an incomplete transcript end in the reference annotation.
+      </div>
+    </div>
+  `
+
+  el.style.padding = '0'
+  el.style.borderRadius = '12px'
+  el.style.background = 'rgba(255,255,255,0.84)'
+  el.style.backdropFilter = 'blur(24px) saturate(180%)'
+  el.style.webkitBackdropFilter = 'blur(24px) saturate(180%)'
+  el.style.border = '1px solid rgba(183,121,31,0.25)'
+  el.style.boxShadow = '0 8px 32px rgba(183,121,31,0.13), 0 2px 8px rgba(0,0,0,0.08), inset 0 1px 0 rgba(255,255,255,0.9)'
+  el.style.minWidth = '260px'
+  el.style.maxWidth = '340px'
+  el.style.fontSize = '13px'
+  el.style.fontFamily = 'IBM Plex Sans, sans-serif'
+  el.style.color = '#0f172a'
+  el.style.display = 'block'
+
+  const nativeEvent = event.sourceEvent || event
+  const W = el.offsetWidth || 290
+  const H = el.offsetHeight || 170
+  const vw = window.innerWidth
+  const vh = window.innerHeight
+  const OFFSET_X = 14, OFFSET_Y = -10
+
+  let x = nativeEvent.clientX + OFFSET_X
+  let y = nativeEvent.clientY + OFFSET_Y
+  if (x + W > vw - 8) x = nativeEvent.clientX - W - OFFSET_X
+  if (y + H > vh - 8) y = nativeEvent.clientY - H - Math.abs(OFFSET_Y)
+  if (y < 4) y = 4
+  if (x < 4) x = 4
+
+  el.style.left = x + 'px'
+  el.style.top  = y + 'px'
+}
+
 // Initialize scale
 const initScale = () => {
   // Base scale maps the content region (exons + APA sites + 5% pad) directly to the
@@ -682,7 +784,10 @@ const initScale = () => {
   // scaleExtent([1, 100]) and translateExtent behave correctly without any fitK gymnastics.
   const allPositions = [
     ...props.exons.map(e => [e.start, e.end]).flat(),
-    ...props.apaSites.map(s => s.mode_site_position)
+    ...props.apaSites.flatMap(s => {
+      const range = siteRange(s)
+      return [s.mode_site_position, range.start, range.end]
+    })
   ]
   const cMin = allPositions.length ? Math.min(...allPositions) : 0
   const cMax = allPositions.length ? Math.max(...allPositions) : 1000
@@ -927,13 +1032,73 @@ const renderTranscript = () => {
 
   // Create CDS lookup set for fast checking
   const cdsSet = new Set(props.cds.map(c => `${c.start}-${c.end}`))
+  const terminalExtension = terminalExtensionFor(sortedExons, props.strand)
+
+  if (terminalExtension) {
+    const x1 = xScale.value(terminalExtension.start)
+    const x2 = xScale.value(terminalExtension.end)
+    const x = Math.min(x1, x2)
+    const w = Math.max(3, Math.abs(x2 - x1))
+    const exonHeight = 20
+    const extensionStroke = 1
+    const extensionH = exonHeight - extensionStroke * 2
+
+    const ext = g.append('g')
+      .attr('class', 'terminal-extension')
+      .style('cursor', 'help')
+
+    ext.append('rect')
+      .attr('x', x)
+      .attr('y', trackY - extensionH / 2)
+      .attr('width', w)
+      .attr('height', extensionH)
+      .attr('fill', TERMINAL_EXTENSION_COLOR)
+      .attr('fill-opacity', 0.16)
+      .attr('stroke', TERMINAL_EXTENSION_COLOR)
+      .attr('stroke-width', extensionStroke)
+      .attr('stroke-dasharray', '4,3')
+      .attr('rx', 3)
+
+    ext.append('rect')
+      .attr('x', x)
+      .attr('y', 0)
+      .attr('width', w)
+      .attr('height', props.trackHeight)
+      .attr('fill', 'transparent')
+
+    if (w > 72) {
+      ext.append('text')
+        .attr('x', x + w / 2)
+        .attr('y', trackY)
+        .attr('dy', '0.35em')
+        .attr('text-anchor', 'middle')
+        .style('font-size', '10.5px')
+        .style('font-weight', '700')
+        .style('fill', TERMINAL_EXTENSION_COLOR)
+        .style('pointer-events', 'none')
+        .text('APA extension')
+    }
+
+    ext
+      .on('mouseenter', function(event) {
+        d3.select(this).select('rect').attr('fill-opacity', 0.24)
+        showTerminalExtensionTooltip(event, terminalExtension)
+      })
+      .on('mousemove', function(event) {
+        showTerminalExtensionTooltip(event, terminalExtension)
+      })
+      .on('mouseleave', function() {
+        d3.select(this).select('rect').attr('fill-opacity', 0.16)
+        hideTooltip()
+      })
+  }
 
   // Render exons with DISTINCT CDS vs UTR styling
   sortedExons.forEach((exon, idx) => {
     const displayNum = props.strand === '-' ? sortedExons.length - idx : idx + 1
     const isCDS = cdsSet.has(`${exon.start}-${exon.end}`)
     const exonHeight = 20
-    const exonColor = isCDS ? '#0D7377' : '#14919B'
+    const exonColor = isCDS ? CDS_COLOR : UTR_COLOR
     
     const x = xScale.value(exon.start)
     const width = Math.max(3, xScale.value(exon.end) - x)

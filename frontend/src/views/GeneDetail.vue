@@ -48,9 +48,8 @@
             <div class="gene-meta-item" style="align-items: flex-start;" v-if="speciesInfo">
               <span class="gene-meta-label">Species</span>
               <span class="gene-meta-value">
-                {{ speciesInfo.name }}
-                <span style="font-style: italic; opacity: 0.65; font-size: 13.5px;">{{ speciesInfo.latin_name }}</span>
-                <v-chip size="x-small" variant="tonal" color="secondary" class="ml-1">{{ speciesInfo.assembly }}</v-chip>
+                {{ formatSpeciesName(speciesInfo) }}
+                <span v-if="formatSpeciesSubtitle(speciesInfo)" style="font-style: italic; opacity: 0.65; font-size: 13.5px;">{{ formatSpeciesSubtitle(speciesInfo) }}</span>
               </span>
             </div>
           </div>
@@ -233,7 +232,7 @@
                       <!-- Transcript ID -->
                       <td class="tx-td">
                         <router-link
-                          :to="{ name: 'LocusDetail', params: { transcriptId: tx.transcript_id } }"
+                          :to="{ name: 'LocusDetail', params: { transcriptId: tx.transcript_id }, query: { species: geneData.species } }"
                           class="tx-id-link"
                           @click.stop
                         >{{ tx.transcript_id }}</router-link>
@@ -419,6 +418,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import { apiService } from '@/services/api'
+import { formatSampleName, formatSpeciesName, formatSpeciesSubtitle } from '@/utils/formatters'
 import MultiIsoformBrowser from '@/components/MultiIsoformBrowser.vue'
 
 const route = useRoute()
@@ -436,56 +436,27 @@ const geneSummaryError = ref(null)
 const geneSummaryData = ref(null)
 const showAllPathways = ref(false)
 
-const fetchGeneSummary = async (geneSymbol, speciesName) => {
-  const SPECIES_TAXON = {
-    'Human': 'human',
-    'Mouse': 'mouse',
-    'Rat': 'rat',
-    'Zebrafish': 'zebrafish',
-    'Fruitfly': 'fruitfly',
-    'Nematode': 'nematode',
-    'Pig': 'pig',
-    'Frog': 'frog',
-  }
-  const taxon = SPECIES_TAXON[speciesName] ?? 'human'
+const fetchGeneSummary = async (geneId, speciesName) => {
   geneSummaryLoading.value = true
   geneSummaryError.value = null
   try {
-    const url = `https://mygene.info/v3/query?q=symbol:${encodeURIComponent(geneSymbol)}&fields=name,summary,pathway.kegg,uniprot,entrezgene,HGNC,symbol,alias,type_of_gene,refseq,ensembl&species=${taxon}&size=1`
-    const res = await fetch(url)
-    if (!res.ok) throw new Error(`HTTP ${res.status}`)
-    const json = await res.json()
-    const hit = json?.hits?.[0]
-    if (!hit) {
+    const summary = await apiService.getGeneSummary(geneId, speciesName)
+    if (!summary?.summary && !summary?.fullName) {
       geneSummaryData.value = null
       return
     }
-    const uniprotRaw = hit.uniprot?.['Swiss-Prot']
-    const uniprot = Array.isArray(uniprotRaw) ? uniprotRaw[0] : uniprotRaw ?? null
-    const pathways = hit.pathway?.kegg
-      ? (Array.isArray(hit.pathway.kegg) ? hit.pathway.kegg : [hit.pathway.kegg])
-      : []
-    // Aliases — normalise to array
-    const aliasRaw = hit.alias
-    const aliases = Array.isArray(aliasRaw) ? aliasRaw : (aliasRaw ? [aliasRaw] : [])
-    // RefSeq: pick first NM_ mRNA accession (curated mRNA)
-    const rnaList = hit.refseq?.rna ?? []
-    const rnaArr  = Array.isArray(rnaList) ? rnaList : [rnaList]
-    const refseqMrna = rnaArr.find(r => r.startsWith('NM_')) ?? rnaArr[0] ?? null
-    // Ensembl gene ID from hit (may differ from query if mouse gene resolved differently)
-    const ensemblGene = hit.ensembl?.gene ?? null
     geneSummaryData.value = {
-      symbol:      hit.symbol      ?? null,
-      fullName:    hit.name        ?? null,
-      aliases,
-      geneType:    hit.type_of_gene ?? null,
-      summary:     hit.summary     ?? null,
-      pathways,
-      entrezgene:  hit.entrezgene  ?? null,
-      uniprot,
-      hgnc:        hit.HGNC        ?? null,
-      refseqMrna,
-      ensemblGene,
+      symbol:      summary.symbol      ?? null,
+      fullName:    summary.fullName    ?? null,
+      aliases:     summary.aliases     ?? [],
+      geneType:    summary.geneType    ?? null,
+      summary:     summary.summary     ?? null,
+      pathways:    summary.pathways    ?? [],
+      entrezgene:  summary.entrezgene  ?? null,
+      uniprot:     summary.uniprot     ?? null,
+      hgnc:        summary.hgnc        ?? null,
+      refseqMrna:  summary.refseqMrna  ?? null,
+      ensemblGene: summary.ensemblGene ?? null,
     }
   } catch (err) {
     console.warn('Gene summary fetch failed:', err)
@@ -543,9 +514,6 @@ const visibleSamples = (site, tx) => {
 const hiddenSampleCount = (site, tx) =>
   Math.max(0, (site.sample_details?.length ?? 0) - visibleSamples(site, tx).length)
 
-const formatSampleName = (name) =>
-  String(name ?? '').replace(/_/g, ' ')
-
 const formatClusterRange = (site) => {
   if (site.cluster_start == null || site.cluster_end == null) return '—'
   return `${site.cluster_start}:${site.cluster_end}`
@@ -595,18 +563,22 @@ const getBiotypeClass = (biotype) => {
 
 onMounted(async () => {
   const geneId = route.params.geneId
+  const species = route.query.species
   
   try {
     loading.value = true
-    geneData.value = await apiService.getGeneDetail(geneId)
+    geneData.value = await apiService.getGeneDetail(geneId, species)
 
     // Fire gene summary fetch (non-blocking)
-    fetchGeneSummary(geneData.value.gene_name, geneData.value.species)
+    fetchGeneSummary(geneId, geneData.value.species)
 
     // Fetch species info from first transcript's locus detail (non-fatal)
     if (geneData.value?.transcripts?.length) {
       try {
-        const firstTx = await apiService.getLocusDetail(geneData.value.transcripts[0].transcript_id)
+        const firstTx = await apiService.getLocusDetail(
+          geneData.value.transcripts[0].transcript_id,
+          geneData.value.species
+        )
         speciesInfo.value = firstTx?.apa_sites?.[0]?.species ?? null
       } catch {
         // Non-fatal — species badge is optional
@@ -624,7 +596,7 @@ onMounted(async () => {
       structuresLoading.value = true
       const entries = await Promise.all(
         geneData.value.transcripts.map(tx =>
-          apiService.getTranscriptStructure(tx.transcript_id)
+          apiService.getTranscriptStructure(tx.transcript_id, geneData.value.species)
             .then(s => [tx.transcript_id, s])
             .catch(() => [tx.transcript_id, null])
         )

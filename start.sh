@@ -6,10 +6,11 @@
 #    1. Locate conda/mamba and create the 'apaatlas' environment if needed
 #    2. Activate the environment
 #    3. Verify Node.js is available
-#    4. Detect data changes; rebuild SQLite DB + run ETL when needed
-#    5. Install frontend npm deps if missing
-#    6. Start the backend (uvicorn, port 8000)
-#    7. Start the frontend (vite dev, port 3000)
+#    4. Validate data files; rebuild SQLite DB + run ETL when needed
+#    5. Build BED12 indices when needed
+#    6. Install frontend npm deps if missing
+#    7. Start the backend (uvicorn, port 8000)
+#    8. Start the frontend (vite dev, port 3000)
 # =============================================================================
 
 set -euo pipefail
@@ -18,11 +19,11 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 BACKEND_DIR="$SCRIPT_DIR/backend"
 FRONTEND_DIR="$SCRIPT_DIR/frontend"
 DATA_DIR="$SCRIPT_DIR/data"
-TEST_SPECIES="${TEST_SPECIES:-Mus_musculus}"
 ENV_NAME="apaatlas"
 DB_FILE="$BACKEND_DIR/apa_atlas.db"
 # Store hash alongside the DB so it travels with the project on the same machine
 DATA_HASH_FILE="$BACKEND_DIR/.data_hash"
+STATS_CACHE_FILE="$BACKEND_DIR/stats_cache.json"
 
 # ─── helpers ──────────────────────────────────────────────────────────────────
 
@@ -41,14 +42,64 @@ md5_cmd() {
     fi
 }
 
-# Hash APA data files for the test species – excludes large reference binaries
+# Hash all species-level APA data files. BED files are included because they
+# drive the genome browser indices.
 get_data_hash() {
-    find "$DATA_DIR/$TEST_SPECIES" -maxdepth 1 -type f \( -name "*.txt" -o -name "*.tsv" \) \
-        ! -path "*/reference/*" -print0 2>/dev/null \
+    find "$DATA_DIR" -mindepth 2 -maxdepth 2 -type f \
+        \( -name "*.txt" -o -name "*.tsv" -o -name "*.bed" \) -print0 2>/dev/null \
         | sort -z \
         | xargs -0 md5sum 2>/dev/null \
         | md5sum | awk '{print $1}' \
         || echo "none"
+}
+
+validate_data_files() {
+    [[ -d "$DATA_DIR" ]] || die "Data directory not found: $DATA_DIR"
+
+    local species_count=0
+    local missing=0
+    local species_dir species_name sites_count anno_count bed_count
+
+    while IFS= read -r -d '' species_dir; do
+        species_count=$((species_count + 1))
+        species_name="$(basename "$species_dir")"
+
+        sites_count="$(find "$species_dir" -maxdepth 1 -type f \
+            \( -name "*_unified_apa_sites.txt" -o -name "*_unified_apa_sites.tsv" \) \
+            | wc -l | tr -d ' ')"
+        anno_count="$(find "$species_dir" -maxdepth 1 -type f \
+            -name "*_unified_apa.anno.txt" \
+            | wc -l | tr -d ' ')"
+        bed_count="$(find "$species_dir" -maxdepth 1 -type f \
+            -name "*.bed" \
+            | wc -l | tr -d ' ')"
+
+        if [[ "$sites_count" -lt 1 ]]; then
+            warn "$species_name: missing *_unified_apa_sites.txt/tsv"
+            missing=1
+        elif [[ "$sites_count" -gt 1 ]]; then
+            warn "$species_name: multiple unified APA site files found; ETL will use the first filesystem match"
+        fi
+
+        if [[ "$anno_count" -lt 1 ]]; then
+            warn "$species_name: missing *_unified_apa.anno.txt"
+            missing=1
+        elif [[ "$anno_count" -gt 1 ]]; then
+            warn "$species_name: multiple annotation files found; ETL will use the first filesystem match"
+        fi
+
+        if [[ "$bed_count" -lt 1 ]]; then
+            warn "$species_name: missing BED file"
+            missing=1
+        elif [[ "$bed_count" -gt 1 ]]; then
+            warn "$species_name: multiple BED files found; genome browser will use the first filesystem match"
+        fi
+    done < <(find "$DATA_DIR" -mindepth 1 -maxdepth 1 -type d ! -name ".*" -print0 | sort -z)
+
+    [[ "$species_count" -gt 0 ]] || die "No species folders found under $DATA_DIR"
+    [[ "$missing" -eq 0 ]] || die "Required data files are missing; fix data/ before rebuilding"
+
+    ok "Validated $species_count species folders"
 }
 
 should_reload_db() {
@@ -67,7 +118,7 @@ log "=========================================="
 log "  ApaAtlas – setup & launch"
 log "=========================================="
 
-log "[1/7] Conda environment"
+log "[1/8] Conda environment"
 
 # Locate mamba or conda (prefer mamba)
 CONDA_EXE=""
@@ -147,7 +198,7 @@ fi
 
 # ─── step 2 : activate ────────────────────────────────────────────────────────
 
-log "[2/7] Activating environment"
+log "[2/8] Activating environment"
 activate_env
 
 # Resolve python inside the environment (robust even if activate did nothing)
@@ -158,7 +209,7 @@ info "Python: $PYTHON ($($PYTHON --version 2>&1))"
 
 # ─── step 3 : node.js ─────────────────────────────────────────────────────────
 
-log "[3/7] Checking Node.js"
+log "[3/8] Checking Node.js"
 if ! command -v node &>/dev/null; then
     die "node not found. Install Node.js (https://nodejs.org) and re-run."
 fi
@@ -166,39 +217,54 @@ ok "Node $(node --version) / npm $(npm --version)"
 
 # ─── step 4 : database / ETL ─────────────────────────────────────────────────
 
-log "[4/7] Database & ETL"
+log "[4/8] Database & ETL"
+
+validate_data_files
 
 if should_reload_db; then
-    info "Data change detected (or DB missing) — rebuilding database ..."
+    info "Data change detected (or DB missing) — rebuilding database for all species ..."
     rm -f "$DB_FILE"
     info "Running ETL pipeline ..."
-    (cd "$BACKEND_DIR" && "$PYTHON" -m app.services.etl --species "$TEST_SPECIES") \
-        || warn "ETL returned non-zero — database may be incomplete"
+    (cd "$BACKEND_DIR" && "$PYTHON" -m app.services.etl) \
+        || die "ETL failed; database was not rebuilt completely"
+    info "Precomputing statistics cache ..."
+    (cd "$BACKEND_DIR" && "$PYTHON" -m app.services.precompute_stats) \
+        || die "Statistics cache generation failed"
     get_data_hash > "$DATA_HASH_FILE"
     ok "Database ready"
 else
     ok "No data changes — using existing database"
 fi
 
-# ─── step 5 : frontend dependencies ──────────────────────────────────────────
+if [[ ! -f "$STATS_CACHE_FILE" ]]; then
+    info "Statistics cache missing — generating ..."
+    (cd "$BACKEND_DIR" && "$PYTHON" -m app.services.precompute_stats) \
+        || die "Statistics cache generation failed"
+    ok "Statistics cache ready"
+else
+    ok "Statistics cache present"
+fi
 
-log "[5/7] BED12 indices"
+# ─── step 5 : BED12 indices ──────────────────────────────────────────────────
+
+log "[5/8] BED12 indices"
 
 _bed12_any_built=0
-for _bed in "$DATA_DIR/$TEST_SPECIES"/*.bed; do
-    [[ -f "$_bed" ]] || continue
+while IFS= read -r -d '' _bed; do
     if [[ ! -f "${_bed}.bidx" ]]; then
-        info "Building BED12 index: $(basename "$_bed") ..."
+        info "Building BED12 index: $(basename "$(dirname "$_bed")")/$(basename "$_bed") ..."
         "$PYTHON" "$BACKEND_DIR/build_bed12_index.py" "$_bed" \
             || warn "Failed to build index for $_bed"
         _bed12_any_built=1
     fi
-done
+done < <(find "$DATA_DIR" -mindepth 2 -maxdepth 2 -type f -name "*.bed" -print0 | sort -z)
 if [[ "$_bed12_any_built" -eq 0 ]]; then
     ok "All BED12 indices present"
 else
     ok "BED12 index build complete"
 fi
+
+# ─── step 6 : frontend dependencies ──────────────────────────────────────────
 
 log "[6/8] Frontend dependencies"
 

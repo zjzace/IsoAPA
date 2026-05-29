@@ -5,19 +5,7 @@
       <div class="hero-bg"></div>
       <v-container class="hero-content">
         <h1 class="text-h3 font-weight-bold text-white mb-2">Download ApaAtlas Data</h1>
-        <p class="text-h6 text-white mb-6 opacity-90">Bulk export of isoform-level polyadenylation datasets</p>
-        
-        <div class="d-flex flex-wrap gap-4">
-          <v-chip class="mr-2" variant="outlined" color="white" style="background: rgba(255,255,255,0.9);">
-            <strong style="color: #0D7377;">235K+ PA Sites</strong>
-          </v-chip>
-          <v-chip class="mr-2" variant="outlined" color="white" style="background: rgba(255,255,255,0.9);">
-            <strong style="color: #0D7377;">3 Datasets</strong>
-          </v-chip>
-          <v-chip variant="outlined" color="white" style="background: rgba(255,255,255,0.9);">
-            <strong style="color: #0D7377;">Multiple Species</strong>
-          </v-chip>
-        </div>
+        <p class="text-h6 text-white opacity-90">Export of isoform-level polyadenylation results</p>
       </v-container>
     </section>
 
@@ -65,15 +53,56 @@
               :class="{ active: selectedSpecies === sp.name }"
               @click="selectedSpecies = sp.name"
             >
-              {{ sp.name }}
-              <span class="scope-chip-latin" v-if="sp.latin_name">{{ sp.latin_name }}</span>
+              {{ formatSpeciesName(sp) }}
+              <span class="scope-chip-latin" v-if="formatSpeciesSubtitle(sp)">{{ formatSpeciesSubtitle(sp) }}</span>
             </button>
           </div>
         </div>
 
         <div class="scope-divider"></div>
 
-        <div class="scope-group">
+        <div class="scope-group scope-group--samples" v-if="sampleFilterEnabled">
+          <div class="scope-label">
+            <v-icon icon="mdi-flask-outline" size="16" class="mr-1"></v-icon>
+            Samples
+            <span class="scope-label-hint">{{ selectedSamples.length }} selected</span>
+          </div>
+          <v-autocomplete
+            v-model="selectedSamples"
+            :items="filteredSampleOptions"
+            item-title="title"
+            item-value="value"
+            multiple
+            clearable
+            chips
+            closable-chips
+            density="compact"
+            variant="outlined"
+            hide-details
+            class="sample-multi-select"
+            menu-icon="mdi-chevron-down"
+            :menu-props="{ contentClass: 'sample-select-menu' }"
+            placeholder="All samples"
+            no-data-text="No samples available"
+          >
+            <template #chip="{ props, item }">
+              <v-chip v-bind="props" size="small" class="sample-select-chip">
+                {{ item.raw.title }}
+              </v-chip>
+            </template>
+            <template #item="{ props, item }">
+              <v-list-item v-bind="props" :title="item.raw.title">
+                <template #subtitle>
+                  <span class="sample-option-subtitle">{{ formatSpeciesName(item.raw.species) }}</span>
+                </template>
+              </v-list-item>
+            </template>
+          </v-autocomplete>
+        </div>
+
+        <div class="scope-divider scope-divider--format" v-if="sampleFilterEnabled"></div>
+
+        <div class="scope-group scope-group--format">
           <div class="scope-label">
             <v-icon icon="mdi-file-delimited" size="16" class="mr-1"></v-icon>
             Format
@@ -105,11 +134,11 @@
           <div class="download-action-eyebrow">Ready to Download</div>
           <div class="download-action-title">
             {{ selectedDataset.title }}
-            <span v-if="selectedSpecies" class="download-action-species"> · {{ selectedSpecies }}</span>
+            <span v-if="selectedSpecies" class="download-action-species"> · {{ selectedSpeciesLabel }}</span>
+            <span v-if="selectedSamples.length" class="download-action-species"> · {{ sampleSelectionLabel }}</span>
           </div>
           <div class="download-action-meta">
             <v-chip size="small" variant="tonal" color="primary" class="mr-2">{{ selectedFormat.toUpperCase() }}</v-chip>
-            <span class="text-grey text-caption">{{ selectedDataset.countLabel }}</span>
           </div>
         </div>
         <v-btn
@@ -162,9 +191,9 @@
           {{ schemaOpen ? 'Hide Data Schema' : 'View Data Schema' }}
         </button>
 
-        <v-expand-transition>
-          <div v-if="schemaOpen" class="schema-content mt-6">
-            <div class="lang-tabs">
+        <div class="schema-panel" :class="{ 'is-open': schemaOpen }">
+          <div class="schema-content mt-6">
+            <div class="lang-tabs schema-tabs">
               <button 
                 v-for="s in schemas" 
                 :key="s.id" 
@@ -192,19 +221,23 @@
               </v-table>
             </div>
           </div>
-        </v-expand-transition>
+        </div>
       </div>
     </v-container>
   </div>
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { apiService } from '@/services/api'
+import { formatSampleName, formatSpeciesName, formatSpeciesSubtitle } from '@/utils/formatters'
 
 const speciesList = ref([])
+const sampleList = ref([])
+const detailedStats = ref({})
 const selectedDataset = ref(null)
 const selectedSpecies = ref(null)
+const selectedSamples = ref([])
 const selectedFormat = ref('csv')
 const apiLang = ref('curl')
 const copied = ref(false)
@@ -212,14 +245,23 @@ const schemaOpen = ref(false)
 const schemaTab = ref('apa-sites')
 const downloading = ref(false)
 
-const datasets = [
+const formatCompactCount = (value) => {
+  const count = Number(value || 0)
+  if (count >= 1_000_000) return `${(count / 1_000_000).toFixed(count >= 10_000_000 ? 0 : 1)}M`
+  if (count >= 1_000) return `${Math.round(count / 1_000)}K`
+  return count.toLocaleString()
+}
+
+const datasets = computed(() => [
   {
     id: 'apa-sites',
     title: 'PA Sites',
     description: 'Polyadenylation sites with genomic positions, read counts, and relative abundances per isoform',
     icon: 'mdi-map-marker-multiple',
     gradient: 'linear-gradient(135deg, #0D7377, #14919B)',
-    countLabel: '235K+ records',
+    countLabel: detailedStats.value.total_apa_sites
+      ? `${formatCompactCount(detailedStats.value.total_apa_sites)} records`
+      : 'PA site records',
     formats: ['csv', 'tsv'],
   },
   {
@@ -234,17 +276,18 @@ const datasets = [
   {
     id: 'abundance-matrix',
     title: 'Sample Abundance Matrix',
-    description: 'PA site × sample read-count matrix (TSV) for differential APA analysis with DaPars, QAPA, or DEXSeq',
+    description: 'PA site × sample matrix with read counts and relative abundance values for differential APA analysis',
     icon: 'mdi-table-large',
     gradient: 'linear-gradient(135deg, #355C7D, #4A7898)',
     countLabel: 'Sites × Samples',
     formats: ['tsv'],
   },
-]
+])
 
 const selectDataset = (item) => {
   selectedDataset.value = item
   selectedFormat.value = item.formats[0]
+  if (!sampleFilterEnabled.value) selectedSamples.value = []
 }
 
 const triggerDownload = async () => {
@@ -275,6 +318,9 @@ const downloadUrl = computed(() => {
   if (!selectedDataset.value) return ''
   const params = new URLSearchParams()
   if (selectedSpecies.value) params.set('species', selectedSpecies.value)
+  if (sampleFilterEnabled.value) {
+    selectedSamples.value.forEach(sample => params.append('sample', sample))
+  }
   if (selectedDataset.value.formats.length > 1) params.set('format', selectedFormat.value)
   const query = params.toString()
   return `${BASE_URL}/download/${selectedDataset.value.id}${query ? '?' + query : ''}`
@@ -283,13 +329,17 @@ const downloadUrl = computed(() => {
 const downloadFilename = computed(() => {
   if (!selectedDataset.value) return ''
   const sp = selectedSpecies.value ? `_${selectedSpecies.value.toLowerCase().replace(/\s+/g, '_')}` : ''
-  return `apaatlas_${selectedDataset.value.id}${sp}.${selectedFormat.value}`
+  const sampleSuffix = selectedSamples.value.length ? `_samples-${selectedSamples.value.length}` : ''
+  return `apaatlas_${selectedDataset.value.id}${sp}${sampleSuffix}.${selectedFormat.value}`
 })
 
 const buildQueryString = () => {
   const parts = []
   if (selectedDataset.value?.formats.length > 1) parts.push(`format=${selectedFormat.value}`)
   if (selectedSpecies.value) parts.push(`species=${encodeURIComponent(selectedSpecies.value)}`)
+  if (sampleFilterEnabled.value) {
+    selectedSamples.value.forEach(sample => parts.push(`sample=${encodeURIComponent(sample)}`))
+  }
   return parts.length ? '?' + parts.join('&') : ''
 }
 
@@ -303,10 +353,13 @@ const curlCommand = computed(() => {
 const pythonCommand = computed(() => {
   const dataset = selectedDataset.value?.id || 'apa-sites'
   const filename = downloadFilename.value || `apaatlas_${dataset}.${selectedFormat.value}`
-  const paramLines = []
-  if (selectedDataset.value?.formats.length > 1) paramLines.push(`    "format": "${selectedFormat.value}",`)
-  if (selectedSpecies.value) paramLines.push(`    "species": "${selectedSpecies.value}",`)
-  const paramBlock = paramLines.length ? `\nparams = {\n${paramLines.join('\n')}\n}\n` : '\nparams = {}\n'
+  const paramItems = []
+  if (selectedDataset.value?.formats.length > 1) paramItems.push(`("format", "${selectedFormat.value}")`)
+  if (selectedSpecies.value) paramItems.push(`("species", "${selectedSpecies.value}")`)
+  if (sampleFilterEnabled.value) {
+    selectedSamples.value.forEach(sample => paramItems.push(`("sample", "${sample}")`))
+  }
+  const paramBlock = paramItems.length ? `\nparams = [\n    ${paramItems.join(',\n    ')}\n]\n` : '\nparams = []\n'
   return `import requests\n\nurl = "http://your-server/api/v1/download/${dataset}"${paramBlock}\nr = requests.get(url, params=params)\nwith open("${filename}", "wb") as f:\n    f.write(r.content)`
 })
 
@@ -316,6 +369,9 @@ const rCommand = computed(() => {
   const paramLines = []
   if (selectedDataset.value?.formats.length > 1) paramLines.push(`    format = "${selectedFormat.value}",`)
   if (selectedSpecies.value) paramLines.push(`    species = "${selectedSpecies.value}",`)
+  if (sampleFilterEnabled.value && selectedSamples.value.length) {
+    paramLines.push(`    sample = c(${selectedSamples.value.map(sample => `"${sample}"`).join(', ')}),`)
+  }
   const paramBlock = paramLines.length ? `\nparams <- list(\n${paramLines.join('\n')}\n)\n` : '\nparams <- list()\n'
   return `library(httr)\n\nurl <- "http://your-server/api/v1/download/${dataset}"${paramBlock}\nresponse <- GET(url, query = params)\nwriteBin(content(response, "raw"), "${filename}")`
 })
@@ -324,6 +380,37 @@ const currentCommand = computed(() => {
   if (apiLang.value === 'curl') return curlCommand.value
   if (apiLang.value === 'python') return pythonCommand.value
   return rCommand.value
+})
+
+const selectedSpeciesLabel = computed(() => {
+  const selected = speciesList.value.find(sp => sp.name === selectedSpecies.value)
+  return selected ? formatSpeciesName(selected) : formatSpeciesName(selectedSpecies.value)
+})
+
+const sampleFilterEnabled = computed(() =>
+  ['apa-sites', 'abundance-matrix'].includes(selectedDataset.value?.id)
+)
+
+const sampleSelectionLabel = computed(() => {
+  if (selectedSamples.value.length === 1) {
+    return formatSampleName(selectedSamples.value[0])
+  }
+  return `${selectedSamples.value.length} samples`
+})
+
+const sampleOptions = computed(() =>
+  sampleList.value
+    .map(sample => ({
+      title: sample.display_name ?? formatSampleName(sample.name),
+      value: sample.name,
+      species: sample.species,
+    }))
+    .sort((a, b) => a.title.localeCompare(b.title, undefined, { sensitivity: 'base' }))
+)
+
+const filteredSampleOptions = computed(() => {
+  if (!selectedSpecies.value) return sampleOptions.value
+  return sampleOptions.value.filter(sample => sample.species === selectedSpecies.value)
 })
 
 const langLabel = (lang) => ({ curl: 'cURL', python: 'Python', r: 'R' }[lang])
@@ -341,9 +428,10 @@ const copyCommand = async () => {
 const schemas = [
   { id: 'apa-sites', title: 'PA Sites', fields: [
     { name: 'gene_name', type: 'string', desc: 'Official gene symbol' },
-{ name: 'gene_id', type: 'string', desc: 'NCBI Entrez Gene ID' },
-      { name: 'transcript_id', type: 'string', desc: 'NCBI RefSeq Transcript ID' },
-    { name: 'site_id', type: 'string', desc: 'Unique APA site identifier (shared across samples)' },
+    { name: 'gene_id', type: 'string', desc: 'NCBI Entrez Gene ID' },
+    { name: 'transcript_id', type: 'string', desc: 'NCBI RefSeq Transcript ID' },
+    { name: 'site_id', type: 'string', desc: 'Unique PA site identifier (shared across samples)' },
+    { name: 'cluster_range', type: 'string', desc: 'Genomic span of the PA site, formatted as start:end' },
     { name: 'representative_position', type: 'integer', desc: 'Consensus genomic coordinate of the PA site, computed as the mode across all supporting samples' },
     { name: 'sample_site_position', type: 'integer', desc: 'Genomic coordinate of the PA cleavage site as detected in this specific sample' },
     { name: 'site_abundance', type: 'float', desc: 'Relative abundance of this PA site within the transcript for this sample (0–1)' },
@@ -351,21 +439,22 @@ const schemas = [
     { name: 'sample', type: 'string', desc: 'Sample / cell line name' },
   ]},
   { id: 'bed', title: 'Genome Browser BED', fields: [
-    { name: 'chrom', type: 'string', desc: 'Chromosome in UCSC format (e.g. chr1)' },
+    { name: 'chrom', type: 'string', desc: 'Chromosome ID' },
     { name: 'chromStart', type: 'integer', desc: '0-based start position of the PA site' },
     { name: 'chromEnd', type: 'integer', desc: '1-based end position (half-open interval)' },
-    { name: 'name', type: 'string', desc: 'gene_name|transcript_id|site_id' },
+    { name: 'name', type: 'string', desc: 'Unique PA site identifier' },
     { name: 'score', type: 'string', desc: '.' },
     { name: 'strand', type: 'string', desc: '+ or –' },
   ]},
   { id: 'abundance-matrix', title: 'Abundance Matrix', fields: [
-    { name: 'site_id', type: 'string', desc: 'APA site identifier' },
+    { name: 'site_id', type: 'string', desc: 'PA site identifier' },
     { name: 'transcript_id', type: 'string', desc: 'NCBI RefSeq Transcript ID' },
     { name: 'gene_name', type: 'string', desc: 'Official gene symbol' },
-    { name: 'chromosome', type: 'string', desc: 'Chromosome' },
+    { name: 'chromosome', type: 'string', desc: 'Chromosome ID' },
     { name: 'strand', type: 'string', desc: '+ or –' },
     { name: 'species', type: 'string', desc: 'Species name' },
-    { name: '[sample_name]', type: 'integer', desc: 'One column per sample — read count at this PA site' },
+    { name: '[sample_name]_count', type: 'integer', desc: 'Read count at this PA site for the sample' },
+    { name: '[sample_name]_relative_abundance', type: 'float', desc: 'Relative abundance of this PA site within the transcript for the sample' },
   ]},
 ]
 
@@ -373,7 +462,12 @@ const currentSchema = computed(() => schemas.find(s => s.id === schemaTab.value)
 
 onMounted(async () => {
   try {
-    const species = await apiService.getSpecies()
+    const [stats, species, samples] = await Promise.all([
+      apiService.getDetailedStats(),
+      apiService.getSpecies(),
+      apiService.getSamples()
+    ])
+    detailedStats.value = stats || {}
     // Depending on API response, it might be an array of strings or objects. Handling both:
     if (species && species.length > 0) {
       if (typeof species[0] === 'string') {
@@ -382,9 +476,25 @@ onMounted(async () => {
         speciesList.value = species
       }
     }
+    sampleList.value = (samples || []).sort((a, b) =>
+      (a.display_name ?? formatSampleName(a.name)).localeCompare(
+        b.display_name ?? formatSampleName(b.name),
+        undefined,
+        { sensitivity: 'base' }
+      )
+    )
   } catch (err) {
-    console.error('Failed to load species:', err)
+    console.error('Failed to load download filters:', err)
   }
+})
+
+watch(selectedSpecies, () => {
+  const available = new Set(filteredSampleOptions.value.map(sample => sample.value))
+  selectedSamples.value = selectedSamples.value.filter(sample => available.has(sample))
+})
+
+watch(sampleFilterEnabled, (enabled) => {
+  if (!enabled) selectedSamples.value = []
 })
 </script>
 
@@ -445,26 +555,24 @@ onMounted(async () => {
   .dataset-cards-row { grid-template-columns: 1fr; }
 }
 .dataset-card {
-  background: rgba(255, 255, 255, 0.80);
-  backdrop-filter: blur(16px) saturate(150%);
-  -webkit-backdrop-filter: blur(16px) saturate(150%);
-  border: 1px solid rgba(255, 255, 255, 0.55);
-  border-radius: 20px;
+  background: #fff;
+  border: 1px solid #dbe3ea;
+  border-radius: 24px;
   padding: 28px 24px;
   cursor: pointer;
-  transition: transform 0.25s ease, box-shadow 0.25s ease, border-color 0.25s ease;
-  box-shadow: 0 4px 20px rgba(0,0,0,0.06);
+  transition: border-color 0.25s ease, background 0.25s ease;
+  box-shadow: none;
   position: relative;
   overflow: hidden;
 }
 .dataset-card:hover {
-  transform: translateY(-5px);
-  box-shadow: 0 12px 32px rgba(13,115,119,0.12);
+  border-color: #b9cbd2;
+  background: #fff;
 }
 .dataset-card--selected {
-  border: 2px solid #14919B !important;
-  box-shadow: 0 0 0 4px rgba(20,145,155,0.12), 0 12px 32px rgba(13,115,119,0.16) !important;
-  background: rgba(240, 253, 250, 0.90) !important;
+  border: 1px solid #14919B !important;
+  box-shadow: none !important;
+  background: #f8fcfc !important;
 }
 .dataset-card-icon {
   width: 52px;
@@ -474,7 +582,7 @@ onMounted(async () => {
   align-items: center;
   justify-content: center;
   margin-bottom: 16px;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+  box-shadow: none;
 }
 .dataset-card-title {
   font-size: 1.15rem;
@@ -496,12 +604,12 @@ onMounted(async () => {
 }
 
 .scope-panel {
-  background: rgba(255,255,255,0.80);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  border: 1px solid rgba(255,255,255,0.55);
-  border-radius: 18px;
-  box-shadow: 0 4px 20px rgba(0,0,0,0.05);
+  background: #fff !important;
+  border: 1px solid #dbe3ea !important;
+  border-radius: 24px;
+  box-shadow: none !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
   padding: 20px 28px;
   display: flex;
   align-items: flex-start;
@@ -510,6 +618,19 @@ onMounted(async () => {
   margin-bottom: 32px;
 }
 .scope-group { display: flex; flex-direction: column; gap: 10px; }
+.scope-group--samples {
+  width: min(880px, 100%);
+  flex: 0 0 min(880px, 100%);
+  align-items: center;
+}
+
+.scope-group--samples .scope-label {
+  width: min(880px, 100%);
+  justify-content: flex-start;
+}
+.scope-group--format {
+  flex: 0 0 auto;
+}
 .scope-label {
   font-size: 0.72rem;
   font-weight: 700;
@@ -518,6 +639,13 @@ onMounted(async () => {
   color: #94a3b8;
   display: flex;
   align-items: center;
+}
+.scope-label-hint {
+  margin-left: 8px;
+  color: #14919B;
+  font-weight: 800;
+  letter-spacing: 0;
+  text-transform: none;
 }
 .scope-chips-row { display: flex; flex-wrap: wrap; gap: 8px; }
 .scope-chip {
@@ -531,7 +659,7 @@ onMounted(async () => {
   background: white;
   color: #475569;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: border-color 0.2s ease, color 0.2s ease, background 0.2s ease;
   gap: 4px;
 }
 .scope-chip:hover {
@@ -542,7 +670,7 @@ onMounted(async () => {
   background: linear-gradient(135deg, #0D7377, #14919B);
   border-color: #14919B;
   color: white;
-  box-shadow: 0 3px 10px rgba(13,115,119,0.25);
+  box-shadow: none;
 }
 .scope-chip-latin {
   font-style: italic;
@@ -557,21 +685,108 @@ onMounted(async () => {
   align-self: stretch;
   min-height: 40px;
 }
+.scope-divider--format {
+  margin-left: 0;
+  margin-right: -14px;
+}
 @media (max-width: 600px) { .scope-divider { display: none; } }
 
+.sample-multi-select {
+  width: min(880px, 100%);
+  min-width: 280px;
+}
+
+.sample-multi-select :deep(.v-field) {
+  min-height: 42px;
+  border-radius: 14px;
+  background:
+    linear-gradient(135deg, rgba(13, 115, 119, 0.06), rgba(255, 255, 255, 0.96)),
+    #fff;
+  box-shadow: inset 0 0 0 1px rgba(13, 115, 119, 0.08);
+  transition: border-color 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+}
+
+.sample-multi-select :deep(.v-field:hover) {
+  box-shadow: inset 0 0 0 1px rgba(20, 145, 155, 0.26);
+}
+
+.sample-multi-select :deep(.v-field--focused) {
+  background: #fff;
+  box-shadow:
+    inset 0 0 0 1px rgba(13, 115, 119, 0.36),
+    0 0 0 4px rgba(20, 145, 155, 0.10);
+}
+
+.sample-multi-select :deep(.v-field__input) {
+  min-height: 42px;
+  padding-top: 4px;
+  padding-bottom: 4px;
+  gap: 5px;
+}
+
+.sample-multi-select :deep(.v-field__outline) {
+  color: transparent;
+}
+
+.sample-multi-select :deep(.v-field__append-inner) {
+  color: #0D7377;
+  padding-inline-start: 4px;
+}
+
+.sample-select-chip {
+  min-height: 24px !important;
+  border-radius: 9px !important;
+  background: rgba(13, 115, 119, 0.10) !important;
+  border: 1px solid rgba(13, 115, 119, 0.14) !important;
+  color: #0D7377 !important;
+  font-size: 0.76rem !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.01em !important;
+}
+
+.sample-multi-select :deep(.v-field__input input::placeholder) {
+  color: #64748b;
+  opacity: 0.9;
+}
+
+.sample-option-subtitle {
+  color: #94a3b8;
+  font-size: 0.76rem;
+}
+
+:global(.sample-select-menu .v-overlay__content) {
+  border-radius: 16px !important;
+  border: 1px solid rgba(13, 115, 119, 0.14) !important;
+  box-shadow: 0 18px 44px rgba(15, 23, 42, 0.14) !important;
+  overflow: hidden !important;
+}
+
+:global(.sample-select-menu .v-list) {
+  padding: 8px !important;
+  background: #ffffff !important;
+}
+
+:global(.sample-select-menu .v-list-item) {
+  border-radius: 11px !important;
+  min-height: 46px !important;
+  margin-bottom: 2px !important;
+}
+
+:global(.sample-select-menu .v-list-item:hover) {
+  background: rgba(13, 115, 119, 0.07) !important;
+}
+
 .download-action-panel {
-  background: rgba(240, 253, 250, 0.95);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  border: 2px solid rgba(20,145,155,0.25);
-  border-radius: 18px;
+  background: #f0fdfa;
+  border: 1px solid #b7dad7;
+  border-radius: 24px;
   padding: 28px 32px;
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 24px;
   margin-bottom: 32px;
-  box-shadow: 0 8px 32px rgba(13,115,119,0.10);
+  box-shadow: none;
   flex-wrap: wrap;
 }
 .download-action-eyebrow {
@@ -598,23 +813,22 @@ onMounted(async () => {
   letter-spacing: 0.05em !important;
   border-radius: 14px !important;
   padding: 0 32px !important;
-  box-shadow: 0 6px 20px rgba(13,115,119,0.30) !important;
-  transition: transform 0.2s ease, box-shadow 0.2s ease !important;
+  box-shadow: none !important;
+  transition: background 0.2s ease !important;
   flex-shrink: 0;
 }
 .download-btn:hover {
-  transform: translateY(-2px) !important;
-  box-shadow: 0 10px 28px rgba(13,115,119,0.40) !important;
+  background: #0b686c !important;
 }
 
 .api-card {
-  background: rgba(255,255,255,0.80);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  border: 1px solid rgba(255,255,255,0.55);
-  border-radius: 20px;
+  background: #fff !important;
+  border: 1px solid #dbe3ea !important;
+  border-radius: 24px;
   padding: 32px;
-  box-shadow: 0 4px 20px rgba(0,0,0,0.06);
+  box-shadow: none !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
   margin-bottom: 32px;
 }
 .api-card-title {
@@ -687,7 +901,7 @@ onMounted(async () => {
   font-size: 0.8rem;
   font-weight: 600;
   cursor: pointer;
-  transition: all 0.2s;
+  transition: background 0.2s, color 0.2s, border-color 0.2s;
 }
 .copy-btn:hover {
   background: rgba(20,145,155,0.25);
@@ -696,12 +910,35 @@ onMounted(async () => {
 }
 
 .schema-section {
-  background: rgba(255,255,255,0.80);
-  backdrop-filter: blur(16px);
-  border: 1px solid rgba(255,255,255,0.55);
-  border-radius: 20px;
+  background: #fff;
+  border: 1px solid #dbe3ea;
+  border-radius: 24px;
   padding: 24px 32px;
-  box-shadow: 0 4px 20px rgba(0,0,0,0.06);
+  box-shadow: none;
+}
+.schema-panel {
+  max-height: 0;
+  opacity: 0;
+  overflow: hidden;
+  transform: translateY(-6px);
+  transform-origin: top center;
+  transition:
+    max-height 320ms cubic-bezier(0.16, 1, 0.3, 1),
+    opacity 180ms ease,
+    transform 260ms cubic-bezier(0.16, 1, 0.3, 1);
+  will-change: max-height, opacity, transform;
+}
+.schema-panel.is-open {
+  max-height: 620px;
+  opacity: 1;
+  transform: translateY(0);
+}
+.schema-panel > * {
+  transform: translateY(-4px);
+  transition: transform 260ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+.schema-panel.is-open > * {
+  transform: translateY(0);
 }
 .schema-toggle-btn {
   display: flex;
@@ -721,6 +958,11 @@ onMounted(async () => {
   overflow: hidden;
   margin-top: 0;
 }
+.schema-tabs {
+  border-bottom: 0;
+  margin-bottom: 10px;
+  padding-left: 12px;
+}
 .field-badge {
   background: #f0fdfa;
   color: #0D7377;
@@ -739,6 +981,12 @@ onMounted(async () => {
   border-radius: 4px;
 }
 .elegant-table { background: transparent !important; }
+.elegant-table :deep(.v-table__wrapper),
+.elegant-table :deep(table),
+.elegant-table :deep(thead),
+.elegant-table :deep(tr:first-child th) {
+  border-top: 0 !important;
+}
 .elegant-table :deep(th) {
   background: #f8fafc !important;
   font-size: 0.8rem !important;
@@ -746,7 +994,11 @@ onMounted(async () => {
   text-transform: uppercase !important;
   letter-spacing: 0.06em !important;
   color: #64748b !important;
+  box-shadow: none !important;
 }
-.elegant-table :deep(td) { border-bottom: 1px solid #f1f5f9 !important; }
+.elegant-table :deep(td) {
+  border-bottom: 1px solid #f1f5f9 !important;
+  font-family: var(--aa-font-sans) !important;
+}
 .elegant-table :deep(tr:hover td) { background: #f0fdfa !important; }
 </style>

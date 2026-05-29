@@ -15,6 +15,21 @@ export const apiService = {
     const response = await api.get('/stats/detailed')
     return response.data
   },
+
+  async getMultiplicityStats(species) {
+    const response = await api.get('/stats/multiplicity', { params: { species } })
+    return response.data
+  },
+
+  async getPasMotifStats(species) {
+    const response = await api.get('/stats/pas-motifs', { params: { species } })
+    return response.data
+  },
+
+  async getTopGeneStats(species) {
+    const response = await api.get('/stats/top-genes', { params: { species } })
+    return response.data
+  },
   
   async search(params) {
     const response = await api.get('/search', { params })
@@ -26,18 +41,23 @@ export const apiService = {
     return response.data
   },
   
-  async getLocusDetail(transcriptId) {
-    const response = await api.get(`/transcript/${transcriptId}`)
+  async getLocusDetail(transcriptId, species) {
+    const response = await api.get(`/transcript/${transcriptId}`, { params: { species } })
     return response.data
   },
   
-  async getGeneDetail(geneId) {
-    const response = await api.get(`/gene/${geneId}`)
+  async getGeneDetail(geneId, species) {
+    const response = await api.get(`/gene/${geneId}`, { params: { species } })
+    return response.data
+  },
+
+  async getGeneSummary(geneId, species) {
+    const response = await api.get(`/gene/${geneId}/summary`, { params: { species } })
     return response.data
   },
   
-  async getTranscriptStructure(transcriptId) {
-    const response = await api.get(`/transcript/${transcriptId}/structure`)
+  async getTranscriptStructure(transcriptId, species) {
+    const response = await api.get(`/transcript/${transcriptId}/structure`, { params: { species } })
     return response.data
   },
   
@@ -75,10 +95,10 @@ export const apiService = {
     return response.data
   },
 
-  async getSiteSequence(transcriptId, siteId, flank = 50) {
+  async getSiteSequence(transcriptId, siteId, flank = 50, species) {
     const response = await api.get(
       `/transcript/${transcriptId}/site-sequence/${encodeURIComponent(siteId)}`,
-      { params: { flank } }
+      { params: { flank, species } }
     )
     return response.data
   }
