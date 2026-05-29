@@ -23,6 +23,8 @@ ENV_NAME="apaatlas"
 DB_FILE="$BACKEND_DIR/apa_atlas.db"
 # Store hash alongside the DB so it travels with the project on the same machine
 DATA_HASH_FILE="$BACKEND_DIR/.data_hash"
+SCHEMA_VERSION_FILE="$BACKEND_DIR/.schema_version"
+SCHEMA_VERSION="2"
 STATS_CACHE_FILE="$BACKEND_DIR/stats_cache.json"
 
 # ─── helpers ──────────────────────────────────────────────────────────────────
@@ -104,6 +106,8 @@ validate_data_files() {
 
 should_reload_db() {
     [[ ! -f "$DB_FILE" ]] && return 0
+    [[ ! -f "$SCHEMA_VERSION_FILE" ]] && return 0
+    [[ "$(cat "$SCHEMA_VERSION_FILE")" != "$SCHEMA_VERSION" ]] && return 0
     [[ ! -f "$DATA_HASH_FILE" ]] && return 0
     local current stored
     current=$(get_data_hash)
@@ -231,6 +235,7 @@ if should_reload_db; then
     (cd "$BACKEND_DIR" && "$PYTHON" -m app.services.precompute_stats) \
         || die "Statistics cache generation failed"
     get_data_hash > "$DATA_HASH_FILE"
+    echo "$SCHEMA_VERSION" > "$SCHEMA_VERSION_FILE"
     ok "Database ready"
 else
     ok "No data changes — using existing database"

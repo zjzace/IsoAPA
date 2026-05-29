@@ -314,6 +314,13 @@ const triggerDownload = async () => {
 
 const BASE_URL = '/api/v1'
 
+const apiOrigin = computed(() => {
+  if (typeof window === 'undefined') return 'http://localhost:3000'
+  return window.location.origin
+})
+
+const apiDownloadBaseUrl = computed(() => `${apiOrigin.value}${BASE_URL}/download`)
+
 const downloadUrl = computed(() => {
   if (!selectedDataset.value) return ''
   const params = new URLSearchParams()
@@ -347,7 +354,7 @@ const curlCommand = computed(() => {
   const dataset = selectedDataset.value?.id || 'apa-sites'
   const qs = buildQueryString()
   const filename = downloadFilename.value || `apaatlas_${dataset}.${selectedFormat.value}`
-  return `curl -o "${filename}" \\\n  "http://your-server/api/v1/download/${dataset}${qs}"`
+  return `curl -fL -o "${filename}" \\\n  "${apiDownloadBaseUrl.value}/${dataset}${qs}"`
 })
 
 const pythonCommand = computed(() => {
@@ -360,7 +367,7 @@ const pythonCommand = computed(() => {
     selectedSamples.value.forEach(sample => paramItems.push(`("sample", "${sample}")`))
   }
   const paramBlock = paramItems.length ? `\nparams = [\n    ${paramItems.join(',\n    ')}\n]\n` : '\nparams = []\n'
-  return `import requests\n\nurl = "http://your-server/api/v1/download/${dataset}"${paramBlock}\nr = requests.get(url, params=params)\nwith open("${filename}", "wb") as f:\n    f.write(r.content)`
+  return `import requests\n\nurl = "${apiDownloadBaseUrl.value}/${dataset}"${paramBlock}\nr = requests.get(url, params=params, timeout=120)\nr.raise_for_status()\nwith open("${filename}", "wb") as f:\n    f.write(r.content)`
 })
 
 const rCommand = computed(() => {
@@ -373,7 +380,7 @@ const rCommand = computed(() => {
     paramLines.push(`    sample = c(${selectedSamples.value.map(sample => `"${sample}"`).join(', ')}),`)
   }
   const paramBlock = paramLines.length ? `\nparams <- list(\n${paramLines.join('\n')}\n)\n` : '\nparams <- list()\n'
-  return `library(httr)\n\nurl <- "http://your-server/api/v1/download/${dataset}"${paramBlock}\nresponse <- GET(url, query = params)\nwriteBin(content(response, "raw"), "${filename}")`
+  return `library(httr)\n\nurl <- "${apiDownloadBaseUrl.value}/${dataset}"${paramBlock}\nresponse <- GET(url, query = params, timeout(120))\nstop_for_status(response)\nwriteBin(content(response, "raw"), "${filename}")`
 })
 
 const currentCommand = computed(() => {

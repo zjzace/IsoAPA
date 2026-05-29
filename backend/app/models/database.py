@@ -89,6 +89,8 @@ class APASite(Base):
 
     site_count = Column(Integer, nullable=False, default=0)
     site_abundance = Column(Float, nullable=False, default=0.0)
+    # Legacy compatibility only. New ETL writes per-sample observations to
+    # apa_site_samples to avoid repeating large JSON blobs per PA site.
     sample_data = Column(Text, nullable=True)
 
     cluster_start = Column(Integer, nullable=True)
@@ -102,6 +104,7 @@ class APASite(Base):
 
     transcript = relationship("Transcript", back_populates="apa_sites")
     species = relationship("Species", back_populates="apa_sites")
+    sample_observations = relationship("APASiteSample", back_populates="apa_site")
 
     __table_args__ = (
         Index(
@@ -111,6 +114,26 @@ class APASite(Base):
             "unified_id",
             unique=True,
         ),
+    )
+
+
+class APASiteSample(Base):
+    __tablename__ = "apa_site_samples"
+
+    id = Column(Integer, primary_key=True)
+    apa_site_id = Column(Integer, ForeignKey("apa_sites.id"), nullable=False, index=True)
+    sample_id = Column(Integer, ForeignKey("samples.id"), nullable=False, index=True)
+    sample_order = Column(Integer, nullable=False, default=0)
+    original_site_position = Column(Integer, nullable=False)
+    site_count = Column(Integer, nullable=False, default=0)
+    site_abundance = Column(Float, nullable=False, default=0.0)
+
+    apa_site = relationship("APASite", back_populates="sample_observations")
+    sample = relationship("Sample")
+
+    __table_args__ = (
+        Index("idx_apa_site_sample", "apa_site_id", "sample_id"),
+        Index("idx_apa_site_sample_order", "apa_site_id", "sample_order"),
     )
 
 

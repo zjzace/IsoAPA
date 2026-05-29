@@ -8,6 +8,7 @@ dependencies:
   - pip
   - pip:
     - fastapi
+    - httpx
     - uvicorn[standard]
     - sqlalchemy
     - pydantic

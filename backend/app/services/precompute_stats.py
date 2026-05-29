@@ -2,9 +2,17 @@ import json
 import os
 from datetime import datetime, timezone
 
-from sqlalchemy import func
+from sqlalchemy import func, inspect
 
-from app.models.database import APASite, Gene, Sample, SessionLocal, Species, Transcript
+from app.models.database import (
+    APASite,
+    APASiteSample,
+    Gene,
+    Sample,
+    SessionLocal,
+    Species,
+    Transcript,
+)
 
 
 BACKEND_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -36,6 +44,7 @@ def _multiplicity_bucket(count: int) -> str:
 def build_stats_cache(output_path: str = STATS_CACHE_FILE) -> dict:
     db = SessionLocal()
     try:
+        has_sample_observations = inspect(db.bind).has_table("apa_site_samples")
         total_genes = db.query(Gene).count()
         total_transcripts = db.query(Transcript).count()
         total_apa_sites = db.query(func.count(func.distinct(APASite.unified_id))).scalar() or 0
@@ -117,14 +126,28 @@ def build_stats_cache(output_path: str = STATS_CACHE_FILE) -> dict:
         multiplicity_total = len(multiplicity_rows)
 
         sample_counts = {}
-        for (sample_data,) in db.query(APASite.sample_data).filter(APASite.sample_data.isnot(None)).all():
-            try:
-                for sd in json.loads(sample_data or "[]"):
-                    sample_name = sd.get("sample_name") or "Unknown"
-                    display = _format_sample_name(sample_name)
-                    sample_counts[display] = sample_counts.get(display, 0) + 1
-            except (TypeError, json.JSONDecodeError):
-                continue
+        normalized_sample_rows = []
+        if has_sample_observations:
+            normalized_sample_rows = (
+                db.query(Sample.name, func.count(APASiteSample.id))
+                .join(APASiteSample, APASiteSample.sample_id == Sample.id)
+                .group_by(Sample.name)
+                .all()
+            )
+        if normalized_sample_rows:
+            sample_counts = {
+                _format_sample_name(sample_name): count
+                for sample_name, count in normalized_sample_rows
+            }
+        else:
+            for (sample_data,) in db.query(APASite.sample_data).filter(APASite.sample_data.isnot(None)).all():
+                try:
+                    for sd in json.loads(sample_data or "[]"):
+                        sample_name = sd.get("sample_name") or "Unknown"
+                        display = _format_sample_name(sample_name)
+                        sample_counts[display] = sample_counts.get(display, 0) + 1
+                except (TypeError, json.JSONDecodeError):
+                    continue
 
         detailed = {
             "generated_at": datetime.now(timezone.utc).isoformat(),

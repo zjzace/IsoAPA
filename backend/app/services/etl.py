@@ -12,6 +12,7 @@ from app.models.database import (
     Gene,
     Transcript,
     APASite,
+    APASiteSample,
     init_db,
 )
 
@@ -310,7 +311,64 @@ def ingest_data(data_dir: str = None, species_filter: list[str] | None = None):
             print("  Pass 4: inserting APA sites in batches...")
             anno_index = _load_anno_index(species_path, species_folder)
             batch = []
+            sample_batch = []
             inserted = 0
+            sample_rows = 0
+
+            def flush_apa_batch():
+                nonlocal batch, sample_batch, inserted, sample_rows
+                if not batch:
+                    return
+                insert_rows = [
+                    {k: v for k, v in site_row.items() if k != "_sample_entries"}
+                    for site_row in batch
+                ]
+                start_id = db.query(APASite.id).order_by(APASite.id.desc()).limit(1).scalar() or 0
+                db.bulk_insert_mappings(APASite, insert_rows)
+                db.commit()
+                inserted += len(batch)
+
+                id_rows = (
+                    db.query(APASite.id, APASite.transcript_id, APASite.unified_id)
+                    .filter(
+                        APASite.species_id == species_id,
+                        APASite.id > start_id,
+                    )
+                    .all()
+                )
+                site_id_map = {
+                    (transcript_id, unified_id): site_id
+                    for site_id, transcript_id, unified_id in id_rows
+                }
+
+                sample_batch = []
+                for site_row, insert_row in zip(batch, insert_rows):
+                    apa_site_id = site_id_map.get(
+                        (insert_row["transcript_id"], insert_row["unified_id"])
+                    )
+                    if not apa_site_id:
+                        continue
+                    for sample_order, entry in enumerate(site_row.pop("_sample_entries")):
+                        sample_id = sample_id_cache.get(entry["sample_name"])
+                        if not sample_id:
+                            continue
+                        sample_batch.append(
+                            {
+                                "apa_site_id": apa_site_id,
+                                "sample_id": sample_id,
+                                "sample_order": sample_order,
+                                "original_site_position": entry["original_site_position"],
+                                "site_count": entry["site_count"],
+                                "site_abundance": entry["site_abundance"],
+                            }
+                        )
+                if sample_batch:
+                    db.bulk_insert_mappings(APASiteSample, sample_batch)
+                    db.commit()
+                    sample_rows += len(sample_batch)
+
+                batch = []
+                sample_batch = []
 
             for (transcript_id_str, unified_id), cluster in clusters.items():
                 row = cluster["row"]
@@ -335,7 +393,7 @@ def ingest_data(data_dir: str = None, species_filter: list[str] | None = None):
                         "transcript_biotype": _cell(row, "transcript_biotype") or None,
                         "site_count": total_count,
                         "site_abundance": mean_abundance,
-                        "sample_data": json.dumps(sample_entries),
+                        "sample_data": None,
                         "sequence": ann.get("sequence"),
                         "pas_motif": ann.get("pas_motif"),
                         "pas_position": ann.get("pas_position"),
@@ -343,23 +401,19 @@ def ingest_data(data_dir: str = None, species_filter: list[str] | None = None):
                         "search_level": ann.get("search_level"),
                         "cluster_start": ann.get("cluster_start"),
                         "cluster_end": ann.get("cluster_end"),
+                        "_sample_entries": sample_entries,
                     }
                 )
 
                 if len(batch) >= BATCH_SIZE:
-                    db.bulk_insert_mappings(APASite, batch)
-                    db.commit()
-                    inserted += len(batch)
-                    batch = []
+                    flush_apa_batch()
                     print(f"    ... {inserted:,} APA sites inserted")
 
-            if batch:
-                db.bulk_insert_mappings(APASite, batch)
-                db.commit()
-                inserted += len(batch)
+            flush_apa_batch()
 
             total_apa_sites += inserted
             print(f"  APA sites inserted: {inserted:,}")
+            print(f"  Sample observations inserted: {sample_rows:,}")
 
         print(f"\n=== Summary ===")
         print(f"Species:     {total_species}")

@@ -382,13 +382,17 @@ onMounted(async () => {
     speciesList.value = species || []
     multiplicityStats.value = detailed?.apa_site_multiplicity || null
     topGeneStats.value = detailed?.top_genes_by_apa?.slice(0, 10) || []
-    motifStats.value = await apiService.getPasMotifStats()
   } catch (err) {
     console.error('Failed to load stats:', err)
     error.value = 'Failed to load statistics. Please try again.'
   } finally {
     loading.value = false
   }
+
+  await Promise.allSettled([
+    loadMotifStats(),
+    loadTopGeneStats()
+  ])
 })
 
 const loadMultiplicityStats = async () => {
