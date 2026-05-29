@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, Query, HTTPException
 from fastapi.responses import PlainTextResponse, StreamingResponse
 from sqlalchemy.orm import Session
-from sqlalchemy import func, or_, case, inspect
+from sqlalchemy import func, case
 from typing import List, Optional
 import os
 import json
@@ -35,7 +35,6 @@ _BED12_INDEX_CACHE: dict = {}
 _TAXID_CACHE: dict = {}
 _GENE_SUMMARY_CACHE: dict = {}
 _STATS_CACHE: dict | None = None
-_HAS_APA_SITE_SAMPLES: bool | None = None
 
 _KNOWN_SPECIES_TAXIDS = {
     "Human": "9606",
@@ -81,39 +80,14 @@ def _load_stats_cache() -> dict:
     return _STATS_CACHE
 
 
-def _legacy_sample_details(sample_data: str | None) -> list[dict]:
-    if not sample_data:
-        return []
-    try:
-        parsed = json.loads(sample_data)
-    except (TypeError, json.JSONDecodeError):
-        return []
-    return parsed if isinstance(parsed, list) else []
-
-
-def _has_apa_site_samples_table(db: Session) -> bool:
-    global _HAS_APA_SITE_SAMPLES
-    if _HAS_APA_SITE_SAMPLES is None:
-        _HAS_APA_SITE_SAMPLES = inspect(db.bind).has_table("apa_site_samples")
-    return _HAS_APA_SITE_SAMPLES
-
-
 def _chunks(values: list[int], size: int = 800):
     for start in range(0, len(values), size):
         yield values[start : start + size]
 
 
 def _sample_detail_rows(db: Session, apa_site_ids: list[int]) -> dict[int, list[dict]]:
-    """Return API-compatible sample details for PA sites.
-
-    New databases store observations in apa_site_samples. Legacy databases may
-    still have APASite.sample_data JSON, so callers merge this with fallback JSON
-    until every local DB has been rebuilt.
-    """
     site_ids = [site_id for site_id in apa_site_ids if site_id]
     if not site_ids:
-        return {}
-    if not _has_apa_site_samples_table(db):
         return {}
 
     grouped: dict[int, list[dict]] = {site_id: [] for site_id in site_ids}
@@ -121,18 +95,18 @@ def _sample_detail_rows(db: Session, apa_site_ids: list[int]) -> dict[int, list[
         rows = (
             db.query(
                 APASiteSample.apa_site_id,
-            Sample.name,
-            Sample.sample_type,
-            APASiteSample.sample_order,
-            APASiteSample.original_site_position,
-            APASiteSample.site_count,
-            APASiteSample.site_abundance,
+                Sample.name,
+                Sample.sample_type,
+                APASiteSample.sample_order,
+                APASiteSample.original_site_position,
+                APASiteSample.site_count,
+                APASiteSample.site_abundance,
+            )
+            .join(Sample, APASiteSample.sample_id == Sample.id)
+            .filter(APASiteSample.apa_site_id.in_(site_id_chunk))
+            .order_by(APASiteSample.apa_site_id, APASiteSample.sample_order)
+            .all()
         )
-        .join(Sample, APASiteSample.sample_id == Sample.id)
-        .filter(APASiteSample.apa_site_id.in_(site_id_chunk))
-        .order_by(APASiteSample.apa_site_id, APASiteSample.sample_order)
-        .all()
-    )
         for site_id, sample_name, sample_type, _sample_order, position, count, abundance in rows:
             grouped.setdefault(site_id, []).append(
                 {
@@ -146,29 +120,16 @@ def _sample_detail_rows(db: Session, apa_site_ids: list[int]) -> dict[int, list[
     return grouped
 
 
-def _sample_details_for_sites(db: Session, apa_sites: list[APASite]) -> dict[int, list[dict]]:
-    grouped = _sample_detail_rows(db, [site.id for site in apa_sites])
-    for site in apa_sites:
-        if grouped.get(site.id):
-            continue
-        grouped[site.id] = _legacy_sample_details(site.sample_data)
-    return grouped
-
-
 def _sample_site_filter(db: Session, sample_names: list[str]):
-    filters = []
-    for sample_name in sample_names:
-        if not sample_name:
-            continue
-        if _has_apa_site_samples_table(db):
-            normalized_sites = (
-                db.query(APASiteSample.apa_site_id)
-                .join(Sample, APASiteSample.sample_id == Sample.id)
-                .filter(Sample.name.ilike(f"%{sample_name}%"))
-            )
-            filters.append(APASite.id.in_(normalized_sites))
-        filters.append(APASite.sample_data.ilike(f"%{sample_name}%"))
-    return or_(*filters) if filters else None
+    names = [sample_name for sample_name in sample_names if sample_name]
+    if not names:
+        return None
+    normalized_sites = (
+        db.query(APASiteSample.apa_site_id)
+        .join(Sample, APASiteSample.sample_id == Sample.id)
+        .filter(Sample.name.in_(names) if len(names) > 1 else Sample.name.ilike(f"%{names[0]}%"))
+    )
+    return APASite.id.in_(normalized_sites)
 
 
 def _write_apa_site_download_row(writer, row, sample_detail: dict | None, delimiter_selected_samples: list[str]):
@@ -595,7 +556,7 @@ def search_transcripts(
     search_results = []
     for r in results:
         apa_sites = db.query(APASite).filter(APASite.transcript_id == r[8]).all()
-        sample_details_by_site = _sample_details_for_sites(db, apa_sites)
+        sample_details_by_site = _sample_detail_rows(db, [site.id for site in apa_sites])
         sample_names = set()
         for asite in apa_sites:
             for sd in sample_details_by_site.get(asite.id, []):
@@ -643,7 +604,7 @@ def get_gene_detail(
         apa_sites = (
             db.query(APASite).filter(APASite.transcript_id == transcript.id).all()
         )
-        sample_details_by_site = _sample_details_for_sites(db, apa_sites)
+        sample_details_by_site = _sample_detail_rows(db, [site.id for site in apa_sites])
 
         sample_names = set()
         transcript_apa_sites = []
@@ -912,7 +873,7 @@ def get_locus_detail(
         raise HTTPException(status_code=404, detail="Gene not found")
 
     apa_sites = db.query(APASite).filter(APASite.transcript_id == transcript.id).all()
-    sample_details_by_site = _sample_details_for_sites(db, apa_sites)
+    sample_details_by_site = _sample_detail_rows(db, [site.id for site in apa_sites])
 
     sample_names = set()
     apa_sites_with_details = []
@@ -932,7 +893,7 @@ def get_locus_detail(
                 transcript_biotype=asite.transcript_biotype,
                 site_count=int(asite.site_count),
                 site_abundance=float(asite.site_abundance),
-                sample_data=asite.sample_data or json.dumps(sample_details),
+                sample_data=json.dumps(sample_details),
                 cluster_start=asite.cluster_start,
                 cluster_end=asite.cluster_end,
                 sequence=asite.sequence,
@@ -1050,39 +1011,8 @@ def download_apa_sites(
     format: str = Query("csv", pattern="^(csv|tsv|txt)$"),
     db: Session = Depends(get_db),
 ):
-    """Download APA sites data in various formats."""
-    query = (
-        db.query(
-            Gene.gene_name,
-            Gene.gene_id,
-            Transcript.transcript_id,
-            APASite.unified_id,
-            APASite.cluster_start,
-            APASite.cluster_end,
-            APASite.mode_site_position,
-            APASite.site_abundance,
-            APASite.sample_data,
-            APASite.id.label("apa_site_id"),
-            Species.name.label("species"),
-        )
-        .select_from(Gene)
-        .join(Transcript, Gene.id == Transcript.gene_id)
-        .join(APASite, Transcript.id == APASite.transcript_id)
-        .join(Species, APASite.species_id == Species.id)
-    )
-
-    if species:
-        query = query.filter(Species.name.ilike(f"%{species}%"))
-    if gene_name:
-        query = query.filter(Gene.gene_name.ilike(f"%{gene_name}%"))
+    """Download PA site observations in sample-resolved format."""
     selected_samples = [s for s in (sample or []) if s]
-    if selected_samples:
-        sample_filter = _sample_site_filter(db, selected_samples)
-        if sample_filter is not None:
-            query = query.filter(sample_filter)
-        if not _has_apa_site_samples_table(db):
-            query = query.filter(APASite.sample_data.isnot(None))
-
     delimiter = "," if format == "csv" else "\t"
     output = io.StringIO()
 
@@ -1101,113 +1031,58 @@ def download_apa_sites(
     writer = csv.DictWriter(output, fieldnames=headers, delimiter=delimiter)
     writer.writeheader()
 
-    if _has_apa_site_samples_table(db):
-        normalized_query = (
-            db.query(
-                Gene.gene_name,
-                Gene.gene_id,
-                Transcript.transcript_id,
-                APASite.unified_id,
-                APASite.cluster_start,
-                APASite.cluster_end,
-                APASite.mode_site_position,
-                Species.name.label("species"),
-                Sample.name.label("sample_name"),
-                Sample.sample_type,
-                APASiteSample.sample_order,
-                APASiteSample.original_site_position,
-                APASiteSample.site_abundance.label("sample_site_abundance"),
-            )
-            .select_from(Gene)
-            .join(Transcript, Gene.id == Transcript.gene_id)
-            .join(APASite, Transcript.id == APASite.transcript_id)
-            .join(APASiteSample, APASiteSample.apa_site_id == APASite.id)
-            .join(Sample, APASiteSample.sample_id == Sample.id)
-            .join(Species, APASite.species_id == Species.id)
-        )
-        if species:
-            normalized_query = normalized_query.filter(Species.name.ilike(f"%{species}%"))
-        if gene_name:
-            normalized_query = normalized_query.filter(Gene.gene_name.ilike(f"%{gene_name}%"))
-        if selected_samples:
-            normalized_query = normalized_query.filter(Sample.name.in_(selected_samples))
-        normalized_query = normalized_query.order_by(
+    query = (
+        db.query(
+            Gene.gene_name,
+            Gene.gene_id,
             Transcript.transcript_id,
             APASite.unified_id,
+            APASite.cluster_start,
+            APASite.cluster_end,
+            APASite.mode_site_position,
+            Species.name.label("species"),
+            Sample.name.label("sample_name"),
+            Sample.sample_type,
             APASiteSample.sample_order,
+            APASiteSample.original_site_position,
+            APASiteSample.site_abundance.label("sample_site_abundance"),
         )
+        .select_from(Gene)
+        .join(Transcript, Gene.id == Transcript.gene_id)
+        .join(APASite, Transcript.id == APASite.transcript_id)
+        .join(APASiteSample, APASiteSample.apa_site_id == APASite.id)
+        .join(Sample, APASiteSample.sample_id == Sample.id)
+        .join(Species, APASite.species_id == Species.id)
+    )
+    if species:
+        query = query.filter(Species.name.ilike(f"%{species}%"))
+    if gene_name:
+        query = query.filter(Gene.gene_name.ilike(f"%{gene_name}%"))
+    if selected_samples:
+        query = query.filter(Sample.name.in_(selected_samples))
 
-        for row in normalized_query.yield_per(5000):
-            _write_apa_site_download_row(
-                writer,
-                row,
-                {
-                    "sample_name": row.sample_name,
-                    "sample_type": row.sample_type,
-                    "original_site_position": row.original_site_position,
-                    "site_abundance": row.sample_site_abundance,
-                },
-                selected_samples,
-            )
-        output.seek(0)
-        media_type = "text/csv" if format == "csv" else "text/tab-separated-values"
-        filename = f"apa_sites.{format}"
-        return StreamingResponse(
-            iter([output.getvalue()]),
-            media_type=media_type,
-            headers={"Content-Disposition": f"attachment; filename={filename}"},
+    query = query.order_by(
+        Transcript.transcript_id,
+        APASite.unified_id,
+        APASiteSample.sample_order,
+    )
+
+    for row in query.yield_per(5000):
+        _write_apa_site_download_row(
+            writer,
+            row,
+            {
+                "sample_name": row.sample_name,
+                "sample_type": row.sample_type,
+                "original_site_position": row.original_site_position,
+                "site_abundance": row.sample_site_abundance,
+            },
+            selected_samples,
         )
-
-    results = query.all()
-    sample_details_by_site = _sample_detail_rows(db, [row.apa_site_id for row in results])
-    for row in results:
-        cluster_range = (
-            f"{row.cluster_start}:{row.cluster_end}"
-            if row.cluster_start is not None and row.cluster_end is not None
-            else ""
-        )
-        sample_details = sample_details_by_site.get(row.apa_site_id) or _legacy_sample_details(row.sample_data)
-
-        if sample_details:
-            for sd in sample_details:
-                sample_name = sd.get("sample_name", "")
-                if selected_samples and sample_name not in selected_samples:
-                    continue
-                writer.writerow(
-                    {
-                        "gene_name": row.gene_name or "",
-                        "gene_id": row.gene_id or "",
-                        "transcript_id": row.transcript_id or "",
-                        "site_id": row.unified_id or "",
-                        "cluster_range": cluster_range,
-                        "representative_position": row.mode_site_position or "",
-                        "sample_site_position": sd.get("original_site_position", ""),
-                        "site_abundance": sd.get("site_abundance", ""),
-                        "species": _format_species_name(row.species),
-                        "sample": _format_sample_name(sample_name),
-                    }
-                )
-        else:
-            writer.writerow(
-                {
-                    "gene_name": row.gene_name or "",
-                    "gene_id": row.gene_id or "",
-                    "transcript_id": row.transcript_id or "",
-                    "site_id": row.unified_id or "",
-                    "cluster_range": cluster_range,
-                    "representative_position": row.mode_site_position or "",
-                    "sample_site_position": "",
-                    "site_abundance": "",
-                    "species": _format_species_name(row.species),
-                    "sample": "",
-                }
-            )
 
     output.seek(0)
-
     media_type = "text/csv" if format == "csv" else "text/tab-separated-values"
     filename = f"apa_sites.{format}"
-
     return StreamingResponse(
         iter([output.getvalue()]),
         media_type=media_type,
@@ -1432,7 +1307,6 @@ def download_abundance_matrix(
             Gene.chromosome,
             Gene.strand,
             APASite.mode_site_position,
-            APASite.sample_data,
             APASite.id.label("apa_site_id"),
             Species.name.label("species"),
         )
@@ -1470,7 +1344,7 @@ def download_abundance_matrix(
             s: {"count": 0, "relative_abundance": 0}
             for s in sample_names
         }
-        for sd in sample_details_by_site.get(row.apa_site_id) or _legacy_sample_details(row.sample_data):
+        for sd in sample_details_by_site.get(row.apa_site_id, []):
             sname = sd.get("sample_name", "")
             if sname in sample_values:
                 sample_values[sname]["count"] = int(sd.get("site_count", 0) or 0)

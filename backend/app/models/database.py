@@ -89,8 +89,7 @@ class APASite(Base):
 
     site_count = Column(Integer, nullable=False, default=0)
     site_abundance = Column(Float, nullable=False, default=0.0)
-    # Legacy compatibility only. New ETL writes per-sample observations to
-    # apa_site_samples to avoid repeating large JSON blobs per PA site.
+    # Kept nullable for old SQLite files; application code uses apa_site_samples.
     sample_data = Column(Text, nullable=True)
 
     cluster_start = Column(Integer, nullable=True)

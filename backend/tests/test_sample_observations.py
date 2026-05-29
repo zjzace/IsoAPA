@@ -1,6 +1,4 @@
-import io
 import os
-import sqlite3
 import sys
 import tempfile
 from contextlib import contextmanager
@@ -18,21 +16,17 @@ from main import app
 
 
 @contextmanager
-def isolated_db(include_sample_observation_table=True):
+def isolated_db():
     fd, path = tempfile.mkstemp(suffix=".db")
     os.close(fd)
     engine = models.create_engine(f"sqlite:///{path}", connect_args={"check_same_thread": False})
     TestingSession = models.sessionmaker(autocommit=False, autoflush=False, bind=engine)
     models.Base.metadata.create_all(bind=engine)
-    if not include_sample_observation_table:
-        APASiteSample.__table__.drop(bind=engine)
 
     original_engine = models.engine
     original_session = models.SessionLocal
-    original_routes_flag = routes._HAS_APA_SITE_SAMPLES
     models.engine = engine
     models.SessionLocal = TestingSession
-    routes._HAS_APA_SITE_SAMPLES = None
 
     def override_db():
         db = TestingSession()
@@ -46,7 +40,6 @@ def isolated_db(include_sample_observation_table=True):
         yield TestingSession, path
     finally:
         app.dependency_overrides.clear()
-        routes._HAS_APA_SITE_SAMPLES = original_routes_flag
         models.SessionLocal = original_session
         models.engine = original_engine
         engine.dispose()
@@ -56,7 +49,7 @@ def isolated_db(include_sample_observation_table=True):
             pass
 
 
-def seed(session_factory, normalized: bool):
+def seed(session_factory, stale_sample_data=False):
     db = session_factory()
     try:
         sp = Species(name="Mouse", latin_name="Mus musculus", assembly="GRCm39")
@@ -96,6 +89,15 @@ def seed(session_factory, normalized: bool):
             },
         ]
         import json
+        legacy_details = [
+            {
+                "sample_name": "Fake_sample",
+                "sample_type": "tissue",
+                "original_site_position": 999,
+                "site_count": 99,
+                "site_abundance": 0.99,
+            }
+        ]
         site = APASite(
             unified_id="cluster_1",
             transcript_id=tx.id,
@@ -104,7 +106,7 @@ def seed(session_factory, normalized: bool):
             transcript_biotype="mRNA",
             site_count=10,
             site_abundance=0.5,
-            sample_data=None if normalized else json.dumps(details),
+            sample_data=json.dumps(legacy_details) if stale_sample_data else None,
             cluster_start=100,
             cluster_end=110,
             sequence="A" * 101,
@@ -114,27 +116,26 @@ def seed(session_factory, normalized: bool):
         )
         db.add(site)
         db.flush()
-        if normalized:
-            db.add_all(
-                [
-                    APASiteSample(
-                        apa_site_id=site.id,
-                        sample_id=sample_a.id,
-                        sample_order=0,
-                        original_site_position=101,
-                        site_count=7,
-                        site_abundance=0.7,
-                    ),
-                    APASiteSample(
-                        apa_site_id=site.id,
-                        sample_id=sample_b.id,
-                        sample_order=1,
-                        original_site_position=103,
-                        site_count=3,
-                        site_abundance=0.3,
-                    ),
-                ]
-            )
+        db.add_all(
+            [
+                APASiteSample(
+                    apa_site_id=site.id,
+                    sample_id=sample_a.id,
+                    sample_order=0,
+                    original_site_position=101,
+                    site_count=7,
+                    site_abundance=0.7,
+                ),
+                APASiteSample(
+                    apa_site_id=site.id,
+                    sample_id=sample_b.id,
+                    sample_order=1,
+                    original_site_position=103,
+                    site_count=3,
+                    site_abundance=0.3,
+                ),
+            ]
+        )
         db.commit()
         return gene.id
     finally:
@@ -146,17 +147,31 @@ def response_text(response):
     return body.decode("utf-8") if isinstance(body, bytes) else str(body)
 
 
-def test_normalized_sample_observations_match_legacy_contract():
-    outputs = []
-    for normalized in (False, True):
-        with isolated_db(include_sample_observation_table=normalized) as (Session, _):
-            gene_id = seed(Session, normalized)
-            client = TestClient(app)
-            gene = client.get(f"/api/v1/gene/{gene_id}?species=Mouse").json()
-            locus = client.get("/api/v1/transcript/NM_TEST.1?species=Mouse").json()
-            apa = response_text(client.get("/api/v1/download/apa-sites?species=Mouse&format=tsv"))
-            matrix = response_text(client.get("/api/v1/download/abundance-matrix?species=Mouse"))
-            outputs.append((gene, locus, apa, matrix))
+def test_normalized_sample_observations_drive_api_contract():
+    with isolated_db() as (Session, _):
+        gene_id = seed(Session)
+        client = TestClient(app)
 
-    legacy, normalized = outputs
-    assert normalized == legacy
+        gene = client.get(f"/api/v1/gene/{gene_id}?species=Mouse").json()
+        locus = client.get("/api/v1/transcript/NM_TEST.1?species=Mouse").json()
+        apa = response_text(client.get("/api/v1/download/apa-sites?species=Mouse&format=tsv"))
+        matrix = response_text(client.get("/api/v1/download/abundance-matrix?species=Mouse"))
+
+    assert set(gene["transcripts"][0]["samples"]) == {"Brain_sample", "ES_cell"}
+    assert {sample["name"] for sample in locus["samples"]} == {"Brain_sample", "ES_cell"}
+    assert "Brain sample" in apa
+    assert "ES cell" in apa
+    assert "Brain sample_count" in matrix
+    assert "ES cell_relative_abundance" in matrix
+
+
+def test_stale_sample_data_is_ignored_when_filtering_by_sample():
+    with isolated_db() as (Session, _):
+        seed(Session, stale_sample_data=True)
+        client = TestClient(app)
+
+        search = client.get("/api/v1/search?species=Mouse&sample=Fake_sample").json()
+        matrix = response_text(client.get("/api/v1/download/abundance-matrix?species=Mouse&sample=Fake_sample"))
+
+    assert search["total"] == 0
+    assert matrix.strip() == "site_id\ttranscript_id\tgene_name\tchromosome\tstrand\tspecies"
