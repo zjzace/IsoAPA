@@ -55,11 +55,10 @@
       <v-container>
         <div class="text-center mb-12">
           <div class="section-eyebrow mb-2">What is Isoform-Level APA?</div>
-          <h2 class="text-h4 font-weight-bold mb-3">One Gene · Multiple 3′ Ends</h2>
+          <h2 class="text-h4 font-weight-bold mb-3">Isoform-Resolved 3′ End Variation</h2>
           <p class="text-body-1 text-grey-darken-1" style="max-width: 720px; margin: 0 auto;">
-            A single gene produces multiple mRNA isoforms by selecting distinct 
-            <strong>polyadenylation sites (PAS)</strong> in the 3′ UTR. These isoforms share the same 
-            coding sequence but differ in 3′ UTR length — and therefore in their post-transcriptional regulatory landscape.
+            ApaAtlas maps polyadenylation sites to individual transcript isoforms, revealing alternative
+            3′ end usage that is hidden by gene-level summaries.
           </p>
         </div>
         
@@ -68,7 +67,7 @@
           <v-col cols="12" lg="6" class="d-flex flex-column col-diagram">
             <div class="apa-diagram-card flex-grow-1 pa-6">
               <div class="d-flex justify-space-between align-center mb-6">
-                <h3 class="text-h6 font-weight-bold">Same Gene · Two Distinct 3′ Ends</h3>
+                <h3 class="text-h6 font-weight-bold">Same Isoform Structure · Alternative 3′ Ends</h3>
                 <div class="diagram-legend">
                   <div class="legend-item">
                     <div class="legend-color-box bg-teal-gradient"></div>
@@ -173,86 +172,6 @@
       </v-container>
     </section>
 
-    <!-- ── Section Divider ──────────────────────────────────── -->
-    <div class="section-divider" aria-hidden="true"></div>
-
-    <!-- Database at a Glance -->
-    <section class="glance-section py-16">
-      <v-container>
-
-        <!-- Header -->
-        <div class="text-center mb-12">
-          <div class="section-eyebrow mb-2">The Database at a Glance</div>
-          <h2 class="text-h4 font-weight-bold mb-3">Isoform-Resolved Polyadenylome Atlas</h2>
-        </div>
-
-        <!-- Stats: 5 glassmorphism cards -->
-        <div class="stats-glass-row mb-14">
-          <div v-for="stat in dbStats" :key="stat.label" class="stat-glass-card">
-            <div class="stat-glass-number font-weight-black" :style="{ color: stat.color }">
-              {{ stat.displayValue }}
-            </div>
-            <div class="stat-glass-label">{{ stat.label }}</div>
-            <div class="stat-glass-desc">{{ stat.desc }}</div>
-          </div>
-        </div>
-
-        <!-- Taxonomy Breakdown -->
-        <div class="d-flex align-center justify-space-between flex-wrap ga-2 mb-6">
-          <div>
-            <h3 class="text-h6 font-weight-bold mb-1">Species Coverage</h3>
-            <p class="text-caption text-grey-darken-1 mb-0">Grouped by taxonomic class · expanding continuously</p>
-          </div>
-          <v-chip color="primary" variant="tonal" size="small" prepend-icon="mdi-earth">
-            {{ dbStats.find(s => s.label === 'Species').displayValue }} Species Covered
-          </v-chip>
-        </div>
-
-        <v-row>
-          <v-col v-for="group in taxonomyGroups" :key="group.class" cols="12" sm="6" lg="4">
-            <div class="taxonomy-card pa-5">
-              <!-- Group header -->
-              <div class="d-flex align-center ga-3 mb-4">
-                <div class="taxonomy-icon-badge" :style="{ background: `linear-gradient(135deg, ${group.color}, ${group.colorAlt})` }">
-                  <v-icon :icon="group.icon" size="20" color="white"></v-icon>
-                </div>
-                <div class="flex-grow-1" style="min-width:0">
-                  <div class="text-subtitle-1 font-weight-bold">{{ group.class }}</div>
-                  <div class="text-caption text-grey-darken-1">{{ group.phylum }}</div>
-                </div>
-                <v-chip size="x-small" color="primary" variant="tonal">
-                  {{ group.species.length }} sp.
-                </v-chip>
-              </div>
-              <!-- Species rows -->
-              <div v-for="sp in group.species" :key="sp.latin" class="taxonomy-species-row d-flex align-center ga-3">
-                <div class="flex-grow-1" style="min-width:0">
-                  <div class="text-body-2 font-weight-medium">{{ sp.name }}</div>
-                  <div v-if="sp.latin" class="text-caption text-grey-darken-1 font-italic">{{ sp.latin }}</div>
-                </div>
-                <div class="text-right flex-shrink-0">
-                  <div class="text-caption font-weight-bold" :style="{ color: group.color }">{{ sp.apaSites }}</div>
-                  <div class="taxonomy-site-sublabel">APA sites</div>
-                </div>
-              </div>
-              <!-- Footer: assembly + sample count chips -->
-              <div class="taxonomy-footer mt-3 pt-3 d-flex flex-wrap ga-1 align-center">
-                <v-chip v-for="sp in group.species" :key="sp.assembly"
-                        size="x-small" variant="outlined" class="taxonomy-chip">
-                  {{ sp.assembly }}
-                </v-chip>
-                <v-chip v-for="sp in group.species" :key="sp.name + '-samples'"
-                        size="x-small" variant="tonal" color="primary" class="ml-1">
-                  {{ sp.samples }} samples
-                </v-chip>
-              </div>
-            </div>
-          </v-col>
-        </v-row>
-
-      </v-container>
-    </section>
-
   </div>
 </template>
 
@@ -282,28 +201,6 @@ const performSearch = () => {
     router.push('/search')
   }
 }
-
-// Database at a Glance — live counts from DB (updated 2026-04)
-const dbStats = [
-  { label: 'Species',     displayValue: '1',       desc: 'test species loaded',               color: '#2E7D32' },
-  { label: 'Samples',     displayValue: '71',      desc: 'mouse tissue samples',              color: '#355C7D' },
-  { label: 'Genes',       displayValue: '22,888',  desc: 'protein-coding & lncRNA loci',      color: '#0D7377' },
-  { label: 'Transcripts', displayValue: '67,929',  desc: 'annotated isoforms',                color: '#14919B' },
-  { label: 'PA Sites',    displayValue: '157,982', desc: 'polyadenylation clusters mapped',   color: '#B63F5A' },
-]
-
-const taxonomyGroups = [
-  {
-    icon: 'mdi-paw',
-    class: 'Mammalia',
-    phylum: 'Chordata',
-    color: '#0D7377',
-    colorAlt: '#14919B',
-    species: [
-      { name: 'Mus musculus', latin: '', assembly: 'GRCm39', apaSites: '157,982', samples: 71 },
-    ],
-  },
-]
 
 </script>
 
@@ -461,6 +358,7 @@ const taxonomyGroups = [
   align-items: center;
   position: relative;
   height: 24px;
+  margin-right: 12px;
 }
 
 .diagram-spine {
@@ -493,8 +391,8 @@ const taxonomyGroups = [
   z-index: 1;
 }
 
-.diagram-utr.short { width: 40px; }
-.diagram-utr.long { width: 140px; }
+.diagram-utr.short { width: 56px; }
+.diagram-utr.long { width: 168px; }
 
 .diagram-pas-marker {
   color: #B63F5A;
@@ -520,133 +418,4 @@ const taxonomyGroups = [
   }
 }
 
-/* ── Section Divider ──────────────────────────────────────── */
-.section-divider {
-  height: 1px;
-  margin: 0 8%;
-  background: linear-gradient(
-    90deg,
-    transparent 0%,
-    rgba(13, 115, 119, 0.18) 20%,
-    rgba(20, 145, 155, 0.32) 50%,
-    rgba(13, 115, 119, 0.18) 80%,
-    transparent 100%
-  );
-}
-
-/* ── Glance Section ───────────────────────────────────────── */
-.glance-section {
-  background: linear-gradient(
-    180deg,
-    rgb(var(--v-theme-background)) 0%,
-    rgba(13, 115, 119, 0.04) 50%,
-    rgb(var(--v-theme-background)) 100%
-  );
-  position: relative;
-}
-
-/* ── Stats Glass Row ──────────────────────────────────────── */
-.stats-glass-row {
-  display: grid;
-  grid-template-columns: repeat(5, 1fr);
-  gap: 16px;
-}
-
-@media (max-width: 959px) {
-  .stats-glass-row { grid-template-columns: repeat(3, 1fr); }
-}
-
-@media (max-width: 599px) {
-  .stats-glass-row { grid-template-columns: repeat(2, 1fr); }
-}
-
-.stat-glass-card {
-  border-radius: 18px;
-  background: rgba(255, 255, 255, 0.72);
-  backdrop-filter: blur(16px) saturate(150%);
-  -webkit-backdrop-filter: blur(16px) saturate(150%);
-  border: 1px solid rgba(255, 255, 255, 0.55);
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.06), 0 1px 4px rgba(0, 0, 0, 0.04);
-  padding: 28px 16px;
-  text-align: center;
-  transition: transform 0.22s ease, box-shadow 0.22s ease;
-}
-
-.stat-glass-card:hover {
-  transform: translateY(-3px);
-  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.09);
-}
-
-.stat-glass-number {
-  font-size: clamp(1.4rem, 2.8vw, 2.2rem);
-  line-height: 1;
-  overflow-wrap: break-word;
-  word-break: break-all;
-  margin-bottom: 8px;
-}
-
-.stat-glass-label {
-  font-size: 0.88rem;
-  font-weight: 600;
-  margin-bottom: 4px;
-  letter-spacing: 0.01em;
-}
-
-.stat-glass-desc {
-  font-size: 0.72rem;
-  color: rgba(0, 0, 0, 0.45);
-  line-height: 1.35;
-}
-
-/* ── Taxonomy Cards ───────────────────────────────────────── */
-.taxonomy-card {
-  border-radius: 18px;
-  background: rgba(255, 255, 255, 0.72);
-  backdrop-filter: blur(16px) saturate(150%);
-  -webkit-backdrop-filter: blur(16px) saturate(150%);
-  border: 1px solid rgba(255, 255, 255, 0.55);
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.06), 0 1px 4px rgba(0, 0, 0, 0.04);
-  transition: transform 0.22s ease, box-shadow 0.22s ease;
-}
-
-.taxonomy-card:hover {
-  transform: translateY(-3px);
-  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.09);
-}
-
-.taxonomy-icon-badge {
-  width: 40px;
-  height: 40px;
-  border-radius: 12px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-}
-
-.taxonomy-species-row {
-  padding: 10px 0;
-  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
-}
-
-.taxonomy-species-row:last-of-type {
-  border-bottom: none;
-}
-
-.taxonomy-site-sublabel {
-  font-size: 0.65rem;
-  color: rgba(0, 0, 0, 0.38);
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-}
-
-.taxonomy-footer {
-  border-top: 1px solid rgba(0, 0, 0, 0.06);
-}
-
-.taxonomy-chip {
-  border-color: rgba(0, 0, 0, 0.18) !important;
-  color: rgba(0, 0, 0, 0.54) !important;
-  font-size: 0.70rem !important;
-}
 </style>
