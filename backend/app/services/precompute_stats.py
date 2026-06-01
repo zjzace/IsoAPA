@@ -2,7 +2,7 @@ import json
 import os
 from datetime import datetime, timezone
 
-from sqlalchemy import func
+from sqlalchemy import case, func
 
 from app.models.database import (
     APASite,
@@ -39,6 +39,117 @@ def _multiplicity_bucket(count: int) -> str:
     if count >= 5:
         return "5+"
     return str(max(count, 0))
+
+
+def _summarize_pas_motif_rows(rows) -> dict:
+    ranked_counts: dict[str, int] = {}
+    no_motif_count = 0
+    other_count = 0
+
+    for motif, pas_type, count in rows:
+        count = int(count or 0)
+        label = (motif or "").strip()
+        motif_type = (pas_type or "").strip().lower()
+
+        if not label:
+            no_motif_count += count
+        elif motif_type in {"canonical", "variant"}:
+            ranked_counts[label] = ranked_counts.get(label, 0) + count
+        else:
+            other_count += count
+
+    total = sum(ranked_counts.values()) + no_motif_count + other_count
+    ranked = sorted(ranked_counts.items(), key=lambda item: item[1], reverse=True)
+    top = ranked[:10]
+    other_count += sum(count for _, count in ranked[10:])
+    if no_motif_count:
+        top.append(("No motif", no_motif_count))
+    if other_count:
+        top.append(("Other motifs", other_count))
+
+    return {
+        "total": total,
+        "motifs": [
+            {
+                "motif": motif,
+                "count": count,
+                "pct": round((count / total) * 100, 1) if total else 0,
+            }
+            for motif, count in top
+        ],
+    }
+
+
+def _build_pas_motif_cache(db) -> dict:
+    motif_rank = case(
+        (APASite.pas_type == "canonical", 1),
+        (APASite.pas_type == "variant", 2),
+        (APASite.pas_motif.is_(None), 4),
+        (APASite.pas_motif == "", 4),
+        else_=3,
+    )
+
+    all_site_choice = db.query(
+        APASite.unified_id.label("site_id"),
+        APASite.pas_motif.label("motif"),
+        APASite.pas_type.label("motif_type"),
+        func.row_number()
+        .over(partition_by=APASite.unified_id, order_by=motif_rank)
+        .label("rn"),
+    ).subquery()
+
+    all_rows = (
+        db.query(
+            all_site_choice.c.motif,
+            all_site_choice.c.motif_type,
+            func.count(all_site_choice.c.site_id).label("site_count"),
+        )
+        .filter(all_site_choice.c.rn == 1)
+        .group_by(all_site_choice.c.motif, all_site_choice.c.motif_type)
+        .all()
+    )
+
+    species_site_choice = (
+        db.query(
+            Species.name.label("species"),
+            APASite.unified_id.label("site_id"),
+            APASite.pas_motif.label("motif"),
+            APASite.pas_type.label("motif_type"),
+            func.row_number()
+            .over(partition_by=[Species.name, APASite.unified_id], order_by=motif_rank)
+            .label("rn"),
+        )
+        .join(Species, APASite.species_id == Species.id)
+        .subquery()
+    )
+
+    species_rows = (
+        db.query(
+            species_site_choice.c.species,
+            species_site_choice.c.motif,
+            species_site_choice.c.motif_type,
+            func.count(species_site_choice.c.site_id).label("site_count"),
+        )
+        .filter(species_site_choice.c.rn == 1)
+        .group_by(
+            species_site_choice.c.species,
+            species_site_choice.c.motif,
+            species_site_choice.c.motif_type,
+        )
+        .all()
+    )
+
+    rows_by_species: dict[str, list] = {}
+    for species, motif, motif_type, count in species_rows:
+        rows_by_species.setdefault(species, []).append((motif, motif_type, count))
+
+    return {
+        "all": _summarize_pas_motif_rows(all_rows),
+        "by_species": {
+            species: _summarize_pas_motif_rows(rows)
+            for species, rows in rows_by_species.items()
+        },
+    }
 
 
 def build_stats_cache(output_path: str = STATS_CACHE_FILE) -> dict:
@@ -123,6 +234,7 @@ def build_stats_cache(output_path: str = STATS_CACHE_FILE) -> dict:
             if count >= 2:
                 multi_count += 1
         multiplicity_total = len(multiplicity_rows)
+        pas_motif_distribution = _build_pas_motif_cache(db)
 
         sample_counts = {
             _format_sample_name(sample_name): count
@@ -183,6 +295,7 @@ def build_stats_cache(output_path: str = STATS_CACHE_FILE) -> dict:
                 "pct_single_site": round((single_count / multiplicity_total) * 100, 1) if multiplicity_total else 0,
                 "pct_multi_site": round((multi_count / multiplicity_total) * 100, 1) if multiplicity_total else 0,
             },
+            "pas_motif_distribution": pas_motif_distribution,
         }
 
         basic = {

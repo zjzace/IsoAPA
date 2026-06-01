@@ -301,6 +301,15 @@ def _build_pas_motif_stats(db: Session, species: Optional[str] = None) -> dict:
     }
 
 
+def _cached_pas_motif_stats(species: Optional[str] = None) -> Optional[dict]:
+    motif_cache = _load_stats_cache().get("detailed", {}).get("pas_motif_distribution")
+    if not motif_cache:
+        return None
+    if species:
+        return motif_cache.get("by_species", {}).get(species)
+    return motif_cache.get("all")
+
+
 def _http_json(url: str) -> dict:
     req = Request(url, headers={"User-Agent": "ApaAtlas/1.0"})
     with urlopen(req, timeout=8) as response:
@@ -991,6 +1000,9 @@ def get_pas_motif_stats(
     db: Session = Depends(get_db),
 ):
     """Get PAS motif distribution, optionally scoped to one species."""
+    cached = _cached_pas_motif_stats(species)
+    if cached is not None:
+        return cached
     return _build_pas_motif_stats(db, species)
 
 

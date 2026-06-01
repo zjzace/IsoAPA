@@ -90,7 +90,7 @@
               no-data-text="No matches"
               class="filter-field"
               :menu-props="{ class: 'search-select-menu', width: filterSelectWidth || undefined, offset: 0 }"
-              @update:model-value="debouncedSearch"
+              @update:model-value="onSpeciesChange"
             >
               <template #selection="{ item }">
                 {{ item?.raw?.title ?? formatSpeciesName(filters.species) }}
@@ -121,7 +121,7 @@
               no-data-text="No matches"
               class="filter-field"
               :menu-props="{ class: 'search-select-menu', width: filterSelectWidth || undefined, offset: 0 }"
-              @update:model-value="debouncedSearch"
+              @update:model-value="onSampleChange"
             >
               <template #selection="{ item }">
                 {{ item?.raw?.title ?? formatSampleName(filters.sample) }}
@@ -256,21 +256,30 @@ const filters = reactive({
 
 const speciesList = ref([{ title: 'Mus musculus', value: 'Mouse' }])
 const sampleList = ref([
-  { title: 'A549', value: 'A549' },
-  { title: 'HepG2', value: 'HepG2' },
-  { title: 'K562', value: 'K562' }
+  { title: 'A549', value: 'A549', species: 'Human' },
+  { title: 'HepG2', value: 'HepG2', species: 'Human' },
+  { title: 'K562', value: 'K562', species: 'Human' }
 ])
 const sampleOptions = computed(() =>
-  sampleList.value.map(sample => ({
-    title: sample.title ?? formatSampleName(sample.value ?? sample),
-    value: sample.value ?? sample
-  }))
+  sampleList.value
+    .filter(sample => !filters.species || sample.species === filters.species)
+    .map(sample => ({
+      title: sample.title ?? formatSampleName(sample.value ?? sample),
+      value: sample.value ?? sample
+    }))
 )
 const speciesOptions = computed(() =>
-  speciesList.value.map(species => ({
-    title: species.title ?? formatSpeciesName(species.value ?? species),
-    value: species.value ?? species
-  }))
+  speciesList.value
+    .filter(species => {
+      if (!filters.sample) return true
+      return sampleList.value.some(sample =>
+        sample.value === filters.sample && sample.species === species.value
+      )
+    })
+    .map(species => ({
+      title: species.title ?? formatSpeciesName(species.value ?? species),
+      value: species.value ?? species
+    }))
 )
 
 const snackbar = ref(false)
@@ -346,8 +355,34 @@ const speciesColors = {
   'Zebrafish': '#355C7D'
 }
 
+const speciesColorPalette = [
+  '#0D7377',
+  '#355C7D',
+  '#8A5A44',
+  '#7A4E92',
+  '#B7791F',
+  '#2F855A',
+  '#9A5B13',
+  '#4C5F91',
+  '#0F766E',
+  '#A43F5C',
+  '#64748B',
+  '#8F5E67',
+]
+
 const getSpeciesColor = (species) => {
-  return speciesColors[species] || 'primary'
+  if (speciesColors[species]) {
+    return speciesColors[species]
+  }
+
+  const key = String(species || '')
+  let hash = 0
+
+  for (let i = 0; i < key.length; i += 1) {
+    hash = (hash * 31 + key.charCodeAt(i)) >>> 0
+  }
+
+  return speciesColorPalette[hash % speciesColorPalette.length]
 }
 
 const filterSubstring = (value, query) =>
@@ -359,6 +394,22 @@ const debouncedSearch = () => {
   searchTimeout = setTimeout(() => {
     search()
   }, 500)
+}
+
+const onSpeciesChange = () => {
+  if (filters.sample && !sampleOptions.value.some(sample => sample.value === filters.sample)) {
+    filters.sample = ''
+  }
+  page.value = 1
+  debouncedSearch()
+}
+
+const onSampleChange = () => {
+  if (filters.species && !speciesOptions.value.some(species => species.value === filters.species)) {
+    filters.species = ''
+  }
+  page.value = 1
+  debouncedSearch()
 }
 
 const search = async () => {
@@ -458,13 +509,15 @@ onMounted(async () => {
       const seen = new Set()
       sampleList.value = samplesData
         .filter(s => {
-          if (seen.has(s.name)) return false
-          seen.add(s.name)
+          const key = `${s.name}::${s.species}`
+          if (seen.has(key)) return false
+          seen.add(key)
           return true
         })
         .map(s => ({
           title: s.display_name ?? formatSampleName(s.name),
-          value: s.name
+          value: s.name,
+          species: s.species
         }))
     }
   } catch (error) {

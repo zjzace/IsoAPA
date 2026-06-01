@@ -5,22 +5,7 @@
       <div class="hero-bg"></div>
       <v-container class="hero-content">
         <h1 class="text-h3 font-weight-bold text-white mb-2">User Guide & Documentation</h1>
-        <p class="text-h6 text-white mb-6 opacity-90">Everything you need to explore isoform-level APA data</p>
-
-        <div class="d-flex flex-wrap gap-4">
-          <v-chip class="mr-2" variant="outlined" color="white" style="background: rgba(255,255,255,0.9);">
-            <strong style="color: #0D7377;">Quick Start</strong>
-          </v-chip>
-          <v-chip class="mr-2" variant="outlined" color="white" style="background: rgba(255,255,255,0.9);">
-            <strong style="color: #0D7377;">Feature Guides</strong>
-          </v-chip>
-          <v-chip class="mr-2" variant="outlined" color="white" style="background: rgba(255,255,255,0.9);">
-            <strong style="color: #0D7377;">FAQ</strong>
-          </v-chip>
-          <v-chip variant="outlined" color="white" style="background: rgba(255,255,255,0.9);">
-            <strong style="color: #0D7377;">Glossary</strong>
-          </v-chip>
-        </div>
+        <p class="text-h6 text-white opacity-90">Everything you need to explore isoform-level APA data</p>
       </v-container>
     </section>
 
@@ -43,6 +28,24 @@
           </div>
         </div>
       </div>
+
+      <section class="workflow-card flat-card" aria-labelledby="apa-workflow-title">
+        <div class="workflow-copy">
+          <div class="section-eyebrow">Analysis Workflow</div>
+          <h2 id="apa-workflow-title" class="workflow-title">How isoform-level PA sites are derived from long-read data</h2>
+          <p class="workflow-desc">
+            Long-read transcriptomic datasets are processed from raw sequencing reads through reference-based
+            alignment, transcript assignment, full-length read filtering, PA site clustering, internal priming
+            filtering, and final isoform-level PA site annotation.
+          </p>
+        </div>
+        <figure class="workflow-figure">
+          <img
+            src="/images/trek-workflow.jpg"
+            alt="Workflow for deriving isoform-level polyadenylation sites from long-read sequencing data"
+          >
+        </figure>
+      </section>
 
       <!-- 3. Quick Start Section -->
       <section id="getting-started" class="content-section">
@@ -93,11 +96,11 @@
                     </div>
                     <div class="info-tile">
                       <div class="tile-title">Transcript ID</div>
-                      <div class="tile-desc">Use an Ensembl transcript ID (ENST00000000233) for exact single-transcript lookup.</div>
+                      <div class="tile-desc">Use a RefSeq transcript ID (for example, NM_001001186.4) for exact single-transcript lookup.</div>
                     </div>
                     <div class="info-tile">
-                      <div class="tile-title">Sample / Cell Line</div>
-                      <div class="tile-desc">Filter by sample name (A549, HepG2, K562) to see tissue-specific APA patterns.</div>
+                      <div class="tile-title">Tissue / Cell Line</div>
+                      <div class="tile-desc">Filter by sample name (A549, Brain, Liver) to see sample-specific APA patterns.</div>
                     </div>
                     <div class="info-tile">
                       <div class="tile-title">Species</div>
@@ -134,6 +137,10 @@
                         <td class="text-grey-darken-1">Unique identifier for the PA site within this transcript</td>
                       </tr>
                       <tr>
+                        <td><strong>Cluster Range</strong></td>
+                        <td class="text-grey-darken-1">Genomic span of the PA site cluster, formatted as start:end</td>
+                      </tr>
+                      <tr>
                         <td><strong>Rep. Position</strong></td>
                         <td class="text-grey-darken-1">Modal genomic coordinate — the single nucleotide most frequently observed as the cleavage-and-polyadenylation point across all supporting reads and samples</td>
                       </tr>
@@ -147,13 +154,13 @@
                       </tr>
                       <tr>
                         <td><strong>Mean Abundance</strong></td>
-                        <td class="text-grey-darken-1">Average relative usage of this site across all samples in which it was detected</td>
+                        <td class="text-grey-darken-1">Average transcript-level relative usage of this PA site across all samples in which it was detected</td>
                       </tr>
                     </tbody>
                   </v-table>
                   <div class="tip-box mt-4">
                     <v-icon icon="mdi-lightbulb-on-outline" color="#0D7377" class="mr-2"></v-icon>
-                    <strong>Tip:</strong> The transcript header shows biotype (mRNA, lncRNA, etc.), species with genome assembly version, and a direct link to the parent Gene Detail page.
+                    <strong>Tip:</strong> The transcript header shows biotype (mRNA, lncRNA, etc.), species name, and a direct link to the parent Gene Detail page.
                   </div>
                 </template>
 
@@ -186,6 +193,10 @@
                     <div class="guide-row">
                       <div class="guide-row-bullet"></div>
                       <div><strong>PA Site Multiplicity</strong> — Histogram bucketing isoforms by their number of PA sites (1, 2, 3, 4, 5+).</div>
+                    </div>
+                    <div class="guide-row">
+                      <div class="guide-row-bullet"></div>
+                      <div><strong>PAS Motif Distribution</strong> — Pie chart summarising canonical and variant polyadenylation signal motifs, plus no-motif and other-motif categories.</div>
                     </div>
                     <div class="guide-row">
                       <div class="guide-row-bullet"></div>
@@ -318,7 +329,7 @@ const steps = [
     icon: 'mdi-magnify',
     gradient: 'linear-gradient(135deg,#0D7377,#14919B)',
     title: 'Search for a Gene or Transcript',
-    desc: 'Enter a gene symbol (GAPDH, ACTB) or Ensembl transcript ID. Autocomplete helps narrow your query.',
+    desc: 'Enter a gene symbol (GAPDH, ACTB) or RefSeq transcript ID. Autocomplete helps narrow your query.',
     link: '/search',
     linkLabel: 'Open Search'
   },
@@ -505,6 +516,46 @@ const glossary = [
 .jump-card-desc {
   font-size: 0.8rem;
   color: #64748b;
+}
+
+.workflow-card {
+  padding: 28px;
+  margin: -44px 0 80px;
+}
+.workflow-copy {
+  margin-bottom: 22px;
+}
+.workflow-title {
+  font-size: 1.55rem;
+  font-weight: 800;
+  color: #1e293b;
+  line-height: 1.25;
+  margin-bottom: 10px;
+}
+.workflow-desc {
+  font-size: 0.96rem;
+  line-height: 1.65;
+  color: #475569;
+  margin: 0;
+}
+.workflow-figure {
+  margin: 0;
+  background: transparent;
+  overflow: hidden;
+}
+.workflow-figure img {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+@media (max-width: 768px) {
+  .workflow-card {
+    padding: 22px;
+    margin-top: -48px;
+  }
+  .workflow-title {
+    font-size: 1.32rem;
+  }
 }
 
 .steps-grid {

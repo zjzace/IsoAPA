@@ -443,7 +443,7 @@ const schemas = [
     { name: 'sample_site_position', type: 'integer', desc: 'Genomic coordinate of the PA cleavage site as detected in this specific sample' },
     { name: 'site_abundance', type: 'float', desc: 'Relative abundance of this PA site within the transcript for this sample (0–1)' },
     { name: 'species', type: 'string', desc: 'Species name' },
-    { name: 'sample', type: 'string', desc: 'Sample / cell line name' },
+    { name: 'sample', type: 'string', desc: 'Tissue / cell line name' },
   ]},
   { id: 'bed', title: 'Genome Browser BED', fields: [
     { name: 'chrom', type: 'string', desc: 'Chromosome ID' },
