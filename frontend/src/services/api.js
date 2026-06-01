@@ -6,11 +6,6 @@ const api = axios.create({
 })
 
 export const apiService = {
-  async getStats() {
-    const response = await api.get('/stats')
-    return response.data
-  },
-  
   async getDetailedStats() {
     const response = await api.get('/stats/detailed')
     return response.data
@@ -73,22 +68,6 @@ export const apiService = {
   
   async downloadApaSites(params) {
     const response = await api.get('/download/apa-sites', { 
-      params,
-      responseType: 'blob'
-    })
-    return response.data
-  },
-  
-  async downloadGenes(params) {
-    const response = await api.get('/download/genes', { 
-      params,
-      responseType: 'blob'
-    })
-    return response.data
-  },
-  
-  async downloadTranscripts(params) {
-    const response = await api.get('/download/transcripts', { 
       params,
       responseType: 'blob'
     })

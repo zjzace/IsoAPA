@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Depends, Query, HTTPException
-from fastapi.responses import PlainTextResponse, StreamingResponse
+from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 from sqlalchemy import func, case
 from typing import List, Optional
@@ -794,18 +794,6 @@ def autocomplete(
         )
         return [{"value": r[0], "type": "species"} for r in results]
     return []
-
-
-import sys
-import os as _os
-
-# Make backend root importable so we can use build_fasta_index helpers
-_BACKEND_ROOT = _os.path.dirname(
-    _os.path.dirname(_os.path.dirname(_os.path.dirname(__file__)))
-)
-if _BACKEND_ROOT not in sys.path:
-    sys.path.insert(0, _BACKEND_ROOT)
-
 
 @router.get("/transcript/{transcript_id}/structure")
 def get_transcript_structure(

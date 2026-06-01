@@ -1,6 +1,5 @@
 import sys
 import os
-import json
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
@@ -423,7 +422,7 @@ def ingest_data(data_dir: str = None, species_filter: list[str] | None = None):
         print(f"APA Sites:   {total_apa_sites}")
         print("Done.")
 
-    except Exception as exc:
+    except Exception:
         db.rollback()
         import traceback
 

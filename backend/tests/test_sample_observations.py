@@ -11,7 +11,6 @@ from fastapi.testclient import TestClient
 
 from app.models import database as models
 from app.models.database import APASite, APASiteSample, Gene, Sample, Species, Transcript
-import app.api.routes as routes
 from main import app
 
 
@@ -72,22 +71,6 @@ def seed(session_factory, stale_sample_data=False):
         tx = Transcript(transcript_id="NM_TEST.1", gene_id=gene.id, species_id=sp.id)
         db.add(tx)
         db.flush()
-        details = [
-            {
-                "sample_name": "Brain_sample",
-                "sample_type": "tissue",
-                "original_site_position": 101,
-                "site_count": 7,
-                "site_abundance": 0.7,
-            },
-            {
-                "sample_name": "ES_cell",
-                "sample_type": "cell_culture",
-                "original_site_position": 103,
-                "site_count": 3,
-                "site_abundance": 0.3,
-            },
-        ]
         import json
         legacy_details = [
             {

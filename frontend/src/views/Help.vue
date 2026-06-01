@@ -257,7 +257,61 @@
         </div>
       </section>
 
-      <!-- 6. Glossary Section -->
+      <!-- 6. Reference Sources Section -->
+      <section id="references" class="content-section">
+        <div class="section-eyebrow">Reference Sources</div>
+        <h2 class="section-heading mb-3">Genome and annotation references</h2>
+        <p class="reference-section-desc">
+          Parent folders for the genome FASTA and transcript annotation resources used to construct ApaAtlas.
+        </p>
+
+        <div class="flat-card reference-card" :class="{ 'is-open': referencesOpen }">
+          <button class="reference-toggle" type="button" @click="referencesOpen = !referencesOpen">
+            <div>
+              <div class="reference-toggle-title">Reference source table</div>
+              <div class="reference-toggle-subtitle">{{ referenceLinks.length }} species with verified source links</div>
+            </div>
+            <v-icon :icon="referencesOpen ? 'mdi-chevron-up' : 'mdi-chevron-down'" color="#64748b"></v-icon>
+          </button>
+
+          <div class="reference-panel" :class="{ 'is-open': referencesOpen }">
+            <div class="reference-table-wrap">
+              <table class="reference-table">
+                <thead>
+                  <tr>
+                    <th>Species</th>
+                    <th>Source</th>
+                    <th>Annotation</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr v-for="row in referenceLinks" :key="row.species">
+                    <td class="reference-species">{{ row.species }}</td>
+                    <td>{{ row.source }}</td>
+                    <td>
+                      <div class="reference-link-stack">
+                        <a
+                          v-for="link in row.links"
+                          :key="link.url"
+                          :href="link.url"
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          class="reference-link"
+                        >
+                          {{ link.label }}
+                          <v-icon icon="mdi-open-in-new" size="13"></v-icon>
+                        </a>
+                      </div>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 7. Glossary Section -->
       <section id="glossary" class="content-section">
         <div class="section-eyebrow">Glossary</div>
         <h2 class="section-heading mb-6">Key terms & definitions</h2>
@@ -270,7 +324,7 @@
         </div>
       </section>
 
-      <!-- 7. Contact Section -->
+      <!-- 8. Contact Section -->
       <section id="contact" class="content-section">
         <div class="section-eyebrow">Contact</div>
         <h2 class="section-heading mb-6">Get in touch</h2>
@@ -309,9 +363,11 @@
 
 <script setup>
 import { ref } from 'vue'
+import { referenceLinks } from '@/data/referenceLinks'
 
 const openGuide = ref(null)
 const openFaq = ref(null)
+const referencesOpen = ref(false)
 
 const scrollTo = (id) => {
   document.getElementById(id)?.scrollIntoView({ behavior: 'smooth' })
@@ -828,6 +884,113 @@ const glossary = [
   line-height: 1.6;
 }
 
+.reference-section-desc {
+  margin: 0 0 20px;
+  color: #475569;
+  font-size: 0.95rem;
+  line-height: 1.65;
+}
+.reference-card {
+  overflow: hidden;
+}
+.reference-toggle {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 20px 24px;
+  background: transparent;
+  border: 0;
+  text-align: left;
+  cursor: pointer;
+}
+.reference-toggle-title {
+  color: #1e293b;
+  font-size: 1.06rem;
+  font-weight: 800;
+  line-height: 1.3;
+}
+.reference-toggle-subtitle {
+  color: #64748b;
+  font-size: 0.86rem;
+  margin-top: 3px;
+}
+.reference-panel {
+  max-height: 0;
+  opacity: 0;
+  overflow: hidden;
+  transition:
+    max-height 360ms cubic-bezier(0.16, 1, 0.3, 1),
+    opacity 180ms ease;
+}
+.reference-panel.is-open {
+  max-height: 940px;
+  opacity: 1;
+}
+.reference-table-wrap {
+  max-height: 720px;
+  overflow: auto;
+  border-top: 1px solid rgba(226, 232, 240, 0.92);
+}
+.reference-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  min-width: 760px;
+}
+.reference-table th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: #f8fafc;
+  color: #475569;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-align: left;
+  text-transform: uppercase;
+  padding: 13px 18px;
+  border-bottom: 1px solid rgba(203, 213, 225, 0.82);
+}
+.reference-table td {
+  color: #475569;
+  font-size: 0.88rem;
+  padding: 13px 18px;
+  border-bottom: 1px solid rgba(226, 232, 240, 0.78);
+  vertical-align: middle;
+}
+.reference-table tbody tr:hover td {
+  background: rgba(13, 115, 119, 0.035);
+}
+.reference-species {
+  color: #1e293b !important;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.reference-link-stack {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.reference-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: #0D7377;
+  background: rgba(13, 115, 119, 0.08);
+  border: 1px solid rgba(13, 115, 119, 0.14);
+  border-radius: 999px;
+  padding: 4px 10px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-decoration: none;
+  white-space: nowrap;
+}
+.reference-link:hover {
+  background: rgba(13, 115, 119, 0.13);
+  color: #0a5c5f;
+}
 .glossary-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);

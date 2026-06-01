@@ -70,10 +70,7 @@ ApaAtlas/
 │   │   ├── services/
 │   │   │   └── etl.py             # Data ingestion pipeline
 │   │   └── config.py              # Application settings
-│   ├── alembic/                   # Database migration scripts
 │   ├── build_bed12_index.py       # BED12 byte-offset index builder
-│   ├── build_fasta_index.py       # FASTA index utility
-│   ├── build_gtf_index.py         # GTF index utility
 │   ├── main.py                    # FastAPI application entry point
 │   ├── requirements.txt           # Python package dependencies
 │   └── environment.yml            # Conda/mamba environment specification
