@@ -73,6 +73,7 @@ class APASiteBase(BaseModel):
     pas_position: Optional[int] = None
     pas_type: Optional[str] = None
     search_level: Optional[str] = None
+    apa_level: Optional[str] = None
 
 
 class APASite(APASiteBase):

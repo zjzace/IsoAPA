@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, Query, HTTPException
 from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
-from sqlalchemy import func, case
+from sqlalchemy import func, case, or_
 from typing import List, Optional
 import os
 import json
@@ -18,7 +18,10 @@ from app.models.database import (
     Species,
     Sample,
     APASiteSample,
+    TranscriptSearchIndex,
+    TranscriptSearchSample,
 )
+from app.services.search_index import ensure_search_index
 from app.services.precompute_stats import STATS_CACHE_FILE, build_stats_cache
 from app.schemas.schemas import (
     SearchResult,
@@ -53,7 +56,35 @@ _KNOWN_SPECIES_TAXIDS = {
 
 
 def _format_sample_name(name: str) -> str:
-    return str(name or "").replace("_", " ")
+    return " ".join(str(name or "").replace("_", " ").split())
+
+
+def _sample_display_key(name: str) -> str:
+    return _format_sample_name(name).lower()
+
+
+def _dedupe_sample_names(names) -> list[str]:
+    seen = set()
+    deduped = []
+    for name in names:
+        key = _sample_display_key(name)
+        if not key or key in seen:
+            continue
+        seen.add(key)
+        deduped.append(name)
+    return deduped
+
+
+def _dedupe_sample_details(details: list[dict]) -> list[dict]:
+    seen = set()
+    deduped = []
+    for detail in details or []:
+        key = _sample_display_key(detail.get("sample_name", ""))
+        if not key or key in seen:
+            continue
+        seen.add(key)
+        deduped.append(detail)
+    return deduped
 
 
 def _format_species_name(name: str, latin_name: Optional[str] = None) -> str:
@@ -130,6 +161,22 @@ def _sample_site_filter(db: Session, sample_names: list[str]):
         .filter(Sample.name.in_(names) if len(names) > 1 else Sample.name.ilike(f"%{names[0]}%"))
     )
     return APASite.id.in_(normalized_sites)
+
+
+def _search_terms(value: Optional[str]) -> tuple[str, str]:
+    raw = str(value or "").strip()
+    normalized = raw.replace(" ", "_")
+    return raw, normalized.lower()
+
+
+def _like_term(value: Optional[str]) -> str:
+    return str(value or "").strip().lower()
+
+
+def _prefix_upper_bound(term: str) -> str:
+    if not term:
+        return term
+    return f"{term[:-1]}{chr(ord(term[-1]) + 1)}"
 
 
 def _write_apa_site_download_row(writer, row, sample_detail: dict | None, delimiter_selected_samples: list[str]):
@@ -493,83 +540,176 @@ def search_transcripts(
     sample: Optional[str] = None,
     species: Optional[str] = None,
     chromosome: Optional[str] = None,
+    sort_by: Optional[str] = None,
+    sort_desc: bool = False,
     page: int = Query(1, ge=1),
     limit: int = Query(50, ge=1, le=100),
     db: Session = Depends(get_db),
 ):
     """Search for transcripts with filters."""
+    ensure_search_index(db)
     query = (
         db.query(
-            Transcript.transcript_id,
-            Gene.gene_id,
-            Gene.gene_name,
-            Gene.chromosome,
-            Gene.strand,
-            func.count(APASite.id).label("apa_site_count"),
-            Species.name.label("species"),
-            Species.id.label("species_id"),
-            Transcript.id.label("transcript_db_id"),
-            Gene.id.label("gene_db_id"),
+            TranscriptSearchIndex.transcript_id,
+            TranscriptSearchIndex.gene_id,
+            TranscriptSearchIndex.gene_name,
+            TranscriptSearchIndex.chromosome,
+            TranscriptSearchIndex.strand,
+            TranscriptSearchIndex.apa_site_count,
+            TranscriptSearchIndex.species,
+            TranscriptSearchIndex.species_id,
+            TranscriptSearchIndex.transcript_db_id,
+            TranscriptSearchIndex.gene_db_id,
         )
-        .select_from(Transcript)
-        .join(Gene, Transcript.gene_id == Gene.id)
-        .join(APASite, APASite.transcript_id == Transcript.id)
-        .join(Species, APASite.species_id == Species.id)
+        .select_from(TranscriptSearchIndex)
     )
 
     if gene_name:
-        query = query.filter(Gene.gene_name.ilike(f"%{gene_name}%"))
+        term = _like_term(gene_name)
+        upper = _prefix_upper_bound(term)
+        has_prefix_match = (
+            db.query(TranscriptSearchIndex.id)
+            .filter(
+                TranscriptSearchIndex.gene_name_lc >= term,
+                TranscriptSearchIndex.gene_name_lc < upper,
+            )
+            .limit(1)
+            .first()
+            is not None
+        )
+        query = (
+            query.filter(
+                TranscriptSearchIndex.gene_name_lc >= term,
+                TranscriptSearchIndex.gene_name_lc < upper,
+            )
+            if has_prefix_match
+            else (
+                query.filter(TranscriptSearchIndex.gene_name.ilike(f"%{term}%"))
+                if len(term) < 6
+                else query.filter(TranscriptSearchIndex.gene_name_lc == term)
+            )
+        )
     if transcript_id:
-        query = query.filter(Transcript.transcript_id.ilike(f"%{transcript_id}%"))
+        term = _like_term(transcript_id)
+        query = query.filter(TranscriptSearchIndex.transcript_id.ilike(f"%{term}%"))
     if gene_id:
-        query = query.filter(Gene.gene_id.ilike(f"%{gene_id}%"))
+        term = _like_term(gene_id)
+        query = query.filter(TranscriptSearchIndex.gene_id.ilike(f"%{term}%"))
+    sample_terms = []
+    sample_count_subquery = None
     if sample:
-        sample_filter = _sample_site_filter(db, [sample])
-        if sample_filter is not None:
-            query = query.filter(sample_filter)
+        raw_sample = str(sample or "").strip()
+        sample_terms = {raw_sample}
+        if "_" in raw_sample:
+            sample_terms.add(raw_sample.replace("_", " "))
+        if " " in raw_sample:
+            sample_terms.add(raw_sample.replace(" ", "_"))
+        sample_terms = [sample_term for sample_term in sample_terms if sample_term]
+        normalized_sample_terms = [sample_term.lower() for sample_term in sample_terms]
+        exact_sample_exists = (
+            db.query(TranscriptSearchSample.id)
+            .filter(TranscriptSearchSample.sample_name_lc.in_(normalized_sample_terms))
+            .limit(1)
+            .first()
+            is not None
+        )
+        sample_filter = (
+            TranscriptSearchSample.sample_name_lc.in_(normalized_sample_terms)
+            if exact_sample_exists
+            else or_(*[
+                TranscriptSearchSample.sample_name.ilike(f"%{sample_term}%")
+                for sample_term in sample_terms
+            ])
+        )
+        sample_count_subquery = (
+            db.query(
+                TranscriptSearchSample.transcript_db_id.label("transcript_db_id"),
+                func.sum(TranscriptSearchSample.apa_site_count).label("sample_apa_site_count"),
+            )
+            .filter(sample_filter)
+            .group_by(TranscriptSearchSample.transcript_db_id)
+            .subquery()
+        )
+        query = query.join(
+            sample_count_subquery,
+            TranscriptSearchIndex.transcript_db_id == sample_count_subquery.c.transcript_db_id,
+        ).add_columns(sample_count_subquery.c.sample_apa_site_count)
     if species:
-        query = query.filter(Species.name.ilike(f"%{species}%"))
+        query = query.filter(TranscriptSearchIndex.species.ilike(f"%{species}%"))
     if chromosome:
-        query = query.filter(Gene.chromosome.ilike(f"%{chromosome}%"))
+        query = query.filter(TranscriptSearchIndex.chromosome.ilike(f"%{chromosome}%"))
 
-    _count_subq = query.group_by(
-        Transcript.transcript_id,
-        Transcript.id,
-        Gene.id,
-        Gene.gene_id,
-        Gene.gene_name,
-        Gene.chromosome,
-        Gene.strand,
-        Species.name,
-        Species.id,
-    ).subquery()
-    total_count = db.query(func.count()).select_from(_count_subq).scalar() or 0
+    sort_columns = {
+        "gene_name": TranscriptSearchIndex.gene_name,
+        "transcript_id": TranscriptSearchIndex.transcript_id,
+        "chromosome": TranscriptSearchIndex.chromosome,
+        "strand": TranscriptSearchIndex.strand,
+        "apa_site_count": (
+            sample_count_subquery.c.sample_apa_site_count
+            if sample_count_subquery is not None
+            else TranscriptSearchIndex.apa_site_count
+        ),
+        "species": TranscriptSearchIndex.species,
+    }
+    order_by = []
+    if gene_name:
+        gene_term = _like_term(gene_name)
+        if gene_term:
+            order_by.append(
+                case(
+                    (TranscriptSearchIndex.gene_name_lc == gene_term, 0),
+                    (TranscriptSearchIndex.gene_name_lc.like(f"{gene_term}%"), 1),
+                    else_=2,
+                )
+            )
+    if transcript_id:
+        transcript_term = _like_term(transcript_id)
+        if transcript_term:
+            order_by.append(
+                case(
+                    (func.lower(TranscriptSearchIndex.transcript_id) == transcript_term, 0),
+                    (func.lower(TranscriptSearchIndex.transcript_id).like(f"{transcript_term}%"), 1),
+                    else_=2,
+                )
+            )
+    if sort_by in sort_columns:
+        sort_expr = sort_columns[sort_by]
+        order_by.append(sort_expr.desc() if sort_desc else sort_expr.asc())
+    order_by.extend([
+        TranscriptSearchIndex.gene_name.asc(),
+        TranscriptSearchIndex.transcript_id.asc(),
+        TranscriptSearchIndex.species.asc(),
+    ])
+
+    total_count = query.count()
 
     results = (
-        query.group_by(
-            Transcript.transcript_id,
-            Transcript.id,
-            Gene.id,
-            Gene.gene_id,
-            Gene.gene_name,
-            Gene.chromosome,
-            Gene.strand,
-            Species.name,
-            Species.id,
-        )
+        query.order_by(*order_by)
         .offset((page - 1) * limit)
         .limit(limit)
         .all()
     )
 
+    transcript_db_ids = [r[8] for r in results]
+    sample_names_by_transcript = {transcript_db_id: set() for transcript_db_id in transcript_db_ids}
+    if transcript_db_ids:
+        sample_rows = (
+            db.query(
+                TranscriptSearchSample.transcript_db_id,
+                TranscriptSearchSample.sample_name,
+            )
+            .filter(TranscriptSearchSample.transcript_db_id.in_(transcript_db_ids))
+            .order_by(
+                TranscriptSearchSample.transcript_db_id,
+                TranscriptSearchSample.sample_name,
+            )
+            .all()
+        )
+        for transcript_db_id, sample_name in sample_rows:
+            sample_names_by_transcript.setdefault(transcript_db_id, set()).add(sample_name)
+
     search_results = []
     for r in results:
-        apa_sites = db.query(APASite).filter(APASite.transcript_id == r[8]).all()
-        sample_details_by_site = _sample_detail_rows(db, [site.id for site in apa_sites])
-        sample_names = set()
-        for asite in apa_sites:
-            for sd in sample_details_by_site.get(asite.id, []):
-                sample_names.add(sd.get("sample_name", ""))
         search_results.append(
             SearchResult(
                 transcript_id=r[0],
@@ -577,8 +717,17 @@ def search_transcripts(
                 gene_name=r[2],
                 chromosome=r[3],
                 strand=r[4],
-                apa_site_count=r[5],
-                cell_lines=list(sample_names),
+                apa_site_count=(
+                    r[10]
+                    if sample_count_subquery is not None
+                    else r[5]
+                ),
+                cell_lines=_dedupe_sample_names(
+                    sorted(
+                        sample_names_by_transcript.get(r[8], set()),
+                        key=lambda value: _format_sample_name(value).lower(),
+                    )
+                ),
                 species=r[6],
                 gene_db_id=r[9],
             )
@@ -618,7 +767,7 @@ def get_gene_detail(
         sample_names = set()
         transcript_apa_sites = []
         for asite in apa_sites:
-            sample_details = sample_details_by_site.get(asite.id, [])
+            sample_details = _dedupe_sample_details(sample_details_by_site.get(asite.id, []))
             for sd in sample_details:
                 sample_names.add(sd.get("sample_name", ""))
 
@@ -631,6 +780,7 @@ def get_gene_detail(
                     "transcript_biotype": asite.transcript_biotype,
                     "cluster_start": asite.cluster_start,
                     "cluster_end": asite.cluster_end,
+                    "apa_level": asite.apa_level,
                     "sample_details": sample_details,
                 }
             )
@@ -639,7 +789,9 @@ def get_gene_detail(
             {
                 "transcript_id": transcript.transcript_id,
                 "apa_site_count": len(apa_sites),
-                "samples": list(sample_names),
+                "samples": _dedupe_sample_names(
+                    sorted(sample_names, key=lambda value: _format_sample_name(value).lower())
+                ),
                 "apa_sites": transcript_apa_sites,
             }
         )
@@ -748,11 +900,22 @@ def autocomplete(
     db: Session = Depends(get_db),
 ):
     """Autocomplete search suggestions."""
+    term = q.strip()
+    lower_term = term.lower()
+
+    def match_rank(column):
+        return case(
+            (func.lower(column) == lower_term, 0),
+            (func.lower(column).like(f"{lower_term}%"), 1),
+            else_=2,
+        )
+
     if field == "gene_name":
         results = (
             db.query(Gene.gene_name)
-            .distinct()
-            .filter(Gene.gene_name.ilike(f"%{q}%"))
+            .filter(Gene.gene_name.ilike(f"%{term}%"))
+            .group_by(Gene.gene_name)
+            .order_by(match_rank(Gene.gene_name), func.lower(Gene.gene_name))
             .limit(limit)
             .all()
         )
@@ -760,8 +923,9 @@ def autocomplete(
     elif field == "gene_id":
         results = (
             db.query(Gene.gene_id)
-            .distinct()
-            .filter(Gene.gene_id.ilike(f"%{q}%"))
+            .filter(Gene.gene_id.ilike(f"%{term}%"))
+            .group_by(Gene.gene_id)
+            .order_by(match_rank(Gene.gene_id), func.lower(Gene.gene_id))
             .limit(limit)
             .all()
         )
@@ -769,8 +933,9 @@ def autocomplete(
     elif field == "transcript_id":
         results = (
             db.query(Transcript.transcript_id)
-            .distinct()
-            .filter(Transcript.transcript_id.ilike(f"%{q}%"))
+            .filter(Transcript.transcript_id.ilike(f"%{term}%"))
+            .group_by(Transcript.transcript_id)
+            .order_by(match_rank(Transcript.transcript_id), func.lower(Transcript.transcript_id))
             .limit(limit)
             .all()
         )
@@ -778,8 +943,9 @@ def autocomplete(
     elif field == "sample":
         results = (
             db.query(Sample.name)
-            .distinct()
-            .filter(Sample.name.ilike(f"%{q}%"))
+            .filter(Sample.name.ilike(f"%{term}%"))
+            .group_by(Sample.name)
+            .order_by(match_rank(Sample.name), func.lower(Sample.name))
             .limit(limit)
             .all()
         )
@@ -787,8 +953,9 @@ def autocomplete(
     elif field == "species":
         results = (
             db.query(Species.name)
-            .distinct()
-            .filter(Species.name.ilike(f"%{q}%"))
+            .filter(Species.name.ilike(f"%{term}%"))
+            .group_by(Species.name)
+            .order_by(match_rank(Species.name), func.lower(Species.name))
             .limit(limit)
             .all()
         )
@@ -877,7 +1044,7 @@ def get_locus_detail(
     for asite in apa_sites:
         species_obj = db.query(Species).filter(Species.id == asite.species_id).first()
 
-        sample_details = sample_details_by_site.get(asite.id, [])
+        sample_details = _dedupe_sample_details(sample_details_by_site.get(asite.id, []))
         for sd in sample_details:
             sample_names.add(sd.get("sample_name", ""))
 
@@ -898,6 +1065,7 @@ def get_locus_detail(
                 pas_position=asite.pas_position,
                 pas_type=asite.pas_type,
                 search_level=asite.search_level,
+                apa_level=asite.apa_level,
                 id=int(asite.id),
                 transcript=transcript,
                 species=species_obj,
@@ -914,9 +1082,12 @@ def get_locus_detail(
     sample_type_map = {
         sample.name: sample.sample_type for sample in sample_type_query.all()
     } if sample_names else {}
+    deduped_sample_names = _dedupe_sample_names(
+        sorted(sample_names, key=lambda value: _format_sample_name(value).lower())
+    )
     samples = [
         {"name": name, "sample_type": sample_type_map.get(name, "cell_culture")}
-        for name in sorted(sample_names)
+        for name in deduped_sample_names
         if name
     ]
     chromosomes = [gene.chromosome] if gene.chromosome else []
@@ -1297,7 +1468,9 @@ def download_abundance_matrix(
         sample_query = sample_query.filter(Species.name.ilike(f"%{species}%"))
     if selected_samples:
         sample_query = sample_query.filter(Sample.name.in_(selected_samples))
-    sample_names = sorted({row[0] for row in sample_query.all()})
+    sample_names = _dedupe_sample_names(
+        sorted({row[0] for row in sample_query.all()}, key=lambda value: _format_sample_name(value).lower())
+    )
 
     query = (
         db.query(
@@ -1341,14 +1514,15 @@ def download_abundance_matrix(
 
     for row in results:
         sample_values: dict = {
-            s: {"count": 0, "relative_abundance": 0}
+            _sample_display_key(s): {"count": 0, "relative_abundance": 0}
             for s in sample_names
         }
         for sd in sample_details_by_site.get(row.apa_site_id, []):
             sname = sd.get("sample_name", "")
-            if sname in sample_values:
-                sample_values[sname]["count"] = int(sd.get("site_count", 0) or 0)
-                sample_values[sname]["relative_abundance"] = sd.get("site_abundance", 0) or 0
+            sample_key = _sample_display_key(sname)
+            if sample_key in sample_values:
+                sample_values[sample_key]["count"] += int(sd.get("site_count", 0) or 0)
+                sample_values[sample_key]["relative_abundance"] = sd.get("site_abundance", 0) or 0
 
         row_vals = [
             row.unified_id or "",
@@ -1360,9 +1534,10 @@ def download_abundance_matrix(
         ] + [
             str(value)
             for s in sample_names
+            for sample_key in [_sample_display_key(s)]
             for value in (
-                sample_values[s]["count"],
-                sample_values[s]["relative_abundance"],
+                sample_values[sample_key]["count"],
+                sample_values[sample_key]["relative_abundance"],
             )
         ]
         output.write("\t".join(row_vals) + "\n")

@@ -100,6 +100,7 @@ class APASite(Base):
     pas_position = deferred(Column(Integer, nullable=True))
     pas_type = deferred(Column(String(30), nullable=True))
     search_level = deferred(Column(String(20), nullable=True))
+    apa_level = deferred(Column(String(30), nullable=True))
 
     transcript = relationship("Transcript", back_populates="apa_sites")
     species = relationship("Species", back_populates="apa_sites")
@@ -133,6 +134,51 @@ class APASiteSample(Base):
     __table_args__ = (
         Index("idx_apa_site_sample", "apa_site_id", "sample_id"),
         Index("idx_apa_site_sample_order", "apa_site_id", "sample_order"),
+    )
+
+
+class TranscriptSearchIndex(Base):
+    __tablename__ = "transcript_search_index"
+
+    id = Column(Integer, primary_key=True)
+    transcript_db_id = Column(Integer, nullable=False, unique=True, index=True)
+    transcript_id = Column(String(100), nullable=False, index=True)
+    gene_id = Column(String(100), nullable=False, index=True)
+    gene_db_id = Column(Integer, nullable=False, index=True)
+    gene_name = Column(String(100), nullable=False, index=True)
+    gene_name_lc = Column(String(100), nullable=False, index=True)
+    chromosome = Column(String(50), nullable=False, index=True)
+    strand = Column(String(1), nullable=False)
+    species = Column(String(100), nullable=False, index=True)
+    species_id = Column(Integer, nullable=False, index=True)
+    apa_site_count = Column(Integer, nullable=False, default=0, index=True)
+
+    __table_args__ = (
+        Index("idx_tsi_default_order", "gene_name", "transcript_id", "species"),
+        Index("idx_tsi_gene_species", "gene_name_lc", "species"),
+        Index("idx_tsi_gene_default_order", "gene_name_lc", "gene_name", "transcript_id", "species"),
+        Index("idx_tsi_species_default_order", "species", "gene_name", "transcript_id"),
+        Index("idx_tsi_transcript_species", "transcript_id", "species"),
+        Index("idx_tsi_species_gene", "species", "gene_name_lc"),
+        Index("idx_tsi_species_apa", "species", "apa_site_count"),
+    )
+
+
+class TranscriptSearchSample(Base):
+    __tablename__ = "transcript_search_samples"
+
+    id = Column(Integer, primary_key=True)
+    transcript_db_id = Column(Integer, nullable=False, index=True)
+    sample_id = Column(Integer, nullable=False, index=True)
+    sample_name = Column(String(100), nullable=False, index=True)
+    sample_name_lc = Column(String(100), nullable=False, index=True)
+    species_id = Column(Integer, nullable=False, index=True)
+    apa_site_count = Column(Integer, nullable=False, default=0, index=True)
+
+    __table_args__ = (
+        Index("idx_tss_sample_transcript", "sample_name_lc", "transcript_db_id"),
+        Index("idx_tss_sample_count", "sample_name_lc", "apa_site_count"),
+        Index("idx_tss_transcript_sample", "transcript_db_id", "sample_name"),
     )
 
 

@@ -1,5 +1,8 @@
 export const formatSampleName = (name) =>
-  String(name ?? '').replace(/_/g, ' ')
+  String(name ?? '')
+    .replace(/_/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
 
 export const formatSampleType = (type) =>
   formatSampleName(type).replace(/\b\w/g, c => c.toUpperCase())

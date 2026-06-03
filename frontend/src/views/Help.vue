@@ -42,6 +42,8 @@
         <figure class="workflow-figure">
           <img
             src="/images/trek-workflow.jpg"
+            width="8412"
+            height="3938"
             alt="Workflow for deriving isoform-level polyadenylation sites from long-read sequencing data"
           >
         </figure>
@@ -251,6 +253,22 @@
             <div class="accordion-panel" :class="{ 'is-open': openFaq === index }">
               <div class="faq-content">
                 <p>{{ faq.a }}</p>
+                <div v-if="faq.table" class="faq-table-wrap">
+                  <table class="faq-table">
+                    <thead>
+                      <tr>
+                        <th v-for="header in faq.table.headers" :key="header">{{ header }}</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr v-for="row in faq.table.rows" :key="row[0]">
+                        <td v-for="(cell, cellIndex) in row" :key="`${row[0]}-${cellIndex}`">
+                          {{ cell }}
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
               </div>
             </div>
           </div>
@@ -362,16 +380,24 @@
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { ref, watch } from 'vue'
+import { useRoute } from 'vue-router'
 import { referenceLinks } from '@/data/referenceLinks'
+
+const route = useRoute()
 
 const openGuide = ref(null)
 const openFaq = ref(null)
-const referencesOpen = ref(false)
+const shouldOpenReferences = () => route.hash === '#references' || route.query.open === 'references'
+const referencesOpen = ref(shouldOpenReferences())
 
 const scrollTo = (id) => {
   document.getElementById(id)?.scrollIntoView({ behavior: 'smooth' })
 }
+
+watch(() => `${route.hash}:${route.query.open || ''}`, () => {
+  if (shouldOpenReferences()) referencesOpen.value = true
+})
 
 const jumpLinks = [
   { id: 'getting-started', icon: 'mdi-rocket-launch', gradient: 'linear-gradient(135deg,#0D7377,#14919B)', title: 'Quick Start', sub: '4-step guide' },
@@ -439,6 +465,20 @@ const faqs = [
   {
     q: 'How is site abundance calculated?',
     a: 'Abundance = (reads at a specific PA site) ÷ (total reads at all PA sites for that transcript) × 100%. It represents the fractional usage of each cleavage site within a transcript in a given sample.'
+  },
+  {
+    q: 'What do APA confidence levels mean?',
+    a: 'ApaAtlas assigns each PA cluster to one confidence level by combining PAS motif annotation with quantitative support evidence, including the number of supporting samples, supported transcript-sample observations, total site count, maximum observation count, and maximum relative abundance.',
+    table: {
+      headers: ['Level', 'Classification', 'Evidence summary'],
+      rows: [
+        ['APA-L1', 'High confidence', 'Canonical PAS with strong support; strong support requires at least 2 samples, at least 3 supported observations, and total site count >= 30.'],
+        ['APA-L2', 'High confidence', 'Canonical PAS with moderate support, or variant PAS with strong support; moderate support requires at least 2 supported observations and total site count >= 10.'],
+        ['APA-L3', 'Moderate confidence', 'Variant PAS with moderate support, or auxiliary/no-motif sites with strong support.'],
+        ['APA-L4', 'Lower confidence', 'Auxiliary PAS or no annotated PAS with moderate support.'],
+        ['APA-L5', 'Candidate site', 'Single-rescue or weaker evidence; retained when maximum observation count >= 20 with maximum relative abundance >= 0.25, or when evidence does not meet higher levels.']
+      ]
+    }
   },
   {
     q: 'Can I use ApaAtlas data in publications?',
@@ -882,6 +922,52 @@ const glossary = [
   font-size: 0.95rem;
   color: #475569;
   line-height: 1.6;
+}
+
+.faq-table-wrap {
+  margin-top: 14px;
+  overflow-x: auto;
+  border: 1px solid rgba(203, 213, 225, 0.72);
+  border-radius: 14px;
+  background: #ffffff;
+}
+
+.faq-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  min-width: 760px;
+}
+
+.faq-table th {
+  padding: 11px 14px;
+  background: #eef7f7;
+  color: #475569;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-align: left;
+  text-transform: uppercase;
+  border-bottom: 1px solid rgba(203, 213, 225, 0.72);
+}
+
+.faq-table td {
+  padding: 12px 14px;
+  color: #475569;
+  font-size: 0.9rem;
+  line-height: 1.55;
+  vertical-align: top;
+  border-bottom: 1px solid rgba(226, 232, 240, 0.82);
+}
+
+.faq-table tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+.faq-table td:first-child {
+  color: #0D7377;
+  font-weight: 800;
+  white-space: nowrap;
 }
 
 .reference-section-desc {

@@ -22,14 +22,21 @@
     <template v-else>
       <v-container class="stats-content reveal-root">
         <section class="metric-grid reveal-item" style="--delay: 80ms">
-          <div v-for="metric in heroMetrics" :key="metric.label" class="metric-card">
+          <component
+            :is="metric.to ? 'router-link' : 'div'"
+            v-for="metric in heroMetrics"
+            :key="metric.label"
+            class="metric-card"
+            :class="{ 'metric-card--link': metric.to }"
+            v-bind="metric.to ? { to: metric.to } : {}"
+          >
             <div class="metric-icon" :style="{ background: metric.gradient }">
               <v-icon :icon="metric.icon" size="20" color="white"></v-icon>
             </div>
             <div class="metric-value">{{ metric.value }}</div>
             <div class="metric-label">{{ metric.label }}</div>
             <div class="metric-note">{{ metric.note }}</div>
-          </div>
+          </component>
         </section>
 
         <section class="section-card stats-flow-card reveal-item" style="--delay: 160ms">
@@ -499,7 +506,8 @@ const heroMetrics = computed(() => [
     value: fmt(detailedStats.value.total_species),
     note: 'organisms loaded',
     icon: 'mdi-paw',
-    gradient: 'linear-gradient(135deg,#0D7377,#14919B)'
+    gradient: 'linear-gradient(135deg,#0D7377,#14919B)',
+    to: { name: 'Help', hash: '#references', query: { open: 'references' } }
   },
   {
     label: 'Isoforms',
@@ -881,6 +889,23 @@ const rankClass = (i) => {
 .metric-card {
   border-radius: 22px;
   padding: 22px;
+  transition: transform 180ms ease, border-color 180ms ease, background-color 180ms ease;
+}
+
+.metric-card--link {
+  color: inherit;
+  cursor: pointer;
+  text-decoration: none;
+}
+
+.metric-card--link:hover {
+  border-color: rgba(20, 145, 155, 0.34);
+  transform: translateY(-2px);
+}
+
+.metric-card--link:focus-visible {
+  outline: 3px solid rgba(20, 145, 155, 0.22);
+  outline-offset: 3px;
 }
 
 .metric-icon {

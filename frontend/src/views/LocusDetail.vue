@@ -168,10 +168,8 @@
                   </span>
                 </template>
 
-                <template v-slot:item.sample_count="{ item }">
-                  <v-chip size="small" variant="tonal" color="primary">
-                    {{ item.sample_count }}
-                  </v-chip>
+                <template v-slot:item.apa_level="{ item }">
+                  <span class="ld-apa-level">{{ item.apa_level || '—' }}</span>
                 </template>
 
                 <template v-slot:item.site_abundance="{ item }">
@@ -532,7 +530,7 @@ const tableHeaders = [
   { title: 'Cluster Range', key: 'cluster_range', sortable: true },
   { title: 'Rep. Position', key: 'mode_site_position', sortable: true },
   { title: 'PAS Motif', key: 'pas_motif', sortable: true },
-  { title: 'Samples', key: 'sample_count', sortable: true, width: 88, align: 'center' },
+  { title: 'APA Level', key: 'apa_level', sortable: true, width: 96, align: 'center' },
   { title: 'Mean Abundance', key: 'site_abundance', sortable: true, width: 150 },
 ]
 
@@ -549,10 +547,20 @@ const formatClusterRange = (site) => {
   return `${site.cluster_start}:${site.cluster_end}`
 }
 
+const dedupeSampleDetails = (details) => {
+  const seen = new Set()
+  return (details || []).filter(detail => {
+    const key = formatSampleName(detail.sample_name).toLowerCase()
+    if (!key || seen.has(key)) return false
+    seen.add(key)
+    return true
+  })
+}
+
 const flattenedTableData = computed(() => {
   if (!locusData.value) return []
   return locusData.value.apa_sites.map(site => {
-    const samples = site.sample_details || []
+    const samples = dedupeSampleDetails(site.sample_details)
     const avgAbundance = samples.length > 0
       ? samples.reduce((sum, sd) => sum + (sd.site_abundance || 0), 0) / samples.length
       : site.site_abundance || 0
@@ -563,6 +571,7 @@ const flattenedTableData = computed(() => {
       pas_motif: site.pas_motif,
       pas_position: site.pas_position,
       pas_type: site.pas_type,
+      apa_level: site.apa_level,
       sample_count: samples.length,
       site_abundance: avgAbundance,
       site_count: site.site_count,
@@ -579,8 +588,8 @@ const heatmapLookup = computed(() => {
   const lookup = {}
   for (const site of locusData.value.apa_sites) {
     lookup[site.unified_id] = {}
-    for (const sd of (site.sample_details || [])) {
-      lookup[site.unified_id][sd.sample_name] = {
+    for (const sd of dedupeSampleDetails(site.sample_details)) {
+      lookup[site.unified_id][formatSampleName(sd.sample_name).toLowerCase()] = {
         abundance: sd.site_abundance,
         count: sd.site_count
       }
@@ -592,7 +601,15 @@ const heatmapLookup = computed(() => {
 const heatmapData = computed(() => {
   if (!locusData.value) return { sites: [], samples: [] }
   // samples may be [{name, sample_type}] objects or plain strings — normalise to strings
-  const allSamples = (locusData.value.samples || []).map(s => s?.name ?? s)
+  const seenSamples = new Set()
+  const allSamples = (locusData.value.samples || [])
+    .map(s => s?.name ?? s)
+    .filter(sample => {
+      const key = formatSampleName(sample).toLowerCase()
+      if (!key || seenSamples.has(key)) return false
+      seenSamples.add(key)
+      return true
+    })
   const sites = locusData.value.apa_sites.map(s => ({
     id: s.unified_id,
     position: s.mode_site_position
@@ -616,7 +633,7 @@ const heatmapGridStyle = computed(() => {
 const HEATMAP_COLOR = [13, 115, 119]   // RGB of primary teal #0D7377
 
 const heatmapCellStyle = (siteId, sample) => {
-  const entry = heatmapLookup.value[siteId]?.[sample]
+  const entry = heatmapLookup.value[siteId]?.[formatSampleName(sample).toLowerCase()]
   if (!entry) {
     return {
       background: 'repeating-linear-gradient(45deg, rgba(0,0,0,0.03) 0px, rgba(0,0,0,0.03) 4px, rgba(0,0,0,0.06) 4px, rgba(0,0,0,0.06) 8px)',
@@ -632,13 +649,13 @@ const heatmapCellStyle = (siteId, sample) => {
 }
 
 const heatmapTextColor = (siteId, sample) => {
-  const entry = heatmapLookup.value[siteId]?.[sample]
+  const entry = heatmapLookup.value[siteId]?.[formatSampleName(sample).toLowerCase()]
   if (!entry) return 'rgba(0,0,0,0.3)'
   return entry.abundance > 0.5 ? '#ffffff' : '#1a1a1a'
 }
 
 const heatmapLabel = (siteId, sample) => {
-  const entry = heatmapLookup.value[siteId]?.[sample]
+  const entry = heatmapLookup.value[siteId]?.[formatSampleName(sample).toLowerCase()]
   if (!entry) return '—'
   return (entry.abundance * 100).toFixed(0) + '%'
 }
@@ -1353,6 +1370,20 @@ code {
   color: rgba(15, 23, 42, 0.78);
   background: rgba(53, 92, 125, 0.08);
   border: 1px solid rgba(53, 92, 125, 0.16);
+  border-radius: 10px !important;
+  padding: 2px 9px;
+  font-family: 'IBM Plex Sans', sans-serif;
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1.6;
+  white-space: nowrap;
+}
+
+.ld-apa-level {
+  display: inline-block;
+  color: #0D7377;
+  background: rgba(13, 115, 119, 0.10);
+  border: 1px solid rgba(13, 115, 119, 0.22);
   border-radius: 10px !important;
   padding: 2px 9px;
   font-family: 'IBM Plex Sans', sans-serif;

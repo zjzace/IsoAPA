@@ -91,11 +91,7 @@
               </v-chip>
             </template>
             <template #item="{ props, item }">
-              <v-list-item v-bind="props" :title="item.raw.title">
-                <template #subtitle>
-                  <span class="sample-option-subtitle">{{ formatSpeciesName(item.raw.species) }}</span>
-                </template>
-              </v-list-item>
+              <v-list-item v-bind="props" :title="item.raw.title"></v-list-item>
             </template>
           </v-autocomplete>
         </div>
@@ -405,19 +401,31 @@ const sampleSelectionLabel = computed(() => {
   return `${selectedSamples.value.length} samples`
 })
 
-const sampleOptions = computed(() =>
-  sampleList.value
+const normalizedSampleKey = (sample) =>
+  formatSampleName(sample.display_name ?? sample.name ?? sample)
+    .trim()
+    .toLowerCase()
+
+const sampleOptions = computed(() => {
+  const seen = new Set()
+  return sampleList.value
+    .filter(sample => !selectedSpecies.value || sample.species === selectedSpecies.value)
+    .filter(sample => {
+      const key = normalizedSampleKey(sample)
+      if (seen.has(key)) return false
+      seen.add(key)
+      return true
+    })
     .map(sample => ({
-      title: sample.display_name ?? formatSampleName(sample.name),
+      title: formatSampleName(sample.display_name ?? sample.name),
       value: sample.name,
       species: sample.species,
     }))
     .sort((a, b) => a.title.localeCompare(b.title, undefined, { sensitivity: 'base' }))
-)
+})
 
 const filteredSampleOptions = computed(() => {
-  if (!selectedSpecies.value) return sampleOptions.value
-  return sampleOptions.value.filter(sample => sample.species === selectedSpecies.value)
+  return sampleOptions.value
 })
 
 const langLabel = (lang) => ({ curl: 'cURL', python: 'Python', r: 'R' }[lang])
@@ -497,7 +505,13 @@ onMounted(async () => {
 
 watch(selectedSpecies, () => {
   const available = new Set(filteredSampleOptions.value.map(sample => sample.value))
-  selectedSamples.value = selectedSamples.value.filter(sample => available.has(sample))
+  const seen = new Set()
+  selectedSamples.value = selectedSamples.value.filter(sample => {
+    const key = formatSampleName(sample).toLowerCase()
+    if (!available.has(sample) || seen.has(key)) return false
+    seen.add(key)
+    return true
+  })
 })
 
 watch(sampleFilterEnabled, (enabled) => {
@@ -704,31 +718,30 @@ watch(sampleFilterEnabled, (enabled) => {
 }
 
 .sample-multi-select :deep(.v-field) {
-  min-height: 42px;
-  border-radius: 14px;
-  background:
-    linear-gradient(135deg, rgba(13, 115, 119, 0.06), rgba(255, 255, 255, 0.96)),
-    #fff;
-  box-shadow: inset 0 0 0 1px rgba(13, 115, 119, 0.08);
+  min-height: 44px;
+  border-radius: 999px;
+  background: #ffffff;
+  border: 1px solid #dbe3ea;
+  box-shadow: none;
   transition: border-color 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
 }
 
 .sample-multi-select :deep(.v-field:hover) {
-  box-shadow: inset 0 0 0 1px rgba(20, 145, 155, 0.26);
+  border-color: #14919B;
+  background: rgba(13, 115, 119, 0.035);
+  box-shadow: none;
 }
 
 .sample-multi-select :deep(.v-field--focused) {
   background: #fff;
-  box-shadow:
-    inset 0 0 0 1px rgba(13, 115, 119, 0.36),
-    0 0 0 4px rgba(20, 145, 155, 0.10);
+  border-color: #0D7377;
+  box-shadow: 0 0 0 4px rgba(20, 145, 155, 0.10);
 }
 
 .sample-multi-select :deep(.v-field__input) {
-  min-height: 42px;
-  padding-top: 4px;
-  padding-bottom: 4px;
-  gap: 5px;
+  min-height: 44px;
+  padding: 5px 10px 5px 16px;
+  gap: 6px;
 }
 
 .sample-multi-select :deep(.v-field__outline) {
@@ -737,23 +750,27 @@ watch(sampleFilterEnabled, (enabled) => {
 
 .sample-multi-select :deep(.v-field__append-inner) {
   color: #0D7377;
-  padding-inline-start: 4px;
+  padding-inline-start: 8px;
+  padding-inline-end: 12px;
 }
 
 .sample-select-chip {
-  min-height: 24px !important;
-  border-radius: 9px !important;
-  background: rgba(13, 115, 119, 0.10) !important;
-  border: 1px solid rgba(13, 115, 119, 0.14) !important;
+  min-height: 26px !important;
+  border-radius: 999px !important;
+  background: rgba(13, 115, 119, 0.08) !important;
+  border: 1px solid rgba(13, 115, 119, 0.16) !important;
   color: #0D7377 !important;
-  font-size: 0.76rem !important;
-  font-weight: 700 !important;
-  letter-spacing: 0.01em !important;
+  font-size: 0.78rem !important;
+  font-weight: 600 !important;
+  letter-spacing: 0 !important;
 }
 
 .sample-multi-select :deep(.v-field__input input::placeholder) {
-  color: #64748b;
-  opacity: 0.9;
+  color: #475569;
+  font-size: 0.9rem;
+  font-weight: 500;
+  letter-spacing: 0;
+  opacity: 0.92;
 }
 
 .sample-option-subtitle {
@@ -762,25 +779,44 @@ watch(sampleFilterEnabled, (enabled) => {
 }
 
 :global(.sample-select-menu .v-overlay__content) {
-  border-radius: 16px !important;
-  border: 1px solid rgba(13, 115, 119, 0.14) !important;
-  box-shadow: 0 18px 44px rgba(15, 23, 42, 0.14) !important;
+  border-radius: 22px !important;
+  border: 1px solid #dbe3ea !important;
+  box-shadow: 0 18px 44px rgba(15, 23, 42, 0.10) !important;
   overflow: hidden !important;
 }
 
 :global(.sample-select-menu .v-list) {
-  padding: 8px !important;
+  padding: 10px !important;
   background: #ffffff !important;
 }
 
 :global(.sample-select-menu .v-list-item) {
-  border-radius: 11px !important;
-  min-height: 46px !important;
-  margin-bottom: 2px !important;
+  border-radius: 999px !important;
+  min-height: 38px !important;
+  margin-bottom: 4px !important;
+  padding-inline: 14px !important;
+}
+
+:global(.sample-select-menu .v-list-item-title) {
+  font-size: 0.85rem !important;
+  font-weight: 500 !important;
+  line-height: 1.25 !important;
+  letter-spacing: 0 !important;
+  color: #475569 !important;
 }
 
 :global(.sample-select-menu .v-list-item:hover) {
   background: rgba(13, 115, 119, 0.07) !important;
+}
+
+:global(.sample-select-menu .v-list-item--active) {
+  background: rgba(13, 115, 119, 0.10) !important;
+  color: #0D7377 !important;
+}
+
+:global(.sample-select-menu .v-list-item--active .v-list-item-title) {
+  color: #0D7377 !important;
+  font-weight: 600 !important;
 }
 
 .download-action-panel {

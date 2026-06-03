@@ -14,6 +14,7 @@ from app.models.database import (
     APASiteSample,
     init_db,
 )
+from app.services.search_index import rebuild_search_index
 
 SPECIES_MAP = {
     "homo_sapiens": {
@@ -53,6 +54,11 @@ DATA_DIR = None
 BATCH_SIZE = 5000
 
 
+def _is_backup_name(name: str) -> bool:
+    lowered = name.lower()
+    return any(token in lowered for token in ("backup", ".bak", "_bak", "old"))
+
+
 def _cell(row: dict, *names: str, default: str = "") -> str:
     for name in names:
         value = row.get(name)
@@ -90,7 +96,9 @@ def _gene_key(row: dict) -> str:
 
 def _unified_file_path(species_folder: str) -> str | None:
     species_dir = os.path.join(DATA_DIR, species_folder)
-    for fname in os.listdir(species_dir):
+    for fname in sorted(os.listdir(species_dir)):
+        if _is_backup_name(fname):
+            continue
         if fname.endswith("_unified_apa_sites.txt") or fname.endswith(
             "_unified_apa_sites.tsv"
         ):
@@ -120,7 +128,9 @@ def _get_or_create_species(db, species_folder: str):
 
 
 def _anno_file_path(species_path: str) -> str | None:
-    for fname in os.listdir(species_path):
+    for fname in sorted(os.listdir(species_path)):
+        if _is_backup_name(fname):
+            continue
         if fname.endswith("_unified_apa.anno.txt"):
             return os.path.join(species_path, fname)
     return None
@@ -147,6 +157,7 @@ def _load_anno_index(species_path: str, species_folder: str) -> dict:
                 "pas_position": int(pas_pos) if pas_pos else None,
                 "pas_type": row.get("pas_type", "").strip() or None,
                 "search_level": row.get("search_level", "").strip() or None,
+                "apa_level": row.get("apa_level", "").strip() or None,
                 "cluster_start": int(c_start) if c_start else None,
                 "cluster_end": int(c_end) if c_end else None,
             }
@@ -398,6 +409,7 @@ def ingest_data(data_dir: str = None, species_filter: list[str] | None = None):
                         "pas_position": ann.get("pas_position"),
                         "pas_type": ann.get("pas_type"),
                         "search_level": ann.get("search_level"),
+                        "apa_level": ann.get("apa_level"),
                         "cluster_start": ann.get("cluster_start"),
                         "cluster_end": ann.get("cluster_end"),
                         "_sample_entries": sample_entries,
@@ -420,6 +432,8 @@ def ingest_data(data_dir: str = None, species_filter: list[str] | None = None):
         print(f"Genes:       {total_genes}")
         print(f"Transcripts: {total_transcripts}")
         print(f"APA Sites:   {total_apa_sites}")
+        print("Building search index...")
+        rebuild_search_index(db)
         print("Done.")
 
     except Exception:

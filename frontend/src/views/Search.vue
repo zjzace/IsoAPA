@@ -23,14 +23,15 @@
         <!-- Filter inputs -->
         <div class="filter-grid" ref="filterGridRef">
           <div class="filter-card filter-card--select">
-            <div class="filter-inner-label" :class="{ 'label-hidden': !!filters.gene_name }">
+            <div class="filter-inner-label" :class="{ 'label-hidden': hasGeneNameValue }">
               <span class="filter-col-icon" style="background: linear-gradient(135deg,#0D7377,#14919B)">
                 <v-icon icon="mdi-dna" size="13" color="white"></v-icon>
               </span>
               <span>Gene Name</span>
             </div>
-            <v-autocomplete
+            <v-combobox
               v-model="filters.gene_name"
+              v-model:search="geneNameInput"
               :items="geneNameSuggestions"
               item-title="value"
               item-value="value"
@@ -43,11 +44,12 @@
               class="filter-field"
               :menu-props="{ class: 'search-select-menu', width: filterSelectWidth || undefined, offset: 0 }"
               @update:search="onGeneNameSearch"
-            ></v-autocomplete>
+              @update:model-value="onGeneNameSelect"
+            ></v-combobox>
           </div>
 
           <div class="filter-card filter-card--select">
-            <div class="filter-inner-label" :class="{ 'label-hidden': !!filters.transcript_id }">
+            <div class="filter-inner-label" :class="{ 'label-hidden': hasTranscriptValue }">
               <span class="filter-col-icon" style="background: linear-gradient(135deg,#355C7D,#4A7898)">
                 <v-icon icon="mdi-file-tree-outline" size="13" color="white"></v-icon>
               </span>
@@ -67,6 +69,7 @@
               class="filter-field"
               :menu-props="{ class: 'search-select-menu', width: filterSelectWidth || undefined, offset: 0 }"
               @update:search="onTranscriptSearch"
+              @update:model-value="onTranscriptSelect"
             ></v-autocomplete>
           </div>
 
@@ -135,7 +138,7 @@
 
         <!-- Actions row -->
         <div class="search-frame-actions">
-          <button class="search-btn" @click="search" :disabled="loading">
+          <button class="search-btn" @click="submitSearch" :disabled="loading">
             <v-progress-circular v-if="loading" size="16" width="2" indeterminate class="mr-2" color="white"></v-progress-circular>
             <v-icon v-else icon="mdi-magnify" size="18" class="mr-2"></v-icon>
             Search
@@ -160,8 +163,10 @@
           :loading="loading"
           :items-per-page="pageSize"
           :page="page"
+          :sort-by="sortBy"
           @update:page="changePage"
           @update:items-per-page="changePageSize"
+          @update:sort-by="changeSort"
         >
           <template v-slot:item.gene_name="{ item }">
             <router-link 
@@ -241,11 +246,16 @@ const measureFilterCard = () => {
   if (card) filterSelectWidth.value = card.offsetWidth
 }
 
+const normalizedSampleKey = (name) =>
+  formatSampleName(name).toLowerCase()
+
 const loading = ref(false)
 const results = ref([])
 const page = ref(1)
 const pageSize = ref(20)
 const totalResults = ref(0)
+const sortBy = ref([])
+const DEFAULT_SPECIES = 'Human'
 
 const filters = reactive({
   gene_name: '',
@@ -254,15 +264,23 @@ const filters = reactive({
   sample: ''
 })
 
+const geneNameInput = ref('')
+const transcriptInput = ref('')
+const hasGeneNameValue = computed(() => !!String(geneNameInput.value || filters.gene_name || '').trim())
+const hasTranscriptValue = computed(() => !!String(transcriptInput.value || filters.transcript_id || '').trim())
+
 const speciesList = ref([{ title: 'Mus musculus', value: 'Mouse' }])
 const sampleList = ref([
-  { title: 'A549', value: 'A549', species: 'Human' },
-  { title: 'HepG2', value: 'HepG2', species: 'Human' },
-  { title: 'K562', value: 'K562', species: 'Human' }
+  { title: 'A549', value: 'A549', normalizedValue: normalizedSampleKey('A549'), species: 'Human' },
+  { title: 'HepG2', value: 'HepG2', normalizedValue: normalizedSampleKey('HepG2'), species: 'Human' },
+  { title: 'K562', value: 'K562', normalizedValue: normalizedSampleKey('K562'), species: 'Human' }
 ])
 const sampleOptions = computed(() =>
   sampleList.value
     .filter(sample => !filters.species || sample.species === filters.species)
+    .filter((sample, index, list) => (
+      filters.species || list.findIndex(item => item.normalizedValue === sample.normalizedValue) === index
+    ))
     .map(sample => ({
       title: sample.title ?? formatSampleName(sample.value ?? sample),
       value: sample.value ?? sample
@@ -294,7 +312,7 @@ const headers = [
     key: 'gene_name',
     sortable: true,
     nowrap: true,
-    width: 'calc((100% - 246px) / 4)',
+    width: 'calc((100% - 270px) / 4)',
     cellProps: { class: 'search-cell-nowrap' },
     headerProps: { class: 'search-cell-nowrap' },
   },
@@ -303,16 +321,16 @@ const headers = [
     key: 'transcript_id',
     sortable: true,
     nowrap: true,
-    width: 'calc((100% - 246px) / 4)',
+    width: 'calc((100% - 270px) / 4)',
     cellProps: { class: 'search-cell-nowrap' },
     headerProps: { class: 'search-cell-nowrap' },
   },
   {
     title: 'Chromosome',
     key: 'chromosome',
-    sortable: false,
+    sortable: true,
     nowrap: true,
-    width: 'calc((100% - 246px) / 4)',
+    width: 'calc((100% - 270px) / 4)',
     align: 'center',
     cellProps: { class: 'search-cell-nowrap' },
     headerProps: { class: 'search-cell-nowrap' },
@@ -320,9 +338,9 @@ const headers = [
   {
     title: 'Strand',
     key: 'strand',
-    sortable: false,
+    sortable: true,
     nowrap: true,
-    width: 96,
+    width: 120,
     align: 'center',
     cellProps: { class: 'search-cell-nowrap search-cell-strand' },
     headerProps: { class: 'search-cell-nowrap search-cell-strand' },
@@ -341,7 +359,7 @@ const headers = [
     title: 'Species',
     key: 'species',
     sortable: true,
-    width: 'calc((100% - 246px) / 4)',
+    width: 'calc((100% - 270px) / 4)',
     nowrap: true,
     cellProps: { class: 'search-cell-nowrap' },
     headerProps: { class: 'search-cell-nowrap' },
@@ -412,6 +430,11 @@ const onSampleChange = () => {
   debouncedSearch()
 }
 
+const commitTextFilters = () => {
+  filters.gene_name = geneNameInput.value.trim()
+  filters.transcript_id = transcriptInput.value.trim()
+}
+
 const search = async () => {
   loading.value = true
   try {
@@ -419,6 +442,10 @@ const search = async () => {
     const params = {
       page: page.value,
       limit: pageSize.value
+    }
+    if (sortBy.value.length) {
+      params.sort_by = sortBy.value[0].key
+      params.sort_desc = sortBy.value[0].order === 'desc'
     }
     
     if (filters.gene_name) params.gene_name = filters.gene_name
@@ -441,9 +468,17 @@ const search = async () => {
   }
 }
 
+const submitSearch = () => {
+  commitTextFilters()
+  page.value = 1
+  search()
+}
+
 const clearFilters = () => {
   filters.gene_name = ''
   filters.transcript_id = ''
+  geneNameInput.value = ''
+  transcriptInput.value = ''
   filters.species = ''
   filters.sample = ''
   page.value = 1
@@ -457,6 +492,12 @@ const changePage = (newPage) => {
 
 const changePageSize = (newSize) => {
   pageSize.value = newSize
+  page.value = 1
+  search()
+}
+
+const changeSort = (newSort) => {
+  sortBy.value = newSort
   page.value = 1
   search()
 }
@@ -509,14 +550,15 @@ onMounted(async () => {
       const seen = new Set()
       sampleList.value = samplesData
         .filter(s => {
-          const key = `${s.name}::${s.species}`
+          const key = `${normalizedSampleKey(s.name)}::${s.species || ''}`
           if (seen.has(key)) return false
           seen.add(key)
           return true
         })
         .map(s => ({
-          title: s.display_name ?? formatSampleName(s.name),
+          title: formatSampleName(s.display_name ?? s.name),
           value: s.name,
+          normalizedValue: normalizedSampleKey(s.name),
           species: s.species
         }))
     }
@@ -524,11 +566,21 @@ onMounted(async () => {
     console.error('Failed to load filters:', error)
   }
   
+  const hasRouteFilters = Object.keys(route.query || {}).length > 0
   if (route.query) {
-    if (route.query.gene_name) filters.gene_name = route.query.gene_name
-    if (route.query.transcript_id) filters.transcript_id = route.query.transcript_id
+    if (route.query.gene_name) {
+      filters.gene_name = route.query.gene_name
+      geneNameInput.value = route.query.gene_name
+    }
+    if (route.query.transcript_id) {
+      filters.transcript_id = route.query.transcript_id
+      transcriptInput.value = route.query.transcript_id
+    }
     if (route.query.sample) filters.sample = route.query.sample
     if (route.query.species) filters.species = route.query.species
+  }
+  if (!hasRouteFilters && speciesList.value.some(species => species.value === DEFAULT_SPECIES)) {
+    filters.species = DEFAULT_SPECIES
   }
   
   search()
@@ -541,10 +593,26 @@ onUnmounted(() => {
 })
 
 watch(() => route.query, (newQuery) => {
-  if (newQuery.gene_name) filters.gene_name = newQuery.gene_name
-  if (newQuery.transcript_id) filters.transcript_id = newQuery.transcript_id
+  filters.gene_name = ''
+  filters.transcript_id = ''
+  filters.sample = ''
+  filters.species = ''
+  geneNameInput.value = ''
+  transcriptInput.value = ''
+
+  if (newQuery.gene_name) {
+    filters.gene_name = newQuery.gene_name
+    geneNameInput.value = newQuery.gene_name
+  }
+  if (newQuery.transcript_id) {
+    filters.transcript_id = newQuery.transcript_id
+    transcriptInput.value = newQuery.transcript_id
+  }
   if (newQuery.sample) filters.sample = newQuery.sample
   if (newQuery.species) filters.species = newQuery.species
+  if (Object.keys(newQuery || {}).length === 0 && speciesList.value.some(species => species.value === DEFAULT_SPECIES)) {
+    filters.species = DEFAULT_SPECIES
+  }
   search()
 })
 
@@ -554,13 +622,12 @@ let geneNameTimer = null
 let transcriptTimer = null
 
 const onGeneNameSearch = (val) => {
-  filters.gene_name = val ?? ''
-  debouncedSearch()
+  geneNameInput.value = val ?? ''
   clearTimeout(geneNameTimer)
   if (!val) { geneNameSuggestions.value = []; return }
   geneNameTimer = setTimeout(async () => {
     try {
-      geneNameSuggestions.value = await apiService.autocomplete(val, 'gene_name')
+      geneNameSuggestions.value = await apiService.autocomplete(val, 'gene_name', 50)
     } catch {
       geneNameSuggestions.value = []
     }
@@ -568,17 +635,30 @@ const onGeneNameSearch = (val) => {
 }
 
 const onTranscriptSearch = (val) => {
-  filters.transcript_id = val ?? ''
-  debouncedSearch()
+  transcriptInput.value = val ?? ''
   clearTimeout(transcriptTimer)
   if (!val) { transcriptSuggestions.value = []; return }
   transcriptTimer = setTimeout(async () => {
     try {
-      transcriptSuggestions.value = await apiService.autocomplete(val, 'transcript_id')
+      transcriptSuggestions.value = await apiService.autocomplete(val, 'transcript_id', 50)
     } catch {
       transcriptSuggestions.value = []
     }
   }, 250)
+}
+
+const onGeneNameSelect = (val) => {
+  geneNameInput.value = typeof val === 'object' ? (val?.value ?? '') : (val ?? '')
+  filters.gene_name = geneNameInput.value.trim()
+  page.value = 1
+  if (filters.gene_name) search()
+}
+
+const onTranscriptSelect = (val) => {
+  transcriptInput.value = val ?? ''
+  filters.transcript_id = transcriptInput.value.trim()
+  page.value = 1
+  if (filters.transcript_id) search()
 }
 </script>
 
@@ -884,11 +964,11 @@ const onTranscriptSearch = (val) => {
   white-space: nowrap !important;
   overflow: hidden;
   text-overflow: ellipsis;
-  width: calc((100% - 246px) / 4);
+  width: calc((100% - 270px) / 4);
 }
 
 .search-page :deep(.search-cell-strand) {
-  width: 96px;
+  width: 120px;
   padding-left: 14px !important;
   padding-right: 10px !important;
 }

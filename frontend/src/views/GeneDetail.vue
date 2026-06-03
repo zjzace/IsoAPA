@@ -279,8 +279,8 @@
                                   <col class="tx-inner-col-spacer">
                                   <col class="tx-inner-col-site">
                                   <col class="tx-inner-col-cluster">
-                                  <col class="tx-inner-col-pa-sites">
-                                  <col class="tx-inner-col-sample-count">
+                                  <col class="tx-inner-col-abundance">
+                                  <col class="tx-inner-col-apa-level">
                                   <col class="tx-inner-col-samples">
                                 </colgroup>
                                <thead>
@@ -307,7 +307,7 @@
                                         </v-menu>
                                       </div>
                                     </th>
-                                    <th class="tx-inner-th tx-inner-th-abundance" colspan="2">
+                                    <th class="tx-inner-th tx-inner-th-abundance">
                                       <div class="tx-inner-th-row">
                                         Mean Abundance
                                         <v-menu location="bottom end" :close-on-content-click="true" max-width="320">
@@ -327,6 +327,7 @@
                                         </v-menu>
                                       </div>
                                     </th>
+                                    <th class="tx-inner-th tx-inner-th-apa-level">APA Level</th>
                                     <th class="tx-inner-th tx-inner-th-samples">Samples</th>
                                  </tr>
                                </thead>
@@ -339,13 +340,16 @@
                                    <td class="tx-inner-td tx-inner-td-cluster">
                                       <span class="tx-cluster-range-tag">{{ formatClusterRange(site) }}</span>
                                     </td>
-                                   <td class="tx-inner-td tx-inner-td-abundance" colspan="2">
+                                   <td class="tx-inner-td tx-inner-td-abundance">
                                     <div class="tx-abundance-wrapper">
                                       <div class="tx-abundance-bar">
                                         <div class="tx-abundance-fill" :style="{ width: abundanceBarWidth(site, tx) }"></div>
                                       </div>
                                       <span class="tx-abundance-val">{{ (meanSiteAbundance(site) * 100).toFixed(1) }}%</span>
                                     </div>
+                                  </td>
+                                  <td class="tx-inner-td tx-inner-td-apa-level">
+                                    <span class="tx-apa-level-pill">{{ formatApaLevel(site.apa_level) }}</span>
                                   </td>
                                    <td class="tx-inner-td tx-inner-td-samples">
                                      <div class="tx-sample-chips">
@@ -355,12 +359,12 @@
                                          class="tx-sample-pill"
                                        >{{ formatSampleName(s.sample_name) }}</span>
                                          <button
-                                           v-if="(site.sample_details?.length ?? 0) > 4 && !isSampleExpanded(site, tx)"
+                                           v-if="dedupedSampleCount(site) > 4 && !isSampleExpanded(site, tx)"
                                            class="tx-sample-more-btn"
                                            @click.stop="toggleSampleExpand(site, tx)"
                                          >+{{ hiddenSampleCount(site, tx) }} more</button>
                                          <button
-                                           v-if="(site.sample_details?.length ?? 0) > 4 && isSampleExpanded(site, tx)"
+                                           v-if="dedupedSampleCount(site) > 4 && isSampleExpanded(site, tx)"
                                            class="tx-sample-more-btn tx-sample-more-btn--collapse"
                                            @click.stop="toggleSampleExpand(site, tx)"
                                          >− show less</button>
@@ -506,17 +510,34 @@ const toggleSampleExpand = (site, tx) => {
 }
 
 const visibleSamples = (site, tx) => {
-  if (!site.sample_details) return []
-  if (isSampleExpanded(site, tx)) return site.sample_details
-  return site.sample_details.slice(0, 4)
+  const details = dedupeSampleDetails(site.sample_details || [])
+  if (isSampleExpanded(site, tx)) return details
+  return details.slice(0, 4)
 }
 
 const hiddenSampleCount = (site, tx) =>
-  Math.max(0, (site.sample_details?.length ?? 0) - visibleSamples(site, tx).length)
+  Math.max(0, dedupeSampleDetails(site.sample_details || []).length - visibleSamples(site, tx).length)
+
+const dedupedSampleCount = (site) => dedupeSampleDetails(site.sample_details || []).length
+
+const dedupeSampleDetails = (details) => {
+  const seen = new Set()
+  return details.filter(detail => {
+    const key = formatSampleName(detail.sample_name).toLowerCase()
+    if (!key || seen.has(key)) return false
+    seen.add(key)
+    return true
+  })
+}
 
 const formatClusterRange = (site) => {
   if (site.cluster_start == null || site.cluster_end == null) return '—'
   return `${site.cluster_start}:${site.cluster_end}`
+}
+
+const formatApaLevel = (level) => {
+  const value = String(level || '').trim()
+  return value || '—'
 }
 
 
@@ -981,6 +1002,7 @@ code {
 
 .tx-site-id-tag,
 .tx-cluster-range-tag,
+.tx-apa-level-pill,
 .tx-sample-pill {
   display: inline-flex;
   align-items: center;
@@ -1061,6 +1083,14 @@ code {
   border: 1px solid rgba(53, 92, 125, 0.16);
   font-family: 'IBM Plex Mono', monospace;
   min-width: max-content;
+}
+
+.tx-apa-level-pill {
+  color: #0A5C5F;
+  background: rgba(13, 115, 119, 0.075);
+  border: 1px solid rgba(13, 115, 119, 0.16);
+  font-size: 11.25px;
+  letter-spacing: 0.01em;
 }
 
 /* Sample "+N more" / "show less" toggle button in inner table */
@@ -1149,23 +1179,23 @@ code {
 }
 
 .tx-inner-col-site {
-  width: 27.368%;
+  width: 20%;
 }
 
 .tx-inner-col-cluster {
-  width: 13.684%;
+  width: 19%;
 }
 
-.tx-inner-col-pa-sites {
-  width: 11.579%;
+.tx-inner-col-abundance {
+  width: 18.5%;
 }
 
-.tx-inner-col-sample-count {
-  width: 15.789%;
+.tx-inner-col-apa-level {
+  width: 10.5%;
 }
 
 .tx-inner-col-samples {
-  width: 31.579%;
+  width: 32%;
 }
 
 .tx-inner-th {
@@ -1183,19 +1213,17 @@ code {
 }
 
 .tx-inner-th-abundance {
-  text-align: center;
+  text-align: left;
   white-space: nowrap;
 }
 
 .tx-inner-th-abundance .tx-inner-th-row {
   justify-content: flex-start;
-  width: 142px;
 }
 
 .tx-inner-td-abundance .tx-abundance-wrapper {
   justify-content: flex-start;
   width: 142px;
-  margin: 0 auto;
 }
 
 .tx-inner-th-spacer,
@@ -1211,12 +1239,23 @@ code {
   padding-left: 16px;
 }
 
+.tx-inner-th-abundance,
+.tx-inner-td-abundance {
+  padding-left: 12px;
+}
+
 .tx-inner-th-cluster {
   white-space: nowrap;
+  padding-left: 28px;
 }
 
 .tx-inner-th-samples {
   padding-left: 24px;
+}
+
+.tx-inner-th-apa-level,
+.tx-inner-td-apa-level {
+  text-align: left;
 }
 
 .tx-inner-th-row {
@@ -1280,6 +1319,10 @@ code {
 .tx-inner-td-site,
 .tx-inner-td-cluster {
   padding-left: 16px;
+}
+
+.tx-inner-td-cluster {
+  padding-left: 28px;
 }
 
 .tx-inner-td-samples {

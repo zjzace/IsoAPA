@@ -272,9 +272,21 @@ const normalizeSampleInfo = (sample) => {
   }
 }
 
+const sampleDisplayKey = (name) => formatSampleName(name).toLowerCase()
+
+const dedupeSamples = (samples) => {
+  const seen = new Set()
+  return samples.filter(sample => {
+    const key = sampleDisplayKey(sample.name)
+    if (!key || seen.has(key)) return false
+    seen.add(key)
+    return true
+  })
+}
+
 // Normalise allSamplesInfo: API may return plain strings or {name, sample_type} objects
 const normalisedSamplesInfo = computed(() =>
-  (props.allSamplesInfo || []).map(normalizeSampleInfo).filter(s => s.name)
+  dedupeSamples((props.allSamplesInfo || []).map(normalizeSampleInfo).filter(s => s.name))
 )
 
 // Derived lists by type
@@ -298,7 +310,7 @@ watch(() => props.allSamplesInfo, (newVal) => {
     selectedSampleNames.value = []
     return
   }
-  const normalised = newVal.map(normalizeSampleInfo).filter(s => s.name)
+  const normalised = dedupeSamples(newVal.map(normalizeSampleInfo).filter(s => s.name))
   const tissue = normalised.filter(s => normalizeSampleType(s.sample_type) === 'tissue').map(s => s.name).sort()
   const cell = normalised.filter(s => normalizeSampleType(s.sample_type) !== 'tissue').map(s => s.name).sort()
   // Show tissue tracks only if any exist; otherwise show cell culture tracks only.
@@ -1172,9 +1184,10 @@ const renderSampleTracks = () => {
     const maxCurveH = trackY - 4
     const MIN_HALF_PX = 8
     const COLOR = '#D45D79'
+    const sampleKey = sampleDisplayKey(sample)
 
     props.apaSites.forEach((site) => {
-      const sampleData = site.sample_details?.find(sd => sd.sample_name === sample)
+      const sampleData = site.sample_details?.find(sd => sampleDisplayKey(sd.sample_name) === sampleKey)
       if (!sampleData || sampleData.site_abundance === 0) return
 
       const abundance = sampleData.site_abundance

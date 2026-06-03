@@ -31,8 +31,8 @@ export const apiService = {
     return response.data
   },
   
-  async autocomplete(q, field) {
-    const response = await api.get('/autocomplete', { params: { q, field } })
+  async autocomplete(q, field, limit = 30) {
+    const response = await api.get('/autocomplete', { params: { q, field, limit } })
     return response.data
   },
   
