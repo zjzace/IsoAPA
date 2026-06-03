@@ -1459,9 +1459,11 @@ def download_bed(
 def download_abundance_matrix(
     species: Optional[str] = None,
     sample: Optional[List[str]] = Query(None),
+    format: str = Query("tsv", pattern="^(csv|tsv)$"),
     db: Session = Depends(get_db),
 ):
-    """Download PA site × sample abundance matrix (TSV) for differential APA analysis."""
+    """Download PA site × sample abundance matrix for differential APA analysis."""
+    delimiter = "," if format == "csv" else "\t"
     selected_samples = sorted({s for s in (sample or []) if s})
     sample_query = db.query(Sample.name).join(Species)
     if species:
@@ -1500,6 +1502,7 @@ def download_abundance_matrix(
     sample_details_by_site = _sample_detail_rows(db, [row.apa_site_id for row in results])
 
     output = io.StringIO()
+    writer = csv.writer(output, delimiter=delimiter)
     display_sample_names = [_format_sample_name(s) for s in sample_names]
     sample_value_cols = [
         col
@@ -1510,7 +1513,7 @@ def download_abundance_matrix(
         "site_id", "transcript_id", "gene_name",
         "chromosome", "strand", "species",
     ] + sample_value_cols
-    output.write("\t".join(header_cols) + "\n")
+    writer.writerow(header_cols)
 
     for row in results:
         sample_values: dict = {
@@ -1540,15 +1543,17 @@ def download_abundance_matrix(
                 sample_values[sample_key]["relative_abundance"],
             )
         ]
-        output.write("\t".join(row_vals) + "\n")
+        writer.writerow(row_vals)
 
     output.seek(0)
     sp_suffix = f"_{species.lower().replace(' ', '_')}" if species else ""
-    filename = f"apaatlas_abundance_matrix{sp_suffix}.tsv"
+    extension = "csv" if format == "csv" else "tsv"
+    filename = f"apaatlas_abundance_matrix{sp_suffix}.{extension}"
+    media_type = "text/csv" if format == "csv" else "text/tab-separated-values"
 
     return StreamingResponse(
         iter([output.getvalue()]),
-        media_type="text/tab-separated-values",
+        media_type=media_type,
         headers={"Content-Disposition": f"attachment; filename={filename}"},
     )
 

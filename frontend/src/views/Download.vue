@@ -276,7 +276,7 @@ const datasets = computed(() => [
     icon: 'mdi-table-large',
     gradient: 'linear-gradient(135deg, #355C7D, #4A7898)',
     countLabel: 'Sites × Samples',
-    formats: ['tsv'],
+    formats: ['tsv', 'csv'],
   },
 ])
 
@@ -311,7 +311,7 @@ const triggerDownload = async () => {
 const BASE_URL = '/api/v1'
 
 const apiOrigin = computed(() => {
-  if (typeof window === 'undefined') return 'http://localhost:3000'
+  if (typeof window === 'undefined' || !window.location?.origin) return ''
   return window.location.origin
 })
 
