@@ -216,7 +216,7 @@
                   <p class="guide-p">Three distinct data products are available on the Download page.</p>
                   <div class="mini-cards-grid">
                     <div class="mini-card">
-                      <div class="mini-card-title">PA Sites (CSV / TSV)</div>
+                      <div class="mini-card-title">PA Sites</div>
                       <div class="mini-card-desc">Full annotated table — gene, transcript, site position, read count, abundance, sample.</div>
                     </div>
                     <div class="mini-card">
@@ -225,7 +225,7 @@
                     </div>
                     <div class="mini-card">
                       <div class="mini-card-title">Sample Abundance Matrix</div>
-                      <div class="mini-card-desc">PA site × sample count matrix (TSV) — directly usable with DaPars, QAPA, or DEXSeq.</div>
+                      <div class="mini-card-desc">PA site × sample count matrix — directly usable with DaPars, QAPA, or DEXSeq.</div>
                     </div>
                   </div>
                   <p class="guide-p mt-4 text-body-2">Use the species scope selector to filter by organism. All three datasets are accessible via browser download or the REST API (cURL, Python, R examples on the Download page).</p>
@@ -357,20 +357,38 @@
             </a>
           </div>
           <div class="contact-right">
-            <div class="contact-tile">
+            <a
+              class="contact-tile contact-tile-link"
+              :href="bugIssueUrl"
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label="Report a bug on GitHub"
+            >
               <div class="contact-tile-icon"><v-icon icon="mdi-bug-outline" color="#0D7377"></v-icon></div>
               <div>
-                <div class="contact-tile-title">Report a Bug</div>
+                <div class="contact-tile-title">
+                  Report a Bug
+                  <v-icon icon="mdi-open-in-new" size="14" class="contact-tile-link-icon"></v-icon>
+                </div>
                 <div class="contact-tile-desc">Found incorrect data or a broken feature? Send us details and we'll fix it.</div>
               </div>
-            </div>
-            <div class="contact-tile">
+            </a>
+            <a
+              class="contact-tile contact-tile-link"
+              :href="featureIssueUrl"
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label="Request a feature on GitHub"
+            >
               <div class="contact-tile-icon"><v-icon icon="mdi-lightbulb-outline" color="#0D7377"></v-icon></div>
               <div>
-                <div class="contact-tile-title">Feature Request</div>
+                <div class="contact-tile-title">
+                  Feature Request
+                  <v-icon icon="mdi-open-in-new" size="14" class="contact-tile-link-icon"></v-icon>
+                </div>
                 <div class="contact-tile-desc">Suggest a new analysis type, species, or visualization.</div>
               </div>
-            </div>
+            </a>
           </div>
         </div>
       </section>
@@ -390,6 +408,9 @@ const openGuide = ref(null)
 const openFaq = ref(null)
 const shouldOpenReferences = () => route.hash === '#references' || route.query.open === 'references'
 const referencesOpen = ref(shouldOpenReferences())
+const githubIssueBase = 'https://github.com/zjzace/ApaAtlas/issues/new'
+const bugIssueUrl = `${githubIssueBase}?title=Bug%3A%20`
+const featureIssueUrl = `${githubIssueBase}?title=Feature%20request%3A%20`
 
 const scrollTo = (id) => {
   document.getElementById(id)?.scrollIntoView({ behavior: 'smooth' })
@@ -1167,6 +1188,16 @@ const glossary = [
   gap: 16px;
   border: 1px solid rgba(20, 145, 155, 0.15);
 }
+.contact-tile-link {
+  color: inherit;
+  text-decoration: none;
+  transition: border-color 180ms ease, background 180ms ease, transform 180ms ease;
+}
+.contact-tile-link:hover {
+  background: #fbfefd;
+  border-color: rgba(20, 145, 155, 0.32);
+  transform: translateY(-1px);
+}
 .contact-tile-icon {
   width: 40px;
   height: 40px;
@@ -1178,10 +1209,24 @@ const glossary = [
   flex-shrink: 0;
 }
 .contact-tile-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
   font-weight: 700;
   color: #0f172a;
   margin-bottom: 4px;
   font-size: 1rem;
+}
+.contact-tile-link-icon {
+  color: #64748b;
+  opacity: 0.75;
+}
+.contact-tile-link:hover .contact-tile-title {
+  color: #0D7377;
+}
+.contact-tile-link:hover .contact-tile-link-icon {
+  color: #0D7377;
+  opacity: 1;
 }
 .contact-tile-desc {
   font-size: 0.85rem;

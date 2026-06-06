@@ -63,6 +63,7 @@ class APASiteBase(BaseModel):
     species_id: int
     mode_site_position: int
     transcript_biotype: Optional[str] = None
+    representative_status: str = "not_representative"
     site_count: int = 0
     site_abundance: float = 0.0
     sample_data: Optional[str] = None

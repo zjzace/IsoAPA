@@ -86,6 +86,9 @@ class APASite(Base):
 
     mode_site_position = Column(Integer, nullable=False, index=True)
     transcript_biotype = Column(String(50), nullable=True)
+    representative_status = Column(
+        String(30), nullable=False, default="not_representative"
+    )
 
     site_count = Column(Integer, nullable=False, default=0)
     site_abundance = Column(Float, nullable=False, default=0.0)

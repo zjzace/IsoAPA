@@ -153,7 +153,6 @@
       <div class="api-card">
         <div class="api-card-header">
           <div>
-            <div class="section-eyebrow mb-1">Programmatic Access</div>
             <h3 class="api-card-title">Download via API</h3>
             <p class="api-card-subtitle">Commands update automatically when you change the dataset or scope above.</p>
           </div>
@@ -868,7 +867,7 @@ watch(sampleFilterEnabled, (enabled) => {
   background: #fff !important;
   border: 1px solid #dbe3ea !important;
   border-radius: 24px;
-  padding: 32px;
+  padding: 22px 32px 32px;
   box-shadow: none !important;
   backdrop-filter: none !important;
   -webkit-backdrop-filter: none !important;

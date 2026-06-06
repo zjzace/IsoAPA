@@ -231,11 +231,21 @@
 
                       <!-- Transcript ID -->
                       <td class="tx-td">
-                        <router-link
-                          :to="{ name: 'LocusDetail', params: { transcriptId: tx.transcript_id }, query: { species: geneData.species } }"
-                          class="tx-id-link"
-                          @click.stop
-                        >{{ tx.transcript_id }}</router-link>
+                        <div class="tx-id-stack">
+                          <router-link
+                            :to="{ name: 'LocusDetail', params: { transcriptId: tx.transcript_id }, query: { species: geneData.species } }"
+                            class="tx-id-link"
+                            @click.stop
+                          >{{ tx.transcript_id }}</router-link>
+                          <span
+                            v-if="transcriptRepresentativeStatus(tx)"
+                            class="tx-representative-badge"
+                            :class="representativeStatusClass(transcriptRepresentativeStatus(tx))"
+                            title="Reference representative transcript"
+                          >
+                            {{ formatRepresentativeStatus(transcriptRepresentativeStatus(tx)) }}
+                          </span>
+                        </div>
                       </td>
 
                        <!-- Biotype Badge -->
@@ -538,6 +548,42 @@ const formatClusterRange = (site) => {
 const formatApaLevel = (level) => {
   const value = String(level || '').trim()
   return value || '—'
+}
+
+const representativePriority = {
+  MANE_Select: 1,
+  RefSeq_Select: 2,
+  Ensembl_Canonical: 3,
+  APPRIS_Principal: 4
+}
+
+const transcriptRepresentativeStatus = (tx) => {
+  const statuses = (tx.apa_sites || [])
+    .map(site => site.representative_status)
+    .filter(status => status && status !== 'not_representative')
+  if (!statuses.length) return null
+  return statuses.sort((a, b) =>
+    (representativePriority[a] || 99) - (representativePriority[b] || 99)
+  )[0]
+}
+
+const formatRepresentativeStatus = (status) => {
+  const labels = {
+    MANE_Select: 'MANE Select',
+    RefSeq_Select: 'RefSeq Select',
+    Ensembl_Canonical: 'Ensembl Canonical',
+    APPRIS_Principal: 'APPRIS Principal'
+  }
+  return labels[status] || status?.replace(/_/g, ' ')
+}
+
+const representativeStatusClass = (status) => {
+  return {
+    MANE_Select: 'tx-representative-badge--mane',
+    RefSeq_Select: 'tx-representative-badge--refseq',
+    Ensembl_Canonical: 'tx-representative-badge--ensembl',
+    APPRIS_Principal: 'tx-representative-badge--appris'
+  }[status] || 'tx-representative-badge--default'
 }
 
 
@@ -925,6 +971,55 @@ code {
   font-family: 'IBM Plex Sans', sans-serif;
   display: inline-flex;
   align-items: center;
+}
+
+.tx-id-stack {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.tx-representative-badge {
+  display: inline-flex;
+  align-items: center;
+  width: fit-content;
+  max-width: 100%;
+  padding: 1px 6px;
+  border-radius: 999px;
+  font-family: 'IBM Plex Sans', sans-serif;
+  font-size: 9.5px;
+  font-weight: 600;
+  line-height: 1.15;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+  border: 1px solid rgba(100, 116, 139, 0.22);
+  background: rgba(248, 250, 252, 0.92);
+  color: #475569;
+}
+
+.tx-representative-badge--mane {
+  color: #0f766e;
+  background: rgba(240, 253, 250, 0.88);
+  border-color: rgba(13, 148, 136, 0.22);
+}
+
+.tx-representative-badge--refseq {
+  color: #355c7d;
+  background: rgba(241, 245, 249, 0.95);
+  border-color: rgba(53, 92, 125, 0.22);
+}
+
+.tx-representative-badge--ensembl {
+  color: #3f6f56;
+  background: rgba(242, 248, 244, 0.92);
+  border-color: rgba(63, 111, 86, 0.22);
+}
+
+.tx-representative-badge--appris {
+  color: #9a5b13;
+  background: rgba(255, 251, 235, 0.9);
+  border-color: rgba(194, 120, 25, 0.24);
 }
 
 .tx-id-link:hover {

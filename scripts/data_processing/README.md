@@ -13,6 +13,11 @@ ApaAtlas. They are not part of the web application runtime.
   clustering implementation for unifying cleavage positions.
 - `annotate_apa.py`: annotates unified PA clusters with flanking sequence, PAS
   motifs, PAS type, search level, and APA confidence level.
+- `append_representative_status.py`: appends a `representative_status` column to
+  each species-level `*_unified_apa_sites.txt` table using local transcript tags
+  from the species reference annotation file. Known values include `MANE_Select`,
+  `RefSeq_Select`, `Ensembl_Canonical`, `APPRIS_Principal`, and
+  `not_representative`.
 
 These scripts contain environment- and filesystem-specific paths from the data
 processing workflow. Review the path variables and command-line arguments before

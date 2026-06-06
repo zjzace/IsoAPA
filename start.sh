@@ -24,7 +24,7 @@ DB_FILE="$BACKEND_DIR/apa_atlas.db"
 # Store hash alongside the DB so it travels with the project on the same machine
 DATA_HASH_FILE="$BACKEND_DIR/.data_hash"
 SCHEMA_VERSION_FILE="$BACKEND_DIR/.schema_version"
-SCHEMA_VERSION="5"
+SCHEMA_VERSION="6"
 STATS_CACHE_FILE="$BACKEND_DIR/stats_cache.json"
 
 # ─── helpers ──────────────────────────────────────────────────────────────────

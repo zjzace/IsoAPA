@@ -370,7 +370,7 @@ const performSearch = () => {
 
 .diagram-exon {
   height: 16px;
-  width: 48px;
+  width:62px;
   background: linear-gradient(135deg, #0D7377, #14919B);
   border-radius: 4px;
   box-shadow: 0 2px 4px rgba(13, 115, 119, 0.2);

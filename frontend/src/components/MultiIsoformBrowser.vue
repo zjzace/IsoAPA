@@ -153,6 +153,9 @@ const dynamicMarginLeft = computed(() => {
     'Chromosome',
     props.geneData?.chromosome ?? '',
     ...transcripts.value.map(tx => tx.transcript_id),
+    ...transcripts.value
+      .map(tx => formatRepresentativeStatus(transcriptRepresentativeStatus(tx)))
+      .filter(Boolean),
     'PA Sites'
   ]
   const maxW = Math.max(...labels.map(l => measureTextWidth(l)))
@@ -175,6 +178,62 @@ const CDS_COLOR = '#0D7377'
 const UTR_COLOR = '#14919B'
 const INTRON_COLOR = '#B0B8C1'
 const TERMINAL_EXTENSION_COLOR = '#5C8797'
+
+const representativePriority = {
+  MANE_Select: 1,
+  RefSeq_Select: 2,
+  Ensembl_Canonical: 3,
+  APPRIS_Principal: 4
+}
+
+const transcriptRepresentativeStatus = (tx) => {
+  const statuses = (tx?.apa_sites || [])
+    .map(site => site.representative_status)
+    .filter(status => status && status !== 'not_representative')
+  if (!statuses.length) return null
+  return statuses.sort((a, b) =>
+    (representativePriority[a] || 99) - (representativePriority[b] || 99)
+  )[0]
+}
+
+const formatRepresentativeStatus = (status) => {
+  const labels = {
+    MANE_Select: 'MANE Select',
+    RefSeq_Select: 'RefSeq Select',
+    Ensembl_Canonical: 'Ensembl Canonical',
+    APPRIS_Principal: 'APPRIS Principal'
+  }
+  return labels[status] || status?.replace(/_/g, ' ')
+}
+
+const representativeBadgeStyle = (status) => {
+  return {
+    MANE_Select: {
+      color: '#0f766e',
+      background: 'rgba(240,253,250,0.88)',
+      border: 'rgba(13,148,136,0.22)'
+    },
+    RefSeq_Select: {
+      color: '#355c7d',
+      background: 'rgba(241,245,249,0.95)',
+      border: 'rgba(53,92,125,0.22)'
+    },
+    Ensembl_Canonical: {
+      color: '#3f6f56',
+      background: 'rgba(242,248,244,0.92)',
+      border: 'rgba(63,111,86,0.22)'
+    },
+    APPRIS_Principal: {
+      color: '#9a5b13',
+      background: 'rgba(255,251,235,0.9)',
+      border: 'rgba(194,120,25,0.24)'
+    }
+  }[status] || {
+    color: '#475569',
+    background: 'rgba(248,250,252,0.92)',
+    border: 'rgba(100,116,139,0.22)'
+  }
+}
 
 // ── Reactive state ───────────────────────────────────────────────────────────
 const containerWidth = ref(1100)
@@ -672,11 +731,13 @@ const renderLabels = () => {
   // Per-isoform labels
   transcripts.value.forEach((tx, i) => {
     const offsets = trackOffsets.value.isoforms[i]
+    const representativeStatus = transcriptRepresentativeStatus(tx)
+    const representativeLabel = formatRepresentativeStatus(representativeStatus)
 
     // Exon track label — full transcript ID, centered in left column
     g.append('text')
       .attr('x', labelWidth.value / 2)
-      .attr('y', offsets.exon + exonTrackHeight / 2)
+      .attr('y', offsets.exon + (representativeLabel ? 13 : exonTrackHeight / 2))
       .attr('dy', '0.35em')
       .attr('text-anchor', 'middle')
       .style('font-family', 'IBM Plex Sans, sans-serif')
@@ -684,6 +745,41 @@ const renderLabels = () => {
       .style('font-weight', '600')
       .style('fill', CDS_COLOR)
       .text(tx.transcript_id)
+
+    if (representativeLabel) {
+      const badgeStyle = representativeBadgeStyle(representativeStatus)
+      const badgeFontSize = 9.5
+      const badgePaddingX = 6
+      const badgePaddingY = 1
+      const badgeTextWidth = measureTextWidth(representativeLabel, badgeFontSize, '600')
+      const badgeWidth = Math.ceil(badgeTextWidth + badgePaddingX * 2)
+      const badgeHeight = Math.ceil(badgeFontSize * 1.15 + badgePaddingY * 2)
+      const badgeX = labelWidth.value / 2 - badgeWidth / 2
+      const badgeY = offsets.exon + 24
+
+      g.append('rect')
+        .attr('x', badgeX)
+        .attr('y', badgeY)
+        .attr('width', badgeWidth)
+        .attr('height', badgeHeight)
+        .attr('rx', badgeHeight / 2)
+        .attr('ry', badgeHeight / 2)
+        .attr('fill', badgeStyle.background)
+        .attr('stroke', badgeStyle.border)
+        .attr('stroke-width', 1)
+
+      g.append('text')
+        .attr('x', labelWidth.value / 2)
+        .attr('y', badgeY + badgeHeight / 2)
+        .attr('dy', '0.35em')
+        .attr('text-anchor', 'middle')
+        .style('font-family', 'IBM Plex Sans, sans-serif')
+        .style('font-size', `${badgeFontSize}px`)
+        .style('font-weight', '600')
+        .style('letter-spacing', '0.02em')
+        .style('fill', badgeStyle.color)
+        .text(representativeLabel)
+    }
 
     // APA track label — centered in left column
     g.append('text')

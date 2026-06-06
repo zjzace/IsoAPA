@@ -95,9 +95,7 @@
               :menu-props="{ class: 'search-select-menu', width: filterSelectWidth || undefined, offset: 0 }"
               @update:model-value="onSpeciesChange"
             >
-              <template #selection="{ item }">
-                {{ item?.raw?.title ?? formatSpeciesName(filters.species) }}
-              </template>
+              <template #selection="{ item }"><span class="filter-selected-value">{{ item?.raw?.title ?? formatSpeciesName(filters.species) }}</span></template>
               <template #item="{ props, item }">
                 <v-list-item v-bind="props" :title="item.raw.title"></v-list-item>
               </template>
@@ -126,9 +124,7 @@
               :menu-props="{ class: 'search-select-menu', width: filterSelectWidth || undefined, offset: 0 }"
               @update:model-value="onSampleChange"
             >
-              <template #selection="{ item }">
-                {{ item?.raw?.title ?? formatSampleName(filters.sample) }}
-              </template>
+              <template #selection="{ item }"><span class="filter-selected-value">{{ item?.raw?.title ?? formatSampleName(filters.sample) }}</span></template>
               <template #item="{ props, item }">
                 <v-list-item v-bind="props" :title="item.raw.title"></v-list-item>
               </template>
@@ -856,9 +852,22 @@ const onTranscriptSelect = (val) => {
   padding-top: 0 !important;
   padding-right: 0 !important;
 }
-.filter-field :deep(.v-select__selection-text) {
+.filter-field :deep(.v-select__selection),
+.filter-field :deep(.v-autocomplete__selection) {
+  margin: 0 !important;
+  min-width: 0;
+}
+.filter-field :deep(.v-select__selection-text),
+.filter-field :deep(.v-autocomplete__selection-text),
+.filter-selected-value {
+  display: inline-block;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
   font-size: 0.91rem;
   font-weight: 500;
+  line-height: 1.25;
 }
 
 /* ── Actions row ────────────────────────────────────────────── */

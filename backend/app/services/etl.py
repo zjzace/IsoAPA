@@ -401,6 +401,12 @@ def ingest_data(data_dir: str = None, species_filter: list[str] | None = None):
                         "species_id": species_id,
                         "mode_site_position": _int_cell(row, "mode_site_position"),
                         "transcript_biotype": _cell(row, "transcript_biotype") or None,
+                        "representative_status": _cell(
+                            row,
+                            "representative_status",
+                            default="not_representative",
+                        )
+                        or "not_representative",
                         "site_count": total_count,
                         "site_abundance": mean_abundance,
                         "sample_data": None,

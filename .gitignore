@@ -83,3 +83,9 @@ TIER1_SUMMARY.md
 
 # Setup scripts (dev only)
 setup_tier1.sh
+
+# Deployment bundles
+/deploy_packages/
+
+# Local backup artifacts
+/backups/

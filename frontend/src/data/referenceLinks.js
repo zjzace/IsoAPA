@@ -532,6 +532,17 @@ export const referenceLinks = [
     "status": "Verified"
   },
   {
+    "species": "Heterocephalus glaber",
+    "source": "NCBI RefSeq",
+    "links": [
+      {
+        "label": "Reference folder",
+        "url": "https://ftp.ncbi.nlm.nih.gov/genomes/all/GCF/000/247/695/GCF_000247695.1_HetGla_female_1.0/"
+      }
+    ],
+    "status": "Verified"
+  },
+  {
     "species": "Homo sapiens",
     "source": "NCBI RefSeq",
     "links": [
@@ -719,6 +730,17 @@ export const referenceLinks = [
     "status": "Verified"
   },
   {
+    "species": "Octopus vulgaris",
+    "source": "NCBI GenBank",
+    "links": [
+      {
+        "label": "Reference folder",
+        "url": "https://ftp.ncbi.nlm.nih.gov/genomes/all/GCA/951/406/725/GCA_951406725.2_xcOctVulg1.2/"
+      }
+    ],
+    "status": "Verified"
+  },
+  {
     "species": "Olea europaea",
     "source": "NCBI RefSeq",
     "links": [
@@ -805,6 +827,17 @@ export const referenceLinks = [
       }
     ],
     "status": "Filename mismatch"
+  },
+  {
+    "species": "Penaeus monodon",
+    "source": "NCBI RefSeq",
+    "links": [
+      {
+        "label": "Reference folder",
+        "url": "https://ftp.ncbi.nlm.nih.gov/genomes/all/GCF/015/228/065/GCF_015228065.2_NSTDA_Pmon_1/"
+      }
+    ],
+    "status": "Verified"
   },
   {
     "species": "Penaeus vannamei",

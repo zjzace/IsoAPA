@@ -27,6 +27,14 @@
           <div class="gene-header-title">
             <v-icon icon="mdi-file-tree-outline" size="22" class="mr-2" style="color: #0D7377; opacity: 0.85;"></v-icon>
             <span class="gene-name-text">{{ locusData.transcript.transcript_id }}</span>
+            <span
+              v-if="transcriptRepresentativeStatus"
+              class="transcript-representative-badge"
+              :class="representativeStatusClass(transcriptRepresentativeStatus)"
+              title="Reference representative transcript"
+            >
+              {{ formatRepresentativeStatus(transcriptRepresentativeStatus) }}
+            </span>
           </div>
           <div class="gene-meta-row">
             <div class="gene-meta-item">
@@ -542,6 +550,42 @@ const displayBiotype = computed(() => {
   return raw
 })
 
+const representativePriority = {
+  MANE_Select: 1,
+  RefSeq_Select: 2,
+  Ensembl_Canonical: 3,
+  APPRIS_Principal: 4
+}
+
+const transcriptRepresentativeStatus = computed(() => {
+  const statuses = (locusData.value?.apa_sites || [])
+    .map(site => site.representative_status)
+    .filter(status => status && status !== 'not_representative')
+  if (!statuses.length) return null
+  return statuses.sort((a, b) =>
+    (representativePriority[a] || 99) - (representativePriority[b] || 99)
+  )[0]
+})
+
+const formatRepresentativeStatus = (status) => {
+  const labels = {
+    MANE_Select: 'MANE Select',
+    RefSeq_Select: 'RefSeq Select',
+    Ensembl_Canonical: 'Ensembl Canonical',
+    APPRIS_Principal: 'APPRIS Principal'
+  }
+  return labels[status] || status?.replace(/_/g, ' ')
+}
+
+const representativeStatusClass = (status) => {
+  return {
+    MANE_Select: 'transcript-representative-badge--mane',
+    RefSeq_Select: 'transcript-representative-badge--refseq',
+    Ensembl_Canonical: 'transcript-representative-badge--ensembl',
+    APPRIS_Principal: 'transcript-representative-badge--appris'
+  }[status] || 'transcript-representative-badge--default'
+}
+
 const formatClusterRange = (site) => {
   if (site.cluster_start == null || site.cluster_end == null) return '—'
   return `${site.cluster_start}:${site.cluster_end}`
@@ -780,6 +824,8 @@ code {
 .gene-header-title {
   display: flex;
   align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
   margin-bottom: 14px;
 }
 
@@ -788,6 +834,48 @@ code {
   font-weight: 700;
   color: rgba(0,0,0,0.87);
   letter-spacing: -0.01em;
+}
+
+.transcript-representative-badge {
+  display: inline-flex;
+  align-items: center;
+  width: fit-content;
+  padding: 1px 7px;
+  border-radius: 999px;
+  font-family: 'IBM Plex Sans', sans-serif;
+  font-size: 10px;
+  font-weight: 600;
+  line-height: 1.2;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+  border: 1px solid rgba(100, 116, 139, 0.22);
+  background: rgba(248, 250, 252, 0.92);
+  color: #475569;
+  transform: translateY(1px);
+}
+
+.transcript-representative-badge--mane {
+  color: #0f766e;
+  background: rgba(240, 253, 250, 0.88);
+  border-color: rgba(13, 148, 136, 0.22);
+}
+
+.transcript-representative-badge--refseq {
+  color: #355c7d;
+  background: rgba(241, 245, 249, 0.95);
+  border-color: rgba(53, 92, 125, 0.22);
+}
+
+.transcript-representative-badge--ensembl {
+  color: #3f6f56;
+  background: rgba(242, 248, 244, 0.92);
+  border-color: rgba(63, 111, 86, 0.22);
+}
+
+.transcript-representative-badge--appris {
+  color: #9a5b13;
+  background: rgba(255, 251, 235, 0.9);
+  border-color: rgba(194, 120, 25, 0.24);
 }
 
 .gene-meta-row {
