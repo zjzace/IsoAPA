@@ -81,32 +81,9 @@ The local script prepares the runtime environment, checks whether the local data
 
 ---
 
-## Deployment
+## Access
 
-IsoAPA is configured for Docker Swarm deployment behind an external Traefik reverse proxy. The production deployment uses precomputed runtime data and does not run the data-construction workflow inside containers.
-
-Create a deployment bundle locally:
-
-```bash
-scripts/deploy/package_for_server.sh
-```
-
-Copy the generated archive and deployment helper to the target server:
-
-```bash
-scp deploy_packages/IsoAPA-deploy-*.tar.gz deploy_packages/deploy_on_server.sh user@server:/home/tflab/
-```
-
-Deploy on the server:
-
-```bash
-cd /home/tflab
-bash deploy_on_server.sh IsoAPA-deploy-YYYYMMDD-HHMMSS.tar.gz
-```
-
-The server-side script removes an existing `isoapa` stack if present, backs up the previous deployment directory, builds local Docker images, and redeploys the Swarm stack.
-
-The configured production domain is:
+IsoAPA is available at:
 
 ```text
 https://isoapa.sls.cuhk.edu.hk
