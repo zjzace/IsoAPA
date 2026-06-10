@@ -36,7 +36,7 @@ def parse_args() -> argparse.Namespace:
         "--data-dir",
         type=Path,
         default=Path("data"),
-        help="ApaAtlas data directory containing per-species folders.",
+        help="IsoAPA data directory containing per-species folders.",
     )
     parser.add_argument(
         "--reference-root",

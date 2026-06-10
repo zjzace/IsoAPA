@@ -7,8 +7,8 @@
           <v-col cols="12" md="10" lg="8">
             <div class="text-center mb-8">
               <h1 class="text-h2 text-white font-weight-bold mb-4">
-                <ApaAtlasIcon :size="48" class="mr-3" style="color:white;" />
-                ApaAtlas
+                <IsoAPAIcon :size="48" class="mr-3" style="color:white;" />
+                IsoAPA
               </h1>
               <p class="hero-subtitle mb-8">
                 Isoform-Level Alternative Polyadenylation Database
@@ -24,15 +24,20 @@
                 flat
                 hide-details
                 @keyup.enter="performSearch"
-                @update:model-value="onSearchInput"
               ></v-text-field>
               <v-card-actions class="px-4 pb-4">
-                <v-chip-group v-model="selectedField" mandatory>
-                  <v-chip value="gene_name" variant="outlined">Gene Name</v-chip>
-                  <v-chip value="transcript_id" variant="outlined">Transcript ID</v-chip>
-                  <v-chip value="sample" variant="outlined">Sample</v-chip>
-                  <v-chip value="species" variant="outlined">Species</v-chip>
-                </v-chip-group>
+                <div class="home-field-selector" role="group" aria-label="Search field">
+                  <button
+                    v-for="field in searchFields"
+                    :key="field.value"
+                    class="home-field-chip"
+                    :class="{ 'home-field-chip--active': selectedField === field.value }"
+                    type="button"
+                    @click="selectedField = field.value"
+                  >
+                    {{ field.label }}
+                  </button>
+                </div>
                 <v-spacer></v-spacer>
                 <v-btn color="primary" size="large" @click="performSearch">
                   Search
@@ -57,7 +62,7 @@
           <div class="section-eyebrow mb-2">What is Isoform-Level APA?</div>
           <h2 class="text-h4 font-weight-bold mb-3">Isoform-Resolved 3′ End Variation</h2>
           <p class="text-body-1 text-grey-darken-1" style="max-width: 720px; margin: 0 auto;">
-            ApaAtlas maps polyadenylation sites to individual transcript isoforms, revealing alternative
+            IsoAPA maps polyadenylation sites to individual transcript isoforms, revealing alternative
             3′ end usage that is hidden by gene-level summaries.
           </p>
         </div>
@@ -178,16 +183,18 @@
 <script setup>
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
-import ApaAtlasIcon from '@/components/ApaAtlasIcon.vue'
+import IsoAPAIcon from '@/components/IsoAPAIcon.vue'
 
 const router = useRouter()
 
 const searchQuery = ref('')
 const selectedField = ref('gene_name')
-
-const onSearchInput = (value) => {
-  // Could add autocomplete here
-}
+const searchFields = [
+  { value: 'gene_name', label: 'Gene Name' },
+  { value: 'transcript_id', label: 'Transcript ID' },
+  { value: 'sample', label: 'Sample' },
+  { value: 'species', label: 'Species' }
+]
 
 const performSearch = () => {
   if (searchQuery.value.trim()) {
@@ -286,6 +293,38 @@ const performSearch = () => {
 
 .search-card :deep(.v-btn) {
   border-radius: var(--home-search-inner-radius) !important;
+}
+
+.home-field-selector {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.home-field-chip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 32px;
+  padding: 0 15px;
+  border: 1px solid rgba(15, 23, 42, 0.76);
+  border-radius: 999px;
+  background: transparent;
+  color: #1e293b;
+  cursor: pointer;
+  font-family: var(--aa-font-sans);
+  font-size: 0.88rem;
+  font-weight: 600;
+  line-height: 1;
+  transition: background 150ms ease, border-color 150ms ease, color 150ms ease;
+}
+
+.home-field-chip:hover,
+.home-field-chip--active {
+  border-color: #0D7377;
+  background: rgba(13, 115, 119, 0.10);
+  color: #0D7377;
 }
 
 /* ── Section Eyebrow ──────────────────────────────────────── */
@@ -415,6 +454,135 @@ const performSearch = () => {
   .col-why {
     flex: 0 0 46.67%;
     max-width: 46.67%;
+  }
+}
+
+@media (max-width: 960px) {
+  .hero-section {
+    min-height: 470px;
+  }
+
+  .hero-content {
+    padding: 44px 0 52px;
+  }
+
+  .apa-diagram-card .d-flex.justify-space-between {
+    align-items: flex-start !important;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .diagram-legend {
+    flex-wrap: wrap;
+  }
+
+  .diagram-track .d-flex.align-center {
+    gap: 12px;
+  }
+
+  .diagram-visual {
+    display: grid;
+    grid-template-columns: 10px minmax(34px, 1.15fr) minmax(18px, 0.62fr) minmax(34px, 1.15fr) minmax(18px, 0.62fr) minmax(34px, 1.15fr) minmax(44px, 1.85fr) 12px;
+    align-items: center;
+    column-gap: 0;
+    width: min(100%, 640px);
+    max-width: 100%;
+    flex: 1 1 auto;
+    min-width: 0;
+    margin-right: 0;
+  }
+
+  .diagram-spine {
+    grid-column: 1;
+    width: 100%;
+  }
+
+  .diagram-exon {
+    width: 100%;
+    min-width: 28px;
+  }
+
+  .diagram-intron {
+    width: 100%;
+    min-width: 16px;
+  }
+
+  .diagram-utr.short {
+    width: clamp(30px, 42%, 58px);
+    min-width: 0;
+  }
+
+  .diagram-utr.long {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .diagram-pas-marker {
+    justify-self: start;
+  }
+
+  .diagram-utr.short + .diagram-pas-marker {
+    grid-column: 7;
+    margin-left: clamp(32px, 42%, 58px);
+  }
+
+  .diagram-utr.long + .diagram-pas-marker {
+    grid-column: 8;
+    margin-left: 2px;
+  }
+}
+
+@media (max-width: 640px) {
+  .hero-section {
+    min-height: 440px;
+  }
+
+  .hero-content {
+    padding: 34px 0 42px;
+  }
+
+  .hero-content :deep(.text-h2) {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 2.35rem !important;
+  }
+
+  .hero-subtitle {
+    border-radius: 18px;
+    padding: 8px 14px;
+    font-size: 1.05rem;
+  }
+
+  .search-card :deep(.v-card-actions) {
+    align-items: stretch;
+    flex-direction: column;
+    gap: 12px;
+    padding-left: 12px !important;
+    padding-right: 12px !important;
+  }
+
+  .home-field-selector {
+    justify-content: center;
+    width: 100%;
+  }
+
+  .search-card :deep(.v-btn) {
+    width: 100%;
+  }
+
+  .diagram-track .d-flex.align-center {
+    align-items: flex-start !important;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .diagram-visual {
+    width: 100%;
+  }
+
+  .diagram-track {
+    padding-bottom: 4px;
   }
 }
 

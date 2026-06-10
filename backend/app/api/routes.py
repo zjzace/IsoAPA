@@ -358,7 +358,7 @@ def _cached_pas_motif_stats(species: Optional[str] = None) -> Optional[dict]:
 
 
 def _http_json(url: str) -> dict:
-    req = Request(url, headers={"User-Agent": "ApaAtlas/1.0"})
+    req = Request(url, headers={"User-Agent": "IsoAPA/1.0"})
     with urlopen(req, timeout=8) as response:
         return json.loads(response.read().decode("utf-8"))
 
@@ -1434,7 +1434,7 @@ def download_bed(
 
     output = io.StringIO()
     output.write(
-        'track name="ApaAtlas_PA_Sites" description="ApaAtlas Polyadenylation Sites" useScore=0\n'
+        'track name="IsoAPA_PA_Sites" description="IsoAPA Polyadenylation Sites" useScore=0\n'
     )
 
     for row in results:
@@ -1448,7 +1448,7 @@ def download_bed(
 
     output.seek(0)
     sp_suffix = f"_{species.lower().replace(' ', '_')}" if species else ""
-    filename = f"apaatlas_pa_sites{sp_suffix}.bed"
+    filename = f"isoapa_pa_sites{sp_suffix}.bed"
 
     return StreamingResponse(
         iter([output.getvalue()]),
@@ -1550,7 +1550,7 @@ def download_abundance_matrix(
     output.seek(0)
     sp_suffix = f"_{species.lower().replace(' ', '_')}" if species else ""
     extension = "csv" if format == "csv" else "tsv"
-    filename = f"apaatlas_abundance_matrix{sp_suffix}.{extension}"
+    filename = f"isoapa_abundance_matrix{sp_suffix}.{extension}"
     media_type = "text/csv" if format == "csv" else "text/tab-separated-values"
 
     return StreamingResponse(

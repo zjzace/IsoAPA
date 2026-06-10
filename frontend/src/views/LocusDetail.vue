@@ -21,6 +21,9 @@
       </div>
       
       <div v-else-if="locusData">
+        <div class="dense-view-note">
+          Genome browser panels, heatmaps, and PA site tables can be scrolled horizontally on small screens. Desktop or tablet view is recommended for detailed inspection.
+        </div>
 
         <!-- ── Transcript header card ─────────────────────────────── -->
         <div class="gene-header-card mb-6">
@@ -1734,5 +1737,100 @@ code {
   color: rgba(0, 0, 0, 0.78);
   padding: 14px 16px !important;
   text-align: justify;
+}
+
+@media (max-width: 900px) {
+  .gene-meta-row {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 14px;
+  }
+
+  .gene-meta-item {
+    align-items: flex-start;
+    min-width: 0;
+  }
+
+  .section-title {
+    align-items: flex-start;
+    gap: 8px;
+  }
+
+  .pas-legend {
+    width: 100%;
+    margin-left: 0 !important;
+    margin-top: 8px;
+  }
+
+  .elegant-table :deep(.v-table__wrapper) {
+    overflow-x: auto;
+  }
+
+  .elegant-table :deep(table) {
+    min-width: 920px;
+  }
+
+  .browser-svg-container {
+    overflow-x: auto;
+  }
+
+  .genome-svg {
+    min-width: 860px;
+  }
+}
+
+@media (max-width: 640px) {
+  .locus-detail-page :deep(.v-container) {
+    padding-top: 24px !important;
+  }
+
+  .gene-header-card,
+  .section-card {
+    padding: 16px;
+  }
+
+  .gene-header-title {
+    align-items: flex-start;
+  }
+
+  .gene-name-text {
+    font-size: 1.2rem;
+    line-height: 1.25;
+    overflow-wrap: anywhere;
+  }
+
+  .gene-meta-row {
+    grid-template-columns: 1fr;
+  }
+
+  .section-title {
+    font-size: 1.04rem;
+    line-height: 1.3;
+  }
+
+  .panel-body {
+    padding: 12px;
+  }
+
+  .panel-body.pa-0 {
+    padding: 0 !important;
+  }
+
+  .pas-legend {
+    gap: 6px;
+  }
+
+  .pas-legend-item {
+    font-size: 10.5px;
+    padding: 3px 7px;
+  }
+
+  .seq-context-card {
+    padding: 12px;
+  }
+
+  .seq-display {
+    font-size: 13px;
+  }
 }
 </style>

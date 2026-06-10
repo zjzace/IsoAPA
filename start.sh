@@ -1,9 +1,9 @@
 #!/bin/bash
 # =============================================================================
-#  ApaAtlas – one-shot setup & launch script
+#  IsoAPA – one-shot setup & launch script
 #
 #  Steps performed on every run:
-#    1. Locate conda/mamba and create the 'apaatlas' environment if needed
+#    1. Locate conda/mamba and create the 'isoapa' environment if needed
 #    2. Activate the environment
 #    3. Verify Node.js is available
 #    4. Validate data files; rebuild SQLite DB + run ETL when needed
@@ -19,8 +19,8 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 BACKEND_DIR="$SCRIPT_DIR/backend"
 FRONTEND_DIR="$SCRIPT_DIR/frontend"
 DATA_DIR="$SCRIPT_DIR/data"
-ENV_NAME="apaatlas"
-DB_FILE="$BACKEND_DIR/apa_atlas.db"
+ENV_NAME="isoapa"
+DB_FILE="$BACKEND_DIR/isoapa.db"
 # Store hash alongside the DB so it travels with the project on the same machine
 DATA_HASH_FILE="$BACKEND_DIR/.data_hash"
 SCHEMA_VERSION_FILE="$BACKEND_DIR/.schema_version"
@@ -119,7 +119,7 @@ should_reload_db() {
 # ─── step 1 : conda / mamba environment ──────────────────────────────────────
 
 log "=========================================="
-log "  ApaAtlas – setup & launch"
+log "  IsoAPA – setup & launch"
 log "=========================================="
 
 log "[1/8] Conda environment"
@@ -316,7 +316,7 @@ ok "Frontend running"
 
 echo ""
 echo "=========================================="
-echo "  ApaAtlas is running!"
+echo "  IsoAPA is running!"
 echo "=========================================="
 echo ""
 echo "  Backend API : http://localhost:8000"
@@ -327,15 +327,15 @@ echo "  Press Ctrl+C to stop"
 echo ""
 
 # Save PIDs for the trap
-echo "$BACKEND_PID"  > /tmp/apaatlas_backend.pid
-echo "$FRONTEND_PID" > /tmp/apaatlas_frontend.pid
+echo "$BACKEND_PID"  > /tmp/isoapa_backend.pid
+echo "$FRONTEND_PID" > /tmp/isoapa_frontend.pid
 
 cleanup() {
     echo ""
     echo "Stopping servers ..."
-    kill "$(cat /tmp/apaatlas_backend.pid 2>/dev/null)"  2>/dev/null || true
-    kill "$(cat /tmp/apaatlas_frontend.pid 2>/dev/null)" 2>/dev/null || true
-    rm -f /tmp/apaatlas_backend.pid /tmp/apaatlas_frontend.pid
+    kill "$(cat /tmp/isoapa_backend.pid 2>/dev/null)"  2>/dev/null || true
+    kill "$(cat /tmp/isoapa_frontend.pid 2>/dev/null)" 2>/dev/null || true
+    rm -f /tmp/isoapa_backend.pid /tmp/isoapa_frontend.pid
     conda deactivate 2>/dev/null || true
     exit 0
 }

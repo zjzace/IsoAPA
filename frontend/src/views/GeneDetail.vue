@@ -21,6 +21,9 @@
       </div>
       
       <div v-else-if="geneData">
+        <div class="dense-view-note">
+          Transcript tables and isoform diagrams can be scrolled horizontally on small screens. Desktop or tablet view is recommended for detailed comparison.
+        </div>
 
         <!-- ── Gene header card ─────────────────────────────────── -->
         <div class="gene-header-card mb-6">
@@ -99,6 +102,7 @@
 
               <!-- Data — NCBI-style definition list -->
               <template v-else>
+                <div class="gs-scroll-frame">
                 <dl class="gs-deflist">
 
                   <!-- Also known as -->
@@ -167,6 +171,7 @@
                   </div>
 
                 </dl>
+                </div>
               </template>
             </div>
           </div>
@@ -1472,6 +1477,10 @@ code {
 }
 
 /* ── Gene Summary definition list ───────────────────────────────── */
+.gs-scroll-frame {
+  width: 100%;
+}
+
 .gs-deflist {
   margin: 0;
   padding: 0;
@@ -1603,5 +1612,90 @@ code {
   background: rgba(13, 115, 119, 0.12);
   color: #0D7377;
   border-color: rgba(13, 115, 119, 0.30);
+}
+
+@media (max-width: 900px) {
+  .gs-scroll-frame {
+    overflow-x: auto;
+    overflow-y: hidden;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: thin;
+    padding-bottom: 2px;
+  }
+
+  .gs-deflist {
+    min-width: 760px;
+  }
+
+  .gene-meta-row {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 14px;
+  }
+
+  .gene-meta-item,
+  .gene-meta-item--centered {
+    align-items: flex-start;
+  }
+
+  .panel-header-left {
+    align-items: flex-start;
+  }
+
+  .tx-table {
+    min-width: 920px;
+  }
+
+  .tx-inner-table {
+    min-width: 920px;
+  }
+
+  .browser-svg-container {
+    overflow-x: auto;
+  }
+
+  .genome-svg {
+    min-width: 860px;
+  }
+}
+
+@media (max-width: 640px) {
+  .gene-detail-page :deep(.v-container) {
+    padding-top: 24px !important;
+  }
+
+  .gene-header-card,
+  .section-card {
+    padding: 16px;
+  }
+
+  .gene-header-title {
+    align-items: flex-start;
+  }
+
+  .gene-name-text {
+    font-size: 1.32rem;
+    line-height: 1.2;
+    overflow-wrap: anywhere;
+  }
+
+  .gene-meta-row {
+    grid-template-columns: 1fr;
+  }
+
+  .section-title {
+    align-items: flex-start;
+    gap: 8px;
+    font-size: 1.04rem;
+    line-height: 1.3;
+  }
+
+  .panel-body {
+    padding: 12px;
+  }
+
+  .panel-header {
+    padding: 12px 14px;
+  }
 }
 </style>

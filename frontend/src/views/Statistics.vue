@@ -3,8 +3,8 @@
     <section class="hero-section">
       <div class="hero-bg"></div>
       <v-container class="hero-content">
-        <h1 class="text-h3 font-weight-bold text-white mb-2">ApaAtlas Statistics</h1>
-        <p class="text-h6 text-white mb-6 opacity-90">Database-scale view of isoform-level polyadenylation complexity</p>
+        <h1 class="text-h3 font-weight-bold text-white mb-2">IsoAPA Statistics</h1>
+        <p class="text-h6 text-white opacity-90">Database-scale view of isoform-level polyadenylation complexity</p>
       </v-container>
     </section>
 
@@ -757,7 +757,24 @@ const rankClass = (i) => {
 .hero-content {
   position: relative;
   z-index: 1;
-  padding: 48px 0 56px;
+  padding: 48px 24px 56px;
+}
+
+.hero-content :deep(.text-h3) {
+  font-family: var(--aa-font-sans) !important;
+  font-size: 3rem !important;
+  font-weight: 700 !important;
+  line-height: 1.12;
+  letter-spacing: -0.01em !important;
+}
+
+.hero-content :deep(.text-h6) {
+  font-family: var(--aa-font-sans) !important;
+  max-width: 760px;
+  font-size: 1.25rem !important;
+  font-weight: 500 !important;
+  line-height: 1.45;
+  letter-spacing: 0 !important;
 }
 
 .stats-content {
@@ -884,6 +901,16 @@ const rankClass = (i) => {
   background: #fff;
   border: 1px solid rgba(203, 213, 225, 0.72);
   box-shadow: none;
+}
+
+.statistics-page .section-card,
+.statistics-page .stats-card-cell > .section-card {
+  background: #ffffff !important;
+  background-image: none !important;
+  border: 1px solid rgba(203, 213, 225, 0.72) !important;
+  box-shadow: none !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
 }
 
 .metric-card {
@@ -1337,15 +1364,38 @@ const rankClass = (i) => {
 .species-leader-bar-fill { background: linear-gradient(90deg, #355C7D, #4A7898); }
 
 @media (max-width: 1024px) {
+  .hero-content {
+    padding-left: 22px !important;
+    padding-right: 22px !important;
+  }
+
   .metric-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .stats-card-row { grid-template-columns: 1fr; }
   .hero-orbit { opacity: 0.28; }
   .flow-grid { grid-template-columns: 1fr; }
   .flow-connector { min-height: 46px; }
   .flow-connector::before { left: 50%; right: auto; top: 0; bottom: 0; border-top: none; border-left: 1px dashed rgba(13,115,119,0.26); }
+  .section-card { padding: 22px; }
 }
 
 @media (max-width: 640px) {
+  .hero-section {
+    min-height: 240px;
+  }
+
+  .hero-content {
+    padding: 36px 18px 42px;
+  }
+
+  .hero-content :deep(.text-h3) {
+    font-size: 2rem !important;
+    line-height: 1.15;
+  }
+
+  .hero-content :deep(.text-h6) {
+    font-size: 1rem !important;
+  }
+
   .stats-hero,
   .stats-hero-container { min-height: 300px; }
   .stats-title { font-size: 2.25rem; }
@@ -1359,5 +1409,22 @@ const rankClass = (i) => {
   .species-leader-name { min-width: 0; max-width: none; }
   .species-bar-count { text-align: left; }
   .leaderboard-bar-track { width: 100%; }
+  .stats-content { padding-top: 28px; }
+  .section-card { padding: 18px; border-radius: 18px; }
+  .stats-filter-topline {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .species-filter-trigger {
+    max-width: 100%;
+  }
+  .chart-shell,
+  .chart-shell--large,
+  .chart-shell--wide {
+    height: 300px;
+  }
+  .flow-node { min-height: 104px; }
+  .flow-node-value { font-size: 1.65rem; }
 }
 </style>

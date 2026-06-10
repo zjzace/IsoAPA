@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED: Use superpowers:subagent-driven-development (if subagents available) or superpowers:executing-plans to implement this plan. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Update ApaAtlas to work with the new NCBI/RefSeq data format, fix ETL for the new folder structure (tissue/cell_culture), add transcript_biotype to the transcript detail page, and replace "cell line" with "cell culture" throughout.
+**Goal:** Update IsoAPA to work with the new NCBI/RefSeq data format, fix ETL for the new folder structure (tissue/cell_culture), add transcript_biotype to the transcript detail page, and replace "cell line" with "cell culture" throughout.
 
 **Architecture:** The data files already use the new format (10-column TSV with NCBI accessions), so changes are code-only. Backend ETL, database schema, API schemas, and routes need updates. Frontend views need text/link updates.
 
@@ -596,7 +596,7 @@ Replace Ensembl IDs in search examples and API endpoint examples with NCBI/RefSe
 
 ```bash
 cd backend
-rm -f apa_atlas.db
+rm -f isoapa.db
 python -m app.services.etl
 ```
 

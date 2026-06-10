@@ -8,9 +8,10 @@ Usage:
 
 What it does:
   1. Creates a clean Docker Swarm deployment bundle from the current project.
-  2. Includes stack.yml, Docker build files, backend/frontend source, apa_atlas.db, stats_cache.json, and data/*.bed/*.bed.bidx.
+  2. Includes stack.yml, Docker build files, backend/frontend source, isoapa.db, stats_cache.json, and data/*.bed/*.bed.bidx.
   3. Excludes raw data tables (*.txt, *.tsv), node_modules, dist, caches, .git, and local runtime junk.
-  4. Optionally copies the tarball to a target server with rsync.
+  4. Includes a server deploy helper that removes current/legacy stacks before redeploying.
+  5. Optionally copies the tarball to a target server with rsync.
 
 Examples:
   scripts/deploy/package_for_server.sh
@@ -23,7 +24,7 @@ HOST=""
 REMOTE_DIR=""
 OUT_DIR="deploy_packages"
 PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
-PROJECT_NAME="ApaAtlas"
+PROJECT_NAME="IsoAPA"
 DRY_RUN=0
 
 while [[ $# -gt 0 ]]; do
@@ -53,7 +54,7 @@ required_files=(
   "backend/.dockerignore"
   "backend/environment.yml"
   "backend/main.py"
-  "backend/apa_atlas.db"
+  "backend/isoapa.db"
   "backend/stats_cache.json"
   "frontend/Dockerfile"
   "frontend/.dockerignore"
@@ -91,12 +92,12 @@ if [[ "$DRY_RUN" -eq 1 ]]; then
   echo "Dry run: deployment bundle can be created."
   echo "Project root: $PROJECT_ROOT"
   echo "Output dir: $OUT_DIR"
-  echo "Required database: $(du -h backend/apa_atlas.db | awk '{print $1}') backend/apa_atlas.db"
+  echo "Required database: $(du -h backend/isoapa.db | awk '{print $1}') backend/isoapa.db"
   echo "Stats cache: $(du -h backend/stats_cache.json | awk '{print $1}') backend/stats_cache.json"
   echo "BED files included: $bed_count"
   echo "BED index files included: $bidx_count"
   echo "Raw .txt/.tsv files excluded: $raw_count"
-  echo "Estimated runtime data size: $(du -ch backend/apa_atlas.db backend/stats_cache.json $(find data -mindepth 2 -maxdepth 2 -type f \( -name "*.bed" -o -name "*.bed.bidx" \)) | tail -1 | awk '{print $1}')"
+  echo "Estimated runtime data size: $(du -ch backend/isoapa.db backend/stats_cache.json $(find data -mindepth 2 -maxdepth 2 -type f \( -name "*.bed" -o -name "*.bed.bidx" \)) | tail -1 | awk '{print $1}')"
   exit 0
 fi
 
@@ -133,7 +134,7 @@ copy_path backend/Dockerfile
 copy_path backend/.dockerignore
 copy_path backend/environment.yml
 copy_path backend/main.py
-copy_path backend/apa_atlas.db
+copy_path backend/isoapa.db
 copy_path backend/stats_cache.json
 mkdir -p "$BUNDLE_DIR/backend/app"
 rsync -a \
@@ -165,7 +166,7 @@ while IFS= read -r -d '' file; do
 done < <(find data -mindepth 2 -maxdepth 2 -type f \( -name "*.bed" -o -name "*.bed.bidx" \) -print0 | sort -z)
 
 {
-  echo "ApaAtlas deployment bundle"
+  echo "IsoAPA deployment bundle"
   echo "Created: $(date -Is)"
   echo "Source: $PROJECT_ROOT"
   echo
@@ -173,10 +174,11 @@ done < <(find data -mindepth 2 -maxdepth 2 -type f \( -name "*.bed" -o -name "*.
   echo "- Docker Swarm stack.yml and Dockerfiles"
   echo "- Backend source and mamba environment.yml"
   echo "- Frontend source and package-lock.json"
-  echo "- backend/apa_atlas.db"
+  echo "- backend/isoapa.db"
   echo "- backend/stats_cache.json"
   echo "- data/<species>/*.bed and *.bed.bidx only"
   echo "- deploy_on_server.sh server-side deployment helper"
+  echo "- Migration-safe cleanup for current and legacy Swarm stack/deploy names"
   echo
   echo "Excluded intentionally:"
   echo "- .git"
@@ -187,7 +189,7 @@ done < <(find data -mindepth 2 -maxdepth 2 -type f \( -name "*.bed" -o -name "*.
   echo "Deploy on server:"
   echo "  bash deploy_on_server.sh $(basename "$TARBALL")"
   echo
-  echo "Traefik should route: https://apaatlas.sls.cuhk.edu.hk"
+  echo "Traefik should route: https://isoapa.sls.cuhk.edu.hk"
   echo
   echo "File count: $(find "$BUNDLE_DIR" -type f | wc -l)"
   echo "Bundle size before compression: $(du -sh "$BUNDLE_DIR" | awk '{print $1}')"

@@ -90,7 +90,7 @@
               <div class="accordion-content">
                 <!-- Guide 0 — Search & Filter -->
                 <template v-if="index === 0">
-                  <p class="guide-p">ApaAtlas supports four search dimensions — combine any to narrow results.</p>
+                  <p class="guide-p">IsoAPA supports four search dimensions — combine any to narrow results.</p>
                   <div class="info-tiles-grid">
                     <div class="info-tile">
                       <div class="tile-title">Gene Name</div>
@@ -280,7 +280,7 @@
         <div class="section-eyebrow">Reference Sources</div>
         <h2 class="section-heading mb-3">Genome and annotation references</h2>
         <p class="reference-section-desc">
-          Parent folders for the genome FASTA and transcript annotation resources used to construct ApaAtlas.
+          Parent folders for the genome FASTA and transcript annotation resources used to construct IsoAPA.
         </p>
 
         <div class="flat-card reference-card" :class="{ 'is-open': referencesOpen }">
@@ -350,7 +350,7 @@
         <div class="contact-card">
           <div class="contact-left">
             <h3 class="contact-heading">Questions or feedback?</h3>
-            <p class="contact-sub">We welcome bug reports, feature requests, and general questions about ApaAtlas.</p>
+            <p class="contact-sub">We welcome bug reports, feature requests, and general questions about IsoAPA.</p>
             <a href="mailto:tf.chan@cuhk.edu.hk" class="contact-email-btn">
               <v-icon icon="mdi-email-outline" size="20" class="mr-2"></v-icon>
               tf.chan@cuhk.edu.hk
@@ -408,7 +408,7 @@ const openGuide = ref(null)
 const openFaq = ref(null)
 const shouldOpenReferences = () => route.hash === '#references' || route.query.open === 'references'
 const referencesOpen = ref(shouldOpenReferences())
-const githubIssueBase = 'https://github.com/zjzace/ApaAtlas/issues/new'
+const githubIssueBase = 'https://github.com/zjzace/IsoAPA/issues/new'
 const bugIssueUrl = `${githubIssueBase}?title=Bug%3A%20`
 const featureIssueUrl = `${githubIssueBase}?title=Feature%20request%3A%20`
 
@@ -476,12 +476,12 @@ const faqs = [
     a: 'APA is a post-transcriptional mechanism where the same pre-mRNA is cleaved and polyadenylated at different sites, producing isoforms with varying 3′ UTR lengths. This affects mRNA stability, translational efficiency, and sub-cellular localization.'
   },
   {
-    q: 'What makes ApaAtlas isoform-level?',
-    a: 'Most APA databases aggregate PA sites at the gene level. ApaAtlas tracks every PA site individually per transcript isoform — so a gene with 10 isoforms maintains separate PA site records for each, preserving isoform-specific regulatory information.'
+    q: 'What makes IsoAPA isoform-level?',
+    a: 'Most APA databases aggregate PA sites at the gene level. IsoAPA tracks every PA site individually per transcript isoform — so a gene with 10 isoforms maintains separate PA site records for each, preserving isoform-specific regulatory information.'
   },
   {
     q: 'What data sources are used?',
-    a: 'ApaAtlas integrates long-read transcriptomic data derived from Oxford Nanopore Technologies (ONT) cDNA and direct RNA sequencing, together with Pacific Biosciences (PacBio) Iso-Seq platforms. These datasets encompass a diverse collection of human and multi-species cell lines and tissues, enabling high-resolution, isoform-level identification of polyadenylation sites. Transcript coordinates are primarily based on NCBI/RefSeq annotations, supplemented by Ensembl or published annotations where required.'
+    a: 'IsoAPA integrates long-read transcriptomic data derived from Oxford Nanopore Technologies (ONT) cDNA and direct RNA sequencing, together with Pacific Biosciences (PacBio) Iso-Seq platforms. These datasets encompass a diverse collection of human and multi-species cell lines and tissues, enabling high-resolution, isoform-level identification of polyadenylation sites. Transcript coordinates are primarily based on NCBI/RefSeq annotations, supplemented by Ensembl or published annotations where required.'
   },
   {
     q: 'How is site abundance calculated?',
@@ -489,7 +489,7 @@ const faqs = [
   },
   {
     q: 'What do APA confidence levels mean?',
-    a: 'ApaAtlas assigns each PA cluster to one confidence level by combining PAS motif annotation with quantitative support evidence, including the number of supporting samples, supported transcript-sample observations, total site count, maximum observation count, and maximum relative abundance.',
+    a: 'IsoAPA assigns each PA cluster to one confidence level by combining PAS motif annotation with quantitative support evidence, including the number of supporting samples, supported transcript-sample observations, total site count, maximum observation count, and maximum relative abundance.',
     table: {
       headers: ['Level', 'Classification', 'Evidence summary'],
       rows: [
@@ -502,8 +502,8 @@ const faqs = [
     }
   },
   {
-    q: 'Can I use ApaAtlas data in publications?',
-    a: 'Yes. ApaAtlas data is freely available for research and publication. Please cite our database when using it in your work.'
+    q: 'Can I use IsoAPA data in publications?',
+    a: 'Yes. IsoAPA data is freely available for research and publication. Please cite our database when using it in your work.'
   },
   {
     q: 'What do \'proximal\' and \'distal\' PAS mean?',
@@ -555,7 +555,24 @@ const glossary = [
 .hero-content {
   position: relative;
   z-index: 1;
-  padding: 48px 0 56px;
+  padding: 48px 24px 56px;
+}
+
+.hero-content :deep(.text-h3) {
+  font-family: var(--aa-font-sans) !important;
+  font-size: 3rem !important;
+  font-weight: 700 !important;
+  line-height: 1.12;
+  letter-spacing: -0.01em !important;
+}
+
+.hero-content :deep(.text-h6) {
+  font-family: var(--aa-font-sans) !important;
+  max-width: 760px;
+  font-size: 1.25rem !important;
+  font-weight: 500 !important;
+  line-height: 1.45;
+  letter-spacing: 0 !important;
 }
 
 .section-eyebrow {
@@ -1232,5 +1249,80 @@ const glossary = [
   font-size: 0.85rem;
   color: #64748b;
   line-height: 1.4;
+}
+
+@media (min-width: 641px) and (max-width: 1024px) {
+  .hero-content {
+    padding-left: 22px !important;
+    padding-right: 22px !important;
+  }
+}
+
+@media (max-width: 640px) {
+  .hero-section {
+    min-height: 240px;
+  }
+
+  .hero-content {
+    padding: 36px 18px 42px;
+  }
+
+  .hero-content :deep(.text-h3) {
+    font-size: 2rem !important;
+    line-height: 1.15;
+  }
+
+  .hero-content :deep(.text-h6) {
+    font-size: 1rem !important;
+  }
+
+  .content-section {
+    margin-bottom: 54px;
+  }
+
+  .jump-nav-row {
+    gap: 12px;
+    margin-bottom: 60px;
+  }
+
+  .workflow-card {
+    padding: 18px;
+    margin-bottom: 58px;
+  }
+
+  .workflow-figure {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .workflow-figure img {
+    min-width: 620px;
+  }
+
+  .accordion-header {
+    padding: 16px 18px;
+  }
+
+  .accordion-content,
+  .faq-content {
+    padding-left: 18px;
+    padding-right: 18px;
+  }
+
+  .reference-toggle {
+    align-items: flex-start;
+    padding: 16px 18px;
+  }
+
+  .contact-card {
+    padding: 24px 18px;
+  }
+
+  .contact-email-btn {
+    justify-content: center;
+    width: 100%;
+    padding-left: 14px;
+    padding-right: 14px;
+  }
 }
 </style>

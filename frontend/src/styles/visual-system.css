@@ -29,10 +29,7 @@
   --aa-radius-md: 12px;
   --aa-radius-lg: 16px;
   --aa-radius-xl: 22px;
-  --aa-shadow-card: 0 18px 48px rgba(15, 23, 42, 0.08), 0 2px 10px rgba(15, 23, 42, 0.04);
   --aa-shadow-soft: 0 10px 30px rgba(13, 115, 119, 0.10);
-  --aa-glass-bg: rgba(255, 255, 255, 0.88);
-  --aa-glass-border: rgba(255, 255, 255, 0.72);
 }
 
 html,
@@ -49,6 +46,14 @@ body,
   -webkit-font-smoothing: antialiased;
 }
 
+html {
+  overflow-x: hidden;
+}
+
+body {
+  overflow-x: hidden;
+}
+
 * {
   font-family: inherit;
 }
@@ -56,7 +61,6 @@ body,
 code,
 pre,
 .field-badge,
-.gene-id-badge,
 .footer-version {
   font-family: var(--aa-font-mono) !important;
 }
@@ -68,10 +72,7 @@ h3,
 .section-title,
 .nav-brand,
 .footer-brand-name,
-.gene-name-text,
-.stat-glass-number,
-.flow-node-number,
-.insight-number {
+.gene-name-text {
   font-family: var(--aa-font-display);
   letter-spacing: -0.02em;
 }
@@ -81,9 +82,6 @@ h3,
 }
 
 .aa-card,
-.aa-card,
-.glass-card,
-.glass-card-subtle,
 .data-section,
 .results-card,
 .search-frame,
@@ -95,8 +93,6 @@ h3,
   border-color: rgba(203, 213, 225, 0.74) !important;
 }
 
-.glass-card,
-.glass-card-subtle,
 .data-section,
 .results-card,
 .search-frame,
@@ -105,11 +101,9 @@ h3,
 .section-card,
 .panel-box,
 .gene-header-card {
-  background: var(--aa-glass-bg) !important;
-  border: 1px solid var(--aa-glass-border) !important;
-  box-shadow: var(--aa-shadow-card) !important;
-  backdrop-filter: blur(18px) saturate(165%) !important;
-  -webkit-backdrop-filter: blur(18px) saturate(165%) !important;
+  background: #ffffff !important;
+  border: 1px solid rgba(203, 213, 225, 0.72) !important;
+  border-radius: var(--aa-radius-lg);
 }
 
 .section-eyebrow {
@@ -200,7 +194,75 @@ table tbody tr:hover td {
   border-radius: var(--aa-radius-lg);
 }
 
-.aa-link,
+.v-table__wrapper,
+.v-data-table .v-table__wrapper,
+.tx-table-container,
+.heatmap-wrap,
+.schema-table-wrapper,
+.reference-table-wrap,
+.faq-table-wrap {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(13, 115, 119, 0.36) rgba(226, 232, 240, 0.55);
+  -webkit-overflow-scrolling: touch;
+}
+
+.v-table__wrapper::-webkit-scrollbar,
+.tx-table-container::-webkit-scrollbar,
+.heatmap-wrap::-webkit-scrollbar,
+.schema-table-wrapper::-webkit-scrollbar,
+.reference-table-wrap::-webkit-scrollbar,
+.faq-table-wrap::-webkit-scrollbar {
+  height: 9px;
+}
+
+.v-table__wrapper::-webkit-scrollbar-track,
+.tx-table-container::-webkit-scrollbar-track,
+.heatmap-wrap::-webkit-scrollbar-track,
+.schema-table-wrapper::-webkit-scrollbar-track,
+.reference-table-wrap::-webkit-scrollbar-track,
+.faq-table-wrap::-webkit-scrollbar-track {
+  background: rgba(226, 232, 240, 0.55);
+  border-radius: 999px;
+}
+
+.v-table__wrapper::-webkit-scrollbar-thumb,
+.tx-table-container::-webkit-scrollbar-thumb,
+.heatmap-wrap::-webkit-scrollbar-thumb,
+.schema-table-wrapper::-webkit-scrollbar-thumb,
+.reference-table-wrap::-webkit-scrollbar-thumb,
+.faq-table-wrap::-webkit-scrollbar-thumb {
+  background: rgba(13, 115, 119, 0.36);
+  border-radius: 999px;
+}
+
+.dense-view-note {
+  display: none;
+  align-items: flex-start;
+  gap: 10px;
+  margin: 0 0 16px;
+  padding: 10px 12px;
+  border: 1px solid rgba(13, 115, 119, 0.16);
+  border-radius: 12px;
+  background: #f0fdfa;
+  color: var(--aa-slate-600);
+  font-size: 0.84rem;
+  line-height: 1.45;
+}
+
+.dense-view-note::before {
+  content: '↔';
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 999px;
+  background: rgba(13, 115, 119, 0.10);
+  color: var(--aa-teal-700);
+  font-weight: 800;
+  flex: 0 0 auto;
+}
+
 a.text-primary,
 .gene-name-link,
 .tx-id-link {
@@ -208,7 +270,6 @@ a.text-primary,
   text-underline-offset: 3px;
 }
 
-.aa-link:hover,
 a.text-primary:hover,
 .gene-name-link:hover,
 .tx-id-link:hover {
@@ -223,5 +284,54 @@ a.text-primary:hover,
 
   .section-heading {
     font-size: 1.7rem !important;
+  }
+}
+
+@media (max-width: 960px) {
+  .section-card,
+  .panel-box,
+  .gene-header-card,
+  .results-card,
+  .search-frame,
+  .scope-panel,
+  .api-card {
+    border-radius: 16px !important;
+  }
+
+  .section-title,
+  .panel-header {
+    flex-wrap: wrap;
+  }
+}
+
+@media (max-width: 640px) {
+  .v-container {
+    padding-left: 14px !important;
+    padding-right: 14px !important;
+  }
+
+  .section-heading {
+    font-size: 1.48rem !important;
+    line-height: 1.2 !important;
+  }
+
+  .section-eyebrow {
+    font-size: 0.68rem !important;
+    letter-spacing: 0.09em !important;
+    padding: 4px 10px;
+  }
+
+  .section-card,
+  .panel-box,
+  .gene-header-card,
+  .results-card,
+  .search-frame,
+  .scope-panel,
+  .api-card {
+    border-radius: 14px !important;
+  }
+
+  .dense-view-note {
+    display: flex;
   }
 }

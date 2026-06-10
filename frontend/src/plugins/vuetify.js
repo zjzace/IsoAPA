@@ -3,7 +3,7 @@ import { createVuetify } from 'vuetify'
 import * as components from 'vuetify/components'
 import * as directives from 'vuetify/directives'
 
-const apaAtlasTheme = {
+const isoapaTheme = {
   dark: false,
   colors: {
     background: '#F5F8FA',
@@ -24,9 +24,9 @@ export default createVuetify({
   components,
   directives,
   theme: {
-    defaultTheme: 'apaAtlasTheme',
+    defaultTheme: 'isoapaTheme',
     themes: {
-      apaAtlasTheme,
+      isoapaTheme,
     }
   },
   defaults: {

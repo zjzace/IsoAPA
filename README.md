@@ -1,14 +1,14 @@
-# ApaAtlas
+# IsoAPA
 
-**ApaAtlas** is a web-based scientific database for exploring isoform-level polyadenylation (PA) sites across diverse species, tissues, and cell lines. The resource links PA site usage to individual transcript isoforms, enabling users to examine alternative 3′ end formation at a resolution that is not preserved by gene-level summaries.
+**IsoAPA** is a web-based scientific database for exploring isoform-level polyadenylation (PA) sites across diverse species, tissues, and cell lines. The resource links PA site usage to individual transcript isoforms, enabling users to examine alternative 3′ end formation at a resolution that is not preserved by gene-level summaries.
 
-ApaAtlas provides interactive search, transcript- and locus-level visualization, database-scale statistics, and downloadable result tables for downstream analysis.
+IsoAPA provides interactive search, transcript- and locus-level visualization, database-scale statistics, and downloadable result tables for downstream analysis.
 
 ---
 
 ## Overview
 
-Alternative polyadenylation shapes transcript 3′ ends and can alter mRNA stability, localization, translation, and post-transcriptional regulation. Many resources summarize PA sites at the gene level, which can obscure transcript-specific regulatory patterns. ApaAtlas was designed to preserve the connection between each PA site and its corresponding transcript isoform.
+Alternative polyadenylation shapes transcript 3′ ends and can alter mRNA stability, localization, translation, and post-transcriptional regulation. Many resources summarize PA sites at the gene level, which can obscure transcript-specific regulatory patterns. IsoAPA was designed to preserve the connection between each PA site and its corresponding transcript isoform.
 
 The web interface supports:
 
@@ -24,7 +24,7 @@ The web interface supports:
 
 ## Workflow
 
-ApaAtlas is constructed from long-read transcriptomic datasets using an isoform-aware PA site discovery workflow. Reads are aligned to reference genomes, assigned to transcript models, filtered for full-length support, clustered into PA site groups, screened for internal priming artifacts, and summarized as transcript-resolved PA site annotations.
+IsoAPA is constructed from long-read transcriptomic datasets using an isoform-aware PA site discovery workflow. Reads are aligned to reference genomes, assigned to transcript models, filtered for full-length support, clustered into PA site groups, screened for internal priming artifacts, and summarized as transcript-resolved PA site annotations.
 
 ![Isoform-level PA site workflow](frontend/public/images/trek-workflow.jpg)
 
@@ -48,7 +48,7 @@ The workflow is intended to retain transcript identity throughout PA site discov
 ## Repository Structure
 
 ```text
-ApaAtlas/
+IsoAPA/
 ├── backend/                 # FastAPI application and SQLite database mount point
 ├── frontend/                # Vite/Vue frontend served by nginx in production
 ├── data/                    # Runtime genome-browser BED and BED index files
@@ -63,7 +63,7 @@ ApaAtlas/
 
 ## Local Development
 
-ApaAtlas uses a FastAPI backend and a Vite frontend. The local development workflow is managed by `start.sh`.
+IsoAPA uses a FastAPI backend and a Vite frontend. The local development workflow is managed by `start.sh`.
 
 ```bash
 ./start.sh
@@ -83,7 +83,7 @@ The local script prepares the runtime environment, checks whether the local data
 
 ## Deployment
 
-ApaAtlas is configured for Docker Swarm deployment behind an external Traefik reverse proxy. The production deployment uses precomputed runtime data and does not run the data-construction workflow inside containers.
+IsoAPA is configured for Docker Swarm deployment behind an external Traefik reverse proxy. The production deployment uses precomputed runtime data and does not run the data-construction workflow inside containers.
 
 Create a deployment bundle locally:
 
@@ -94,29 +94,29 @@ scripts/deploy/package_for_server.sh
 Copy the generated archive and deployment helper to the target server:
 
 ```bash
-scp deploy_packages/ApaAtlas-deploy-*.tar.gz deploy_packages/deploy_on_server.sh user@server:/home/tflab/
+scp deploy_packages/IsoAPA-deploy-*.tar.gz deploy_packages/deploy_on_server.sh user@server:/home/tflab/
 ```
 
 Deploy on the server:
 
 ```bash
 cd /home/tflab
-bash deploy_on_server.sh ApaAtlas-deploy-YYYYMMDD-HHMMSS.tar.gz
+bash deploy_on_server.sh IsoAPA-deploy-YYYYMMDD-HHMMSS.tar.gz
 ```
 
-The server-side script removes an existing `apaatlas` stack if present, backs up the previous deployment directory, builds local Docker images, and redeploys the Swarm stack.
+The server-side script removes an existing `isoapa` stack if present, backs up the previous deployment directory, builds local Docker images, and redeploys the Swarm stack.
 
 The configured production domain is:
 
 ```text
-https://apaatlas.sls.cuhk.edu.hk
+https://isoapa.sls.cuhk.edu.hk
 ```
 
 ---
 
 ## Data Access
 
-ApaAtlas provides downloadable result tables directly through the web interface and API. Supported exports include:
+IsoAPA provides downloadable result tables directly through the web interface and API. Supported exports include:
 
 - PA site tables with genomic coordinates, cluster ranges, motif annotations, and abundance summaries;
 - genome browser BED files using database PA site identifiers;
@@ -128,7 +128,7 @@ Genome and annotation reference parent links are available from the Help page un
 
 ## Citation
 
-Citation information will be added after publication. If you use ApaAtlas before formal publication, please cite the project website and contact the maintainers for the recommended acknowledgement.
+Citation information will be added after publication. If you use IsoAPA before formal publication, please cite the project website and contact the maintainers for the recommended acknowledgement.
 
 ---
 
@@ -137,4 +137,4 @@ Citation information will be added after publication. If you use ApaAtlas before
 For questions, bug reports, or feature requests:
 
 - Email: `tf.chan@cuhk.edu.hk`
-- GitHub Issues: `https://github.com/zjzace/ApaAtlas/issues`
+- GitHub Issues: `https://github.com/zjzace/IsoAPA/issues`

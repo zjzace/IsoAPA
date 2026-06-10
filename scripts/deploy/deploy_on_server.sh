@@ -1,30 +1,34 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-STACK_NAME="${STACK_NAME:-apaatlas}"
-DEPLOY_DIR="${DEPLOY_DIR:-/home/tflab/ApaAtlas-deploy}"
-BACKUP_DIR="${BACKUP_DIR:-/home/tflab/ApaAtlas-deploy-backups}"
-BACKEND_IMAGE="${BACKEND_IMAGE:-apaatlas-backend:latest}"
-FRONTEND_IMAGE="${FRONTEND_IMAGE:-apaatlas-frontend:latest}"
+STACK_NAME="${STACK_NAME:-isoapa}"
+LEGACY_STACK_NAME="${LEGACY_STACK_NAME:-apaatlas}"
+DEPLOY_DIR="${DEPLOY_DIR:-/home/tflab/IsoAPA-deploy}"
+LEGACY_DEPLOY_DIR="${LEGACY_DEPLOY_DIR:-/home/tflab/ApaAtlas-deploy}"
+BACKUP_DIR="${BACKUP_DIR:-/home/tflab/IsoAPA-deploy-backups}"
+BACKEND_IMAGE="${BACKEND_IMAGE:-isoapa-backend:latest}"
+FRONTEND_IMAGE="${FRONTEND_IMAGE:-isoapa-frontend:latest}"
 TRAEFIK_NETWORK="${TRAEFIK_NETWORK:-traefik-public}"
 
 usage() {
   cat <<'USAGE'
 Usage:
-  bash deploy_on_server.sh ApaAtlas-deploy-YYYYMMDD-HHMMSS.tar.gz
+  bash deploy_on_server.sh IsoAPA-deploy-YYYYMMDD-HHMMSS.tar.gz
 
 Optional environment variables:
-  STACK_NAME=apaatlas
-  DEPLOY_DIR=/home/tflab/ApaAtlas-deploy
-  BACKUP_DIR=/home/tflab/ApaAtlas-deploy-backups
-  BACKEND_IMAGE=apaatlas-backend:latest
-  FRONTEND_IMAGE=apaatlas-frontend:latest
+  STACK_NAME=isoapa
+  LEGACY_STACK_NAME=apaatlas
+  DEPLOY_DIR=/home/tflab/IsoAPA-deploy
+  LEGACY_DEPLOY_DIR=/home/tflab/ApaAtlas-deploy
+  BACKUP_DIR=/home/tflab/IsoAPA-deploy-backups
+  BACKEND_IMAGE=isoapa-backend:latest
+  FRONTEND_IMAGE=isoapa-frontend:latest
   TRAEFIK_NETWORK=traefik-public
 
 This script:
   1. Verifies Docker Swarm and the external Traefik network.
-  2. Removes the existing ApaAtlas stack if present.
-  3. Backs up the previous deployment directory.
+  2. Removes the current IsoAPA stack and the legacy ApaAtlas stack if present.
+  3. Backs up previous deployment directories from either naming scheme.
   4. Extracts the new deployment bundle into DEPLOY_DIR.
   5. Builds local backend/frontend images.
   6. Deploys the Swarm stack.
@@ -64,7 +68,7 @@ case "$BUNDLE" in
   *) die "Expected a .tar.gz or .tgz bundle" ;;
 esac
 
-WORK_ROOT="$(mktemp -d /tmp/apaatlas-deploy.XXXXXX)"
+WORK_ROOT="$(mktemp -d /tmp/isoapa-deploy.XXXXXX)"
 cleanup() {
   rm -rf "$WORK_ROOT"
 }
@@ -73,37 +77,57 @@ trap cleanup EXIT
 log "Extracting bundle"
 tar -xzf "$BUNDLE" -C "$WORK_ROOT"
 
-EXTRACTED_DIR="$(find "$WORK_ROOT" -mindepth 1 -maxdepth 1 -type d -name 'ApaAtlas-deploy-*' -print -quit)"
-[[ -n "$EXTRACTED_DIR" ]] || die "Could not find extracted ApaAtlas-deploy-* directory"
+EXTRACTED_DIR="$(find "$WORK_ROOT" -mindepth 1 -maxdepth 1 -type d -name 'IsoAPA-deploy-*' -print -quit)"
+[[ -n "$EXTRACTED_DIR" ]] || die "Could not find extracted IsoAPA-deploy-* directory"
 
-for required in stack.yml backend/Dockerfile backend/apa_atlas.db backend/stats_cache.json frontend/Dockerfile frontend/nginx.conf data; do
+for required in stack.yml backend/Dockerfile backend/isoapa.db backend/stats_cache.json frontend/Dockerfile frontend/nginx.conf data; do
   [[ -e "$EXTRACTED_DIR/$required" ]] || die "Extracted bundle missing required path: $required"
 done
 
-if docker stack ls --format '{{.Name}}' | grep -Fxq "$STACK_NAME"; then
-  log "Removing existing stack: $STACK_NAME"
-  docker stack rm "$STACK_NAME"
+remove_stack_if_present() {
+  local stack_name="$1"
+  [[ -n "$stack_name" ]] || return 0
 
-  log "Waiting for old services to stop"
+  if ! docker stack ls --format '{{.Name}}' | grep -Fxq "$stack_name"; then
+    log "No existing stack named $stack_name"
+    return 0
+  fi
+
+  log "Removing existing stack: $stack_name"
+  docker stack rm "$stack_name"
+
+  log "Waiting for $stack_name services to stop"
   for _ in {1..60}; do
-    if ! docker service ls --format '{{.Name}}' | grep -Eq "^${STACK_NAME}_"; then
+    if ! docker service ls --format '{{.Name}}' | grep -Eq "^${stack_name}_"; then
       break
     fi
     sleep 2
   done
 
-  if docker service ls --format '{{.Name}}' | grep -Eq "^${STACK_NAME}_"; then
-    die "Timed out waiting for old $STACK_NAME services to stop"
+  if docker service ls --format '{{.Name}}' | grep -Eq "^${stack_name}_"; then
+    die "Timed out waiting for old $stack_name services to stop"
   fi
-else
-  log "No existing stack named $STACK_NAME"
+}
+
+backup_existing_dir() {
+  local path="$1"
+  [[ -n "$path" ]] || return 0
+  [[ -d "$path" ]] || return 0
+
+  mkdir -p "$BACKUP_DIR"
+  local backup_path="$BACKUP_DIR/$(basename "$path").$(date +%Y%m%d-%H%M%S)"
+  log "Moving previous deployment $path to $backup_path"
+  mv "$path" "$backup_path"
+}
+
+remove_stack_if_present "$STACK_NAME"
+if [[ "$LEGACY_STACK_NAME" != "$STACK_NAME" ]]; then
+  remove_stack_if_present "$LEGACY_STACK_NAME"
 fi
 
-if [[ -d "$DEPLOY_DIR" ]]; then
-  mkdir -p "$BACKUP_DIR"
-  BACKUP_PATH="$BACKUP_DIR/$(basename "$DEPLOY_DIR").$(date +%Y%m%d-%H%M%S)"
-  log "Moving previous deployment to $BACKUP_PATH"
-  mv "$DEPLOY_DIR" "$BACKUP_PATH"
+backup_existing_dir "$DEPLOY_DIR"
+if [[ "$LEGACY_DEPLOY_DIR" != "$DEPLOY_DIR" ]]; then
+  backup_existing_dir "$LEGACY_DEPLOY_DIR"
 fi
 
 log "Installing new deployment to $DEPLOY_DIR"
@@ -134,5 +158,5 @@ Useful checks:
   docker service logs ${STACK_NAME}_frontend --tail 80
 
 Site:
-  https://apaatlas.sls.cuhk.edu.hk
+  https://isoapa.sls.cuhk.edu.hk
 EOF

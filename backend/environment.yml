@@ -1,4 +1,4 @@
-name: apaatlas
+name: isoapa
 channels:
   - conda-forge
   - bioconda

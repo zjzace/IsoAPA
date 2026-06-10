@@ -4,7 +4,7 @@
     <section class="hero-section">
       <div class="hero-bg"></div>
       <v-container class="hero-content">
-        <h1 class="text-h3 font-weight-bold text-white mb-2">Download ApaAtlas Data</h1>
+        <h1 class="text-h3 font-weight-bold text-white mb-2">Download IsoAPA Data</h1>
         <p class="text-h6 text-white opacity-90">Export of isoform-level polyadenylation results</p>
       </v-container>
     </section>
@@ -181,6 +181,9 @@
 
       <!-- E. Schema (collapsed) -->
       <div class="schema-section">
+        <div class="dense-view-note">
+          Data schema tables can be scrolled horizontally on small screens.
+        </div>
         <button class="schema-toggle-btn" @click="schemaOpen = !schemaOpen">
           <v-icon :icon="schemaOpen ? 'mdi-chevron-up' : 'mdi-chevron-down'" size="20" class="mr-2"></v-icon>
           {{ schemaOpen ? 'Hide Data Schema' : 'View Data Schema' }}
@@ -332,7 +335,7 @@ const downloadFilename = computed(() => {
   if (!selectedDataset.value) return ''
   const sp = selectedSpecies.value ? `_${selectedSpecies.value.toLowerCase().replace(/\s+/g, '_')}` : ''
   const sampleSuffix = selectedSamples.value.length ? `_samples-${selectedSamples.value.length}` : ''
-  return `apaatlas_${selectedDataset.value.id}${sp}${sampleSuffix}.${selectedFormat.value}`
+  return `isoapa_${selectedDataset.value.id}${sp}${sampleSuffix}.${selectedFormat.value}`
 })
 
 const buildQueryString = () => {
@@ -348,13 +351,13 @@ const buildQueryString = () => {
 const curlCommand = computed(() => {
   const dataset = selectedDataset.value?.id || 'apa-sites'
   const qs = buildQueryString()
-  const filename = downloadFilename.value || `apaatlas_${dataset}.${selectedFormat.value}`
+  const filename = downloadFilename.value || `isoapa_${dataset}.${selectedFormat.value}`
   return `curl -fL -o "${filename}" \\\n  "${apiDownloadBaseUrl.value}/${dataset}${qs}"`
 })
 
 const pythonCommand = computed(() => {
   const dataset = selectedDataset.value?.id || 'apa-sites'
-  const filename = downloadFilename.value || `apaatlas_${dataset}.${selectedFormat.value}`
+  const filename = downloadFilename.value || `isoapa_${dataset}.${selectedFormat.value}`
   const paramItems = []
   if (selectedDataset.value?.formats.length > 1) paramItems.push(`("format", "${selectedFormat.value}")`)
   if (selectedSpecies.value) paramItems.push(`("species", "${selectedSpecies.value}")`)
@@ -367,7 +370,7 @@ const pythonCommand = computed(() => {
 
 const rCommand = computed(() => {
   const dataset = selectedDataset.value?.id || 'apa-sites'
-  const filename = downloadFilename.value || `apaatlas_${dataset}.${selectedFormat.value}`
+  const filename = downloadFilename.value || `isoapa_${dataset}.${selectedFormat.value}`
   const paramLines = []
   if (selectedDataset.value?.formats.length > 1) paramLines.push(`    format = "${selectedFormat.value}",`)
   if (selectedSpecies.value) paramLines.push(`    species = "${selectedSpecies.value}",`)
@@ -552,7 +555,24 @@ watch(sampleFilterEnabled, (enabled) => {
 .hero-content {
   position: relative;
   z-index: 1;
-  padding: 48px 0 56px;
+  padding: 48px 24px 56px;
+}
+
+.hero-content :deep(.text-h3) {
+  font-family: var(--aa-font-sans) !important;
+  font-size: 3rem !important;
+  font-weight: 700 !important;
+  line-height: 1.12;
+  letter-spacing: -0.01em !important;
+}
+
+.hero-content :deep(.text-h6) {
+  font-family: var(--aa-font-sans) !important;
+  max-width: 760px;
+  font-size: 1.25rem !important;
+  font-weight: 500 !important;
+  line-height: 1.45;
+  letter-spacing: 0 !important;
 }
 
 .section-eyebrow {
@@ -1043,4 +1063,125 @@ watch(sampleFilterEnabled, (enabled) => {
   font-family: var(--aa-font-sans) !important;
 }
 .elegant-table :deep(tr:hover td) { background: #f0fdfa !important; }
+
+@media (max-width: 900px) {
+  .scope-panel {
+    gap: 20px;
+  }
+
+  .scope-divider {
+    display: none;
+  }
+
+  .scope-group,
+  .scope-group--samples,
+  .scope-group--format,
+  .scope-group--samples .scope-label,
+  .sample-multi-select {
+    align-items: stretch;
+    flex: 1 1 100%;
+    width: 100%;
+  }
+}
+
+@media (min-width: 641px) and (max-width: 1024px) {
+  .hero-content {
+    padding-left: 22px !important;
+    padding-right: 22px !important;
+  }
+}
+
+@media (max-width: 640px) {
+  .hero-section {
+    min-height: 240px;
+  }
+
+  .hero-content {
+    padding: 36px 18px 42px;
+  }
+
+  .hero-content :deep(.text-h3) {
+    font-size: 2rem !important;
+    line-height: 1.15;
+  }
+
+  .hero-content :deep(.text-h6) {
+    font-size: 1rem !important;
+  }
+
+  .dataset-cards-row {
+    gap: 14px;
+  }
+
+  .dataset-card {
+    border-radius: 18px;
+    padding: 22px 18px;
+  }
+
+  .scope-panel,
+  .api-card,
+  .download-action-panel {
+    padding: 18px;
+    border-radius: 18px;
+  }
+
+  .scope-chip {
+    justify-content: center;
+    min-height: 34px;
+  }
+
+  .scope-chip-latin {
+    display: block;
+    margin-left: 0;
+  }
+
+  .download-action-panel {
+    align-items: stretch;
+  }
+
+  .download-action-title {
+    font-size: 1.12rem;
+    line-height: 1.35;
+  }
+
+  .download-btn {
+    width: 100%;
+  }
+
+  .lang-tabs {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .lang-tab {
+    flex: 0 0 auto;
+    padding: 9px 16px;
+  }
+
+  .code-block {
+    padding: 18px 14px 58px;
+    overflow-x: auto;
+  }
+
+  .code-text {
+    white-space: pre;
+    word-break: normal;
+    min-width: 560px;
+  }
+
+  .copy-btn {
+    bottom: 12px;
+    left: 14px;
+    right: auto;
+    top: auto;
+  }
+
+  .schema-table-wrapper {
+    overflow-x: auto;
+  }
+
+  .schema-table-wrapper :deep(table) {
+    min-width: 720px;
+  }
+}
 </style>

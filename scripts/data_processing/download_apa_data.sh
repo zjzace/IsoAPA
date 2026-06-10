@@ -1210,7 +1210,7 @@ main() {
     # Initial disk space check
     check_disk_space
 
-    # Step 1: Build index of already-downloaded files from ApaAtlas
+    # Step 1: Build index of already-downloaded files from IsoAPA
     build_download_index
 
     # Steps 2–7: Parse TSV, group by folder, sort by tier/platform, download/move

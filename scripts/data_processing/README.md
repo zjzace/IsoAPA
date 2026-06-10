@@ -1,7 +1,7 @@
 # Data Processing Scripts
 
 This directory stores standalone utilities used before loading data into
-ApaAtlas. They are not part of the web application runtime.
+IsoAPA. They are not part of the web application runtime.
 
 ## Scripts
 

@@ -1,8 +1,8 @@
 <template>
-  <div class="apa-genome-browser">
+  <div class="apa-genome-browser" :class="{ 'apa-genome-browser--touch': isTouchLayout }">
     <!-- Controls -->
     <div class="browser-controls">
-      <v-btn-group density="compact" variant="outlined">
+      <v-btn-group v-if="!isTouchLayout" density="compact" variant="outlined">
         <v-btn size="small" @click="zoomIn" title="Zoom In">
           <v-icon>mdi-magnify-plus</v-icon>
         </v-btn>
@@ -13,9 +13,9 @@
           <v-icon>mdi-fit-to-screen</v-icon>
         </v-btn>
       </v-btn-group>
-      <span class="ml-4 text-caption text-grey">
+      <span class="browser-gesture-hint text-caption text-grey">
         <v-icon size="x-small" class="mr-1">mdi-gesture-pinch</v-icon>
-        Scroll to zoom • Drag to pan
+        {{ isTouchLayout ? 'Swipe horizontally to inspect the full genome browser track' : 'Wheel to zoom • drag to pan' }}
       </span>
 
       <!-- Sample selectors — pushed to right -->
@@ -515,6 +515,7 @@ const terminalExtensionFor = (sortedExons, strand) => {
 const xScale = ref(null)
 const zoomBehavior = ref(null)
 const currentTransform = ref(d3.zoomIdentity)
+const isTouchLayout = ref(false)
 
 // Refs
 const svgElement = ref(null)
@@ -1296,6 +1297,14 @@ const renderSampleTracks = () => {
 let _frozenBaseScale = null
 
 const setupZoom = () => {
+  if (isTouchLayout.value) {
+    zoomBehavior.value = null
+    currentTransform.value = d3.zoomIdentity
+    d3.select(svgElement.value).on('.zoom', null)
+    d3.select(svgElement.value).on('mouseleave.tooltip', hideTooltip)
+    return
+  }
+
   const baseScale = xScale.value.copy()  // Snapshot of base (k=1) scale — never mutated
   _frozenBaseScale = baseScale
 
@@ -1324,6 +1333,7 @@ const setupZoom = () => {
 
 // Zoom controls
 const zoomIn = () => {
+  if (!zoomBehavior.value || isTouchLayout.value) return
   d3.select(svgElement.value)
     .transition()
     .duration(300)
@@ -1331,6 +1341,7 @@ const zoomIn = () => {
 }
 
 const zoomOut = () => {
+  if (!zoomBehavior.value || isTouchLayout.value) return
   d3.select(svgElement.value)
     .transition()
     .duration(300)
@@ -1338,7 +1349,7 @@ const zoomOut = () => {
 }
 
 const resetZoom = () => {
-  if (!zoomBehavior.value) return
+  if (!zoomBehavior.value || isTouchLayout.value) return
   // k=1 identity transform is exactly the fit view (initScale maps content to track at k=1)
   d3.select(svgElement.value)
     .transition()
@@ -1365,15 +1376,50 @@ const resizeObserver = ref(null)
 
 const measureWidth = () => {
   if (browserContainer.value) {
+    const previousTouchLayout = isTouchLayout.value
     const rect = browserContainer.value.getBoundingClientRect()
+    const visibleWidth = Math.floor(rect.width - 24)
+    if (visibleWidth <= 0) return false
+
+    const mobile = window.matchMedia('(max-width: 640px)').matches
+    const tablet = window.matchMedia('(max-width: 900px)').matches
+    const coarsePointer = window.matchMedia('(pointer: coarse)').matches
+    const hoverless = window.matchMedia('(hover: none)').matches
+    isTouchLayout.value = tablet && (coarsePointer || hoverless)
+
     // Account for container padding (12px each side)
-    containerWidth.value = Math.floor(rect.width - 24)
+    if (mobile) {
+      containerWidth.value = Math.max(760, Math.floor(visibleWidth * 2.05))
+    } else if (tablet) {
+      containerWidth.value = Math.max(980, Math.floor(visibleWidth * 1.45))
+    } else {
+      containerWidth.value = visibleWidth
+    }
+
+    return previousTouchLayout !== isTouchLayout.value
   }
+  return false
 }
 
 // Initialize on mount
 // Wheel handler — stored so we can remove it on unmount
 let wheelHandler = null
+
+const syncDesktopWheelHandler = () => {
+  if (!browserContainer.value) return
+  if (isTouchLayout.value) {
+    if (wheelHandler) {
+      browserContainer.value.removeEventListener('wheel', wheelHandler)
+      wheelHandler = null
+    }
+    return
+  }
+  if (!wheelHandler) {
+    // Desktop-only: keep wheel input dedicated to D3 zoom while cursor is inside.
+    wheelHandler = (e) => e.preventDefault()
+    browserContainer.value.addEventListener('wheel', wheelHandler, { passive: false })
+  }
+}
 
 onMounted(async () => {
   await nextTick()
@@ -1387,16 +1433,18 @@ onMounted(async () => {
   }
   // Watch for container resize
   resizeObserver.value = new ResizeObserver(async () => {
-    measureWidth()
+    const interactionModeChanged = measureWidth()
     if (props.exons && props.exons.length > 0) {
       render()
+      if (interactionModeChanged) {
+        setupZoom()
+        syncDesktopWheelHandler()
+      }
     }
   })
   if (browserContainer.value) {
     resizeObserver.value.observe(browserContainer.value)
-    // Prevent page scroll while mouse is inside the browser container
-    wheelHandler = (e) => e.preventDefault()
-    browserContainer.value.addEventListener('wheel', wheelHandler, { passive: false })
+    syncDesktopWheelHandler()
   }
 })
 
@@ -1423,7 +1471,7 @@ watch(() => [props.exons, props.apaSites, activeSamples.value], async () => {
   // Second tick: Vue creates new <g> elements for updated activeSamples
   await nextTick()
   if (props.exons && props.exons.length > 0) {
-    if (zoomBehavior.value) {
+    if (zoomBehavior.value && !isTouchLayout.value) {
       // Zoom already active — only redraw, don't reinit scale (would reset zoom)
       redrawTracks()
     } else {
@@ -1458,7 +1506,13 @@ watch(dynamicMarginLeft, (newLeft) => {
 .browser-controls {
   display: flex;
   align-items: center;
+  gap: 12px;
   margin-bottom: 16px;
+}
+
+.browser-gesture-hint {
+  display: inline-flex;
+  align-items: center;
 }
 
 .sample-selectors {
@@ -1620,11 +1674,13 @@ watch(dynamicMarginLeft, (newLeft) => {
   padding: 12px;
   background: #ffffff !important;
   border: 1px solid rgba(203, 213, 225, 0.72);
+  touch-action: pan-x pan-y;
 }
 
 .genome-svg {
   display: block;
   cursor: grab;
+  touch-action: pan-x pan-y;
 }
 
 .genome-svg:active {
@@ -1638,5 +1694,37 @@ watch(dynamicMarginLeft, (newLeft) => {
 
 :deep(.apa-marker rect) {
   transition: fill-opacity 0.15s ease, width 0.15s ease;
+}
+
+@media (max-width: 900px) {
+  .browser-svg-container {
+    overflow-x: auto;
+    overflow-y: hidden;
+    -webkit-overflow-scrolling: touch;
+    touch-action: pan-x pan-y;
+  }
+
+  .genome-svg {
+    min-width: 980px;
+    cursor: default;
+    touch-action: pan-x pan-y;
+  }
+
+  .browser-controls {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 8px;
+  }
+}
+
+@media (max-width: 640px) {
+  .browser-svg-container {
+    padding: 8px;
+    border-radius: 12px;
+  }
+
+  .genome-svg {
+    min-width: 760px;
+  }
 }
 </style>

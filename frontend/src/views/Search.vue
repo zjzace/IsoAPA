@@ -3,6 +3,9 @@
     <v-container class="py-10">
       <div class="section-eyebrow mb-2">Search & Filter</div>
       <h1 class="section-heading mb-6">Browse APA Sites</h1>
+      <div class="dense-view-note">
+        Wide result tables can be scrolled horizontally on small screens. Use landscape mode for easier inspection.
+      </div>
 
       <!-- Glassmorphism Search Frame -->
       <div class="search-frame mb-8">
@@ -434,7 +437,6 @@ const commitTextFilters = () => {
 const search = async () => {
   loading.value = true
   try {
-    console.log('Searching with filters:', filters)
     const params = {
       page: page.value,
       limit: pageSize.value
@@ -449,9 +451,7 @@ const search = async () => {
     if (filters.species) params.species = filters.species
     if (filters.sample) params.sample = filters.sample
     
-    console.log('API params:', params)
     const data = await apiService.search(params)
-    console.log('Search results:', data)
     results.value = data.items
     totalResults.value = data.total
   } catch (error) {
@@ -749,7 +749,11 @@ const onTranscriptSelect = (val) => {
   .filter-grid { grid-template-columns: repeat(2, 1fr); }
 }
 @media (max-width: 600px) {
-  .filter-grid { grid-template-columns: 1fr; }
+  .filter-grid {
+    grid-template-columns: 1fr;
+    gap: 10px;
+    padding: 14px 14px 8px;
+  }
 }
 
 .filter-card {
@@ -1078,6 +1082,58 @@ const onTranscriptSelect = (val) => {
 .search-page :deep(.v-chip) {
   font-size: 13px;
   font-weight: 500;
+}
+
+@media (max-width: 640px) {
+  .search-page :deep(.v-container) {
+    padding-top: 26px !important;
+    padding-bottom: 34px !important;
+  }
+
+  .search-frame {
+    margin-bottom: 20px !important;
+  }
+
+  .search-frame-topbar {
+    padding: 12px 14px;
+  }
+
+  .search-frame-actions {
+    align-items: stretch;
+    flex-direction: column;
+    gap: 10px;
+    padding: 12px 14px 14px;
+  }
+
+  .search-frame-actions .v-spacer {
+    display: none;
+  }
+
+  .search-btn,
+  .export-btn {
+    justify-content: center;
+    width: 100%;
+  }
+
+  .search-page :deep(.v-table__wrapper > table) {
+    min-width: 820px;
+  }
+
+  .search-page :deep(.v-data-table__th) {
+    padding-left: 18px !important;
+    padding-right: 12px !important;
+  }
+
+  .search-page :deep(.v-data-table__td) {
+    padding: 9px 12px 9px 18px !important;
+  }
+
+  .search-page :deep(.v-data-table-footer) {
+    align-items: stretch;
+    flex-direction: column;
+    gap: 8px;
+    padding: 10px 14px !important;
+  }
 }
 </style>
 

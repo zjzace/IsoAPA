@@ -1,8 +1,8 @@
 <template>
-  <div class="multi-isoform-browser">
+  <div class="multi-isoform-browser" :class="{ 'multi-isoform-browser--touch': isTouchLayout }">
     <!-- Controls -->
     <div class="browser-controls">
-      <v-btn-group density="compact" variant="outlined">
+      <v-btn-group v-if="!isTouchLayout" density="compact" variant="outlined">
         <v-btn size="small" @click="zoomIn" title="Zoom In">
           <v-icon>mdi-magnify-plus</v-icon>
         </v-btn>
@@ -13,9 +13,9 @@
           <v-icon>mdi-fit-to-screen</v-icon>
         </v-btn>
       </v-btn-group>
-      <span class="ml-4 text-caption text-grey">
+      <span class="browser-gesture-hint text-caption text-grey">
         <v-icon size="x-small" class="mr-1">mdi-gesture-pinch</v-icon>
-        Scroll to zoom • Drag to pan
+        {{ isTouchLayout ? 'Swipe horizontally to inspect the full track' : 'Wheel to zoom • drag to pan' }}
       </span>
     </div>
 
@@ -240,6 +240,7 @@ const containerWidth = ref(1100)
 const xScale = ref(null)
 const zoomBehavior = ref(null)
 const resizeObserver = ref(null)
+const isTouchLayout = ref(false)
 
 // Template refs
 const browserContainer = ref(null)
@@ -1122,7 +1123,25 @@ const initScale = () => {
 // ── Zoom ──────────────────────────────────────────────────────────────────────
 let _frozenBaseScale = null
 
+function shouldHandleZoomEvent(event) {
+  // Let one-finger touch gestures scroll the page. D3 handles desktop wheel/drag
+  // and two-finger pinch gestures for horizontal zoom/pan inside the track panel.
+  if (event.type?.startsWith('touch')) {
+    if (event.type === 'touchend' || event.type === 'touchcancel') {
+      return !!this.__zooming
+    }
+    return (event.touches?.length ?? 0) >= 2
+  }
+  return true
+}
+
 const setupZoom = () => {
+  if (isTouchLayout.value) {
+    zoomBehavior.value = null
+    d3.select(svgElement.value).on('.zoom', null)
+    return
+  }
+
   const baseScale = xScale.value.copy()  // Snapshot of base (k=1) scale — never mutated
   _frozenBaseScale = baseScale
 
@@ -1133,6 +1152,7 @@ const setupZoom = () => {
   // the transcript off-screen. Combined with scaleExtent([1,100]), zooming out to
   // minimum always restores the full-fit view regardless of current pan position.
   zoomBehavior.value = d3.zoom()
+    .filter(shouldHandleZoomEvent)
     .scaleExtent([1, 100])
     .translateExtent([[trackLeft, -Infinity], [trackRight, Infinity]])
     .extent([[trackLeft, 0], [trackRight, totalHeight.value]])
@@ -1147,22 +1167,44 @@ const setupZoom = () => {
 }
 
 const zoomIn = () => {
+  if (!zoomBehavior.value || isTouchLayout.value) return
   d3.select(svgElement.value).transition().duration(300).call(zoomBehavior.value.scaleBy, 1.5)
 }
 
 const zoomOut = () => {
+  if (!zoomBehavior.value || isTouchLayout.value) return
   d3.select(svgElement.value).transition().duration(300).call(zoomBehavior.value.scaleBy, 0.67)
 }
 
 const resetZoom = () => {
+  if (!zoomBehavior.value || isTouchLayout.value) return
   d3.select(svgElement.value).transition().duration(500).call(zoomBehavior.value.transform, d3.zoomIdentity)
 }
 
 // ── Width measurement ─────────────────────────────────────────────────────────
 const measureWidth = () => {
   if (browserContainer.value) {
-    containerWidth.value = Math.floor(browserContainer.value.getBoundingClientRect().width - 24)
+    const previousTouchLayout = isTouchLayout.value
+    const visibleWidth = Math.floor(browserContainer.value.getBoundingClientRect().width - 24)
+    if (visibleWidth <= 0) return
+
+    const mobile = window.matchMedia('(max-width: 640px)').matches
+    const tablet = window.matchMedia('(max-width: 900px)').matches
+    const coarsePointer = window.matchMedia('(pointer: coarse)').matches
+    const hoverless = window.matchMedia('(hover: none)').matches
+    isTouchLayout.value = tablet && (coarsePointer || hoverless)
+
+    if (mobile) {
+      containerWidth.value = Math.max(760, Math.floor(visibleWidth * 2.05))
+    } else if (tablet) {
+      containerWidth.value = Math.max(980, Math.floor(visibleWidth * 1.45))
+    } else {
+      containerWidth.value = visibleWidth
+    }
+
+    return previousTouchLayout !== isTouchLayout.value
   }
+  return false
 }
 
 // ── Lifecycle ─────────────────────────────────────────────────────────────────
@@ -1174,8 +1216,11 @@ onMounted(() => {
       setupZoom()
     }
     resizeObserver.value = new ResizeObserver(() => {
-      measureWidth()
-      if (transcripts.value.length > 0) render()
+      const interactionModeChanged = measureWidth()
+      if (transcripts.value.length > 0) {
+        render()
+        if (interactionModeChanged) setupZoom()
+      }
     })
     if (browserContainer.value) resizeObserver.value.observe(browserContainer.value)
   })
@@ -1191,7 +1236,14 @@ onBeforeUnmount(() => {
 
 watch(
   () => [props.geneData, props.transcriptStructures],
-  () => { nextTick(() => { if (transcripts.value.length > 0) render() }) },
+  () => {
+    nextTick(() => {
+      if (transcripts.value.length > 0) {
+        render()
+        setupZoom()
+      }
+    })
+  },
   { deep: true }
 )
 
@@ -1213,7 +1265,13 @@ watch(dynamicMarginLeft, (newLeft) => {
 .browser-controls {
   display: flex;
   align-items: center;
+  gap: 12px;
   margin-bottom: 16px;
+}
+
+.browser-gesture-hint {
+  display: inline-flex;
+  align-items: center;
 }
 
 .browser-svg-container {
@@ -1222,11 +1280,13 @@ watch(dynamicMarginLeft, (newLeft) => {
   overflow: hidden;
   border-radius: 16px;
   padding: 12px;
+  touch-action: pan-x pan-y;
 }
 
 .genome-svg {
   display: block;
   cursor: grab;
+  touch-action: pan-x pan-y;
 }
 
 .genome-svg:active {
@@ -1282,5 +1342,56 @@ watch(dynamicMarginLeft, (newLeft) => {
 
 :deep(.apa-marker line) {
   transition: stroke-width 0.15s ease;
+}
+
+@media (max-width: 900px) {
+  .browser-svg-container {
+    overflow-x: auto;
+    overflow-y: hidden;
+    -webkit-overflow-scrolling: touch;
+    touch-action: pan-x pan-y;
+  }
+
+  .genome-svg {
+    min-width: 980px;
+    cursor: default;
+    touch-action: pan-x pan-y;
+  }
+
+  .browser-controls {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .stats-strip :deep(.v-row) {
+    justify-content: flex-start !important;
+    overflow-x: auto;
+    flex-wrap: nowrap;
+    padding-bottom: 4px;
+  }
+
+  .stat-card {
+    min-width: 96px;
+  }
+}
+
+@media (max-width: 640px) {
+  .browser-svg-container {
+    padding: 8px;
+    border-radius: 12px;
+  }
+
+  .genome-svg {
+    min-width: 760px;
+  }
+
+  .stat-card {
+    padding: 7px 14px;
+  }
+
+  .stat-value {
+    font-size: 20px;
+  }
 }
 </style>

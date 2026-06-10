@@ -2,15 +2,15 @@ version: '3.8'
 
 services:
   backend:
-    image: apaatlas-backend:latest
+    image: isoapa-backend:latest
     environment:
-      DATABASE_URL: sqlite:////app/backend/apa_atlas.db
+      DATABASE_URL: sqlite:////app/backend/isoapa.db
     volumes:
-      - ./backend/apa_atlas.db:/app/backend/apa_atlas.db:ro
+      - ./backend/isoapa.db:/app/backend/isoapa.db:ro
       - ./backend/stats_cache.json:/app/backend/stats_cache.json:ro
       - ./data:/app/data:ro
     networks:
-      - apaatlas-internal
+      - isoapa-internal
     deploy:
       replicas: 1
       labels:
@@ -19,9 +19,9 @@ services:
         condition: any
 
   frontend:
-    image: apaatlas-frontend:latest
+    image: isoapa-frontend:latest
     networks:
-      - apaatlas-internal
+      - isoapa-internal
       - traefik-public
     deploy:
       replicas: 1
@@ -29,19 +29,19 @@ services:
         - traefik.enable=true
         - traefik.constraint-label=traefik-public
         - traefik.docker.network=traefik-public
-        - traefik.http.routers.apaatlas-http.rule=Host(`apaatlas.sls.cuhk.edu.hk`)
-        - traefik.http.routers.apaatlas-http.entrypoints=http
-        - traefik.http.routers.apaatlas-http.middlewares=https-redirect@docker
-        - traefik.http.routers.apaatlas-https.rule=Host(`apaatlas.sls.cuhk.edu.hk`)
-        - traefik.http.routers.apaatlas-https.entrypoints=https
-        - traefik.http.routers.apaatlas-https.tls=true
-        - traefik.http.routers.apaatlas-https.tls.certresolver=le
-        - traefik.http.services.apaatlas.loadbalancer.server.port=80
+        - traefik.http.routers.isoapa-http.rule=Host(`isoapa.sls.cuhk.edu.hk`)
+        - traefik.http.routers.isoapa-http.entrypoints=http
+        - traefik.http.routers.isoapa-http.middlewares=https-redirect@docker
+        - traefik.http.routers.isoapa-https.rule=Host(`isoapa.sls.cuhk.edu.hk`)
+        - traefik.http.routers.isoapa-https.entrypoints=https
+        - traefik.http.routers.isoapa-https.tls=true
+        - traefik.http.routers.isoapa-https.tls.certresolver=le
+        - traefik.http.services.isoapa.loadbalancer.server.port=80
       restart_policy:
         condition: any
 
 networks:
-  apaatlas-internal:
+  isoapa-internal:
     driver: overlay
   traefik-public:
     external: true

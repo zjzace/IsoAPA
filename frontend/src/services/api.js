@@ -66,14 +66,6 @@ export const apiService = {
     return response.data
   },
   
-  async downloadApaSites(params) {
-    const response = await api.get('/download/apa-sites', { 
-      params,
-      responseType: 'blob'
-    })
-    return response.data
-  },
-
   async getSiteSequence(transcriptId, siteId, flank = 50, species) {
     const response = await api.get(
       `/transcript/${transcriptId}/site-sequence/${encodeURIComponent(siteId)}`,
