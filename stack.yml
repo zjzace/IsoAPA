@@ -4,6 +4,9 @@ services:
   backend:
     image: isoapa-backend:latest
     environment:
+      APP_ENV: production
+      DEBUG: "false"
+      CORS_ALLOWED_ORIGINS: https://isoapa.sls.cuhk.edu.hk
       DATABASE_URL: sqlite:////app/backend/isoapa.db
     volumes:
       - ./backend/isoapa.db:/app/backend/isoapa.db:ro

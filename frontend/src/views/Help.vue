@@ -109,7 +109,7 @@
                       <div class="tile-desc">Select from available species to constrain the search scope when the database spans multiple organisms.</div>
                     </div>
                   </div>
-                  <div class="tip-box">
+                  <div class="tip-box mt-4">
                     <v-icon icon="mdi-lightbulb-on-outline" color="#0D7377" class="mr-2"></v-icon>
                     <strong>Tip:</strong> The search bar on the home page supports live autocomplete — results appear as you type.
                   </div>
@@ -125,18 +125,14 @@
                     </div>
                     <div class="guide-row">
                       <v-icon icon="mdi-table" color="#355C7D" class="mr-3"></v-icon>
-                      <div><strong>PA Sites Details</strong> — Sortable table listing every polyadenylation site detected for the transcript. Click any row to expand it and reveal per-sample abundance bars and a colour-coded genomic sequence window centred on the cleavage site.</div>
-                    </div>
-                    <div class="guide-row">
-                      <v-icon icon="mdi-view-grid-outline" color="#355C7D" class="mr-3"></v-icon>
-                      <div><strong>Per-site Abundance Heatmap</strong> — Sites × samples matrix. Colour intensity encodes relative abundance (0–100%); hatched cells indicate the site was not detected in that sample.</div>
+                      <div><strong>PA Sites Details</strong> — Sortable table listing every polyadenylation site detected for the transcript, including cluster range, representative position, PAS motif, APA confidence level, and mean transcript-level usage. Click any row to expand a colour-coded genomic sequence window centred on the cleavage site.</div>
                     </div>
                   </div>
                   <v-table density="compact" class="metrics-table mt-4">
                     <tbody>
                       <tr>
                         <td><strong>Site ID</strong></td>
-                        <td class="text-grey-darken-1">Unique identifier for the PA site within this transcript</td>
+                        <td class="text-grey-darken-1">Transcript-level PA site identifier used across the locus table, sequence panel, and download records</td>
                       </tr>
                       <tr>
                         <td><strong>Cluster Range</strong></td>
@@ -151,8 +147,8 @@
                         <td class="text-grey-darken-1">Upstream hexamer signal (e.g. AATAAA) colour-coded by type: canonical, variant, or none detected</td>
                       </tr>
                       <tr>
-                        <td><strong>Samples</strong></td>
-                        <td class="text-grey-darken-1">Number of samples in which this PA site was detected</td>
+                        <td><strong>APA Level</strong></td>
+                        <td class="text-grey-darken-1">Confidence category assigned to the PA site using motif support, read evidence, and internal-priming assessment</td>
                       </tr>
                       <tr>
                         <td><strong>Mean Abundance</strong></td>
@@ -160,6 +156,12 @@
                       </tr>
                     </tbody>
                   </v-table>
+                  <div class="guide-rows mt-4">
+                    <div class="guide-row">
+                      <v-icon icon="mdi-view-grid-outline" color="#355C7D" class="mr-3"></v-icon>
+                      <div><strong>Per-site Abundance Heatmap</strong> — Sites × samples matrix. Colour intensity encodes relative abundance (0–100%); hatched cells indicate the site was not detected in that sample.</div>
+                    </div>
+                  </div>
                   <div class="tip-box mt-4">
                     <v-icon icon="mdi-lightbulb-on-outline" color="#0D7377" class="mr-2"></v-icon>
                     <strong>Tip:</strong> The transcript header shows biotype (mRNA, lncRNA, etc.), species name, and a direct link to the parent Gene Detail page.
@@ -168,15 +170,50 @@
 
                 <!-- Guide 2 — Gene Detail View -->
                 <template v-if="index === 2">
-                  <p class="guide-p">Click any gene name in the app to open its Gene Detail page.</p>
-                  <ul class="guide-ul">
-                    <li>Lists all transcript isoforms for the gene with per-isoform PA site counts.</li>
-                    <li>Click any transcript row to jump directly to its full Locus Detail page.</li>
-                    <li>Genes with high isoform diversity are highlighted on the Statistics page leaderboard.</li>
-                  </ul>
-                  <div class="tip-box">
+                  <p class="guide-p">Click any gene name to open the Gene Detail page. The page is organised into three panels:</p>
+                  <div class="guide-rows">
+                    <div class="guide-row">
+                      <v-icon icon="mdi-text-box-outline" color="#355C7D" class="mr-3"></v-icon>
+                      <div><strong>Gene Summary</strong> — Gene symbol, genomic location, species, and concise functional annotation.</div>
+                    </div>
+                    <div class="guide-row">
+                      <v-icon icon="mdi-source-branch" color="#355C7D" class="mr-3"></v-icon>
+                      <div><strong>Transcripts and PA Sites</strong> — One row per transcript isoform. Expand a row to inspect the transcript-specific PA sites, APA confidence level, abundance, and supporting samples.</div>
+                    </div>
+                  </div>
+                  <v-table density="compact" class="metrics-table mt-4">
+                    <tbody>
+                      <tr>
+                        <td><strong>Transcript</strong></td>
+                        <td class="text-grey-darken-1">Transcript identifier; representative transcript badges are shown when a reference status is available</td>
+                      </tr>
+                      <tr>
+                        <td><strong>Biotype</strong></td>
+                        <td class="text-grey-darken-1">Transcript annotation class from the source reference</td>
+                      </tr>
+                      <tr>
+                        <td><strong>PA Sites / Samples</strong></td>
+                        <td class="text-grey-darken-1">Number of PA sites assigned to the transcript and the deduplicated samples supporting them</td>
+                      </tr>
+                      <tr>
+                        <td><strong>Dominant PA Site</strong></td>
+                        <td class="text-grey-darken-1">PA site with the broadest sample support for that transcript</td>
+                      </tr>
+                      <tr>
+                        <td><strong>Expanded PA-site row</strong></td>
+                        <td class="text-grey-darken-1">Shows Site ID, Cluster Range, Mean Abundance, APA Level, and supporting sample names for each transcript-specific PA site</td>
+                      </tr>
+                    </tbody>
+                  </v-table>
+                  <div class="guide-rows mt-4">
+                    <div class="guide-row">
+                      <v-icon icon="mdi-fingerprint" color="#355C7D" class="mr-3"></v-icon>
+                      <div><strong>Isoform–APA Fingerprint</strong> — Visual summary of how PA sites distribute across isoforms. Extension segments indicate cases where PA evidence extends beyond the annotated terminal exon.</div>
+                    </div>
+                  </div>
+                  <div class="tip-box mt-4">
                     <v-icon icon="mdi-lightbulb-on-outline" color="#0D7377" class="mr-2"></v-icon>
-                    <strong>Tip:</strong> Use the Statistics → Top Genes Leaderboard to find genes with the most PA sites — each entry links directly to its Gene Detail page.
+                    <strong>Tip:</strong> Click a transcript identifier to open its Locus Detail page, where the same PA sites are shown with genome-browser context, PAS motif details, sequence context, and the abundance heatmap.
                   </div>
                 </template>
 
@@ -806,6 +843,7 @@ const glossary = [
   transform: translateY(0);
 }
 .accordion-content {
+  --guide-readable-width: 98%;
   padding: 0 24px 24px 76px;
 }
 @media (max-width: 600px) {
@@ -813,12 +851,14 @@ const glossary = [
 }
 
 .guide-p {
+  max-width: var(--guide-readable-width);
   font-size: 0.95rem;
   color: #475569;
   line-height: 1.6;
   margin-bottom: 16px;
 }
 .info-tiles-grid {
+  max-width: var(--guide-readable-width);
   display: grid;
   grid-template-columns: repeat(2, 1fr);
   gap: 16px;
@@ -845,6 +885,7 @@ const glossary = [
   line-height: 1.5;
 }
 .tip-box {
+  max-width: var(--guide-readable-width);
   background: rgba(240, 253, 250, 0.8);
   border: 1px solid rgba(20, 145, 155, 0.2);
   border-radius: 12px;
@@ -855,6 +896,7 @@ const glossary = [
   align-items: flex-start;
 }
 .guide-rows {
+  max-width: var(--guide-readable-width);
   display: flex;
   flex-direction: column;
   gap: 12px;
@@ -884,6 +926,7 @@ const glossary = [
 }
 .guide-ul li { margin-bottom: 8px; }
 .metrics-table {
+  width: min(var(--guide-readable-width), 100%) !important;
   background: rgba(248, 250, 252, 0.5) !important;
   border: 1px solid #e2e8f0;
   border-radius: 12px;

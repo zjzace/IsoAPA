@@ -82,9 +82,38 @@
             <div class="footer-brand d-flex align-center mb-3">
               <IsoAPAIcon :size="18" style="color:#0D7377;" class="mr-2" />
               <span class="footer-brand-name">IsoAPA</span>
+              <span class="footer-version">v1.0.0</span>
             </div>
-            <p class="footer-desc">A comprehensive database for isoform-level Alternative Polyadenylation (APA) loci.</p>
-            <span class="footer-version">v1.0.0</span>
+            <p class="footer-desc footer-desc--single-line">Isoform-level alternative polyadenylation database.</p>
+            <div class="footer-affiliations" aria-label="Institutional affiliations">
+              <a
+                class="footer-affiliation-link footer-affiliation-link--cuhk"
+                href="https://www.cuhk.edu.hk/"
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label="The Chinese University of Hong Kong"
+              >
+                <img
+                  src="/images/cuhk-logo.png"
+                  alt="The Chinese University of Hong Kong"
+                  class="footer-affiliation-logo footer-affiliation-logo--cuhk"
+                />
+              </a>
+              <span class="footer-affiliation-divider" aria-hidden="true"></span>
+              <a
+                class="footer-affiliation-link footer-affiliation-link--sls"
+                href="https://www.sls.cuhk.edu.hk/"
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label="School of Life Sciences, The Chinese University of Hong Kong"
+              >
+                <img
+                  src="/images/sls-logo.png"
+                  alt="School of Life Sciences, The Chinese University of Hong Kong"
+                  class="footer-affiliation-logo footer-affiliation-logo--sls"
+                />
+              </a>
+            </div>
           </div>
           <div class="footer-col">
             <h4 class="footer-heading">Quick Links</h4>
@@ -103,7 +132,7 @@
           </div>
         </div>
         <div class="footer-divider"></div>
-        <p class="footer-copy">&copy; 2026 IsoAPA. All rights reserved.</p>
+        <p class="footer-copy">&copy; 2026 IsoAPA · Ting-Fung Chan Lab, School of Life Sciences, CUHK.</p>
       </v-container>
     </footer>
   </v-app>
@@ -260,6 +289,10 @@ a {
     grid-template-columns: 1fr;
     gap: 28px;
   }
+
+  .footer-desc--single-line {
+    white-space: normal;
+  }
 }
 
 .footer-brand-name {
@@ -267,6 +300,10 @@ a {
   font-weight: 700;
   letter-spacing: -0.2px;
   color: var(--aa-slate-800);
+}
+
+.footer-brand .footer-version {
+  margin-left: 10px;
 }
 
 .footer-heading {
@@ -285,9 +322,56 @@ a {
   margin: 0 0 8px;
 }
 
+.footer-desc--single-line {
+  white-space: nowrap;
+}
+
 .footer-version {
   font-size: 12.5px;
   color: var(--aa-slate-500);
+  line-height: 1;
+}
+
+.footer-affiliations {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  width: min(500px, 100%);
+  margin-top: 22px;
+}
+
+.footer-affiliation-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0.9;
+  transition: opacity 150ms ease, transform 150ms ease;
+}
+
+.footer-affiliation-link:hover {
+  opacity: 1;
+  transform: translateY(-1px);
+}
+
+.footer-affiliation-logo {
+  display: block;
+  width: auto;
+  object-fit: contain;
+}
+
+.footer-affiliation-logo--cuhk {
+  height: 66px;
+}
+
+.footer-affiliation-logo--sls {
+  height: 52px;
+}
+
+.footer-affiliation-divider {
+  width: 1px;
+  height: 52px;
+  background: rgba(100, 116, 139, 0.34);
+  flex: 0 0 auto;
 }
 
 .footer-links {

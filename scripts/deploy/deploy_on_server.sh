@@ -142,6 +142,16 @@ docker build -t "$BACKEND_IMAGE" ./backend
 log "Building frontend image: $FRONTEND_IMAGE"
 docker build -t "$FRONTEND_IMAGE" ./frontend
 
+log "Validating frontend nginx configuration"
+docker run --rm "$FRONTEND_IMAGE" nginx -t
+
+log "Validating Swarm stack configuration"
+if docker stack config --help 2>&1 | grep -q -- '--compose-file'; then
+  docker stack config --compose-file stack.yml >/dev/null
+else
+  log "Skipping docker stack config validation: this Docker version does not support it"
+fi
+
 log "Deploying stack: $STACK_NAME"
 docker stack deploy -c stack.yml "$STACK_NAME"
 

@@ -7,6 +7,7 @@ import os
 import json
 import csv
 import io
+import re
 from urllib.error import URLError
 from urllib.parse import urlencode
 from urllib.request import Request, urlopen
@@ -57,6 +58,12 @@ _KNOWN_SPECIES_TAXIDS = {
 
 def _format_sample_name(name: str) -> str:
     return " ".join(str(name or "").replace("_", " ").split())
+
+
+def _download_filename(name: str) -> str:
+    """Keep Content-Disposition filenames ASCII-safe and header-safe."""
+    safe = re.sub(r"[^A-Za-z0-9._-]+", "_", str(name or "").strip())
+    return safe.strip("._") or "download"
 
 
 def _sample_display_key(name: str) -> str:
@@ -1259,7 +1266,7 @@ def download_apa_sites(
     return StreamingResponse(
         iter([output.getvalue()]),
         media_type=media_type,
-        headers={"Content-Disposition": f"attachment; filename={filename}"},
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
     )
 
 
@@ -1329,7 +1336,7 @@ def download_genes(
     return StreamingResponse(
         iter([output.getvalue()]),
         media_type=media_type,
-        headers={"Content-Disposition": f"attachment; filename={filename}"},
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
     )
 
 
@@ -1404,7 +1411,7 @@ def download_transcripts(
     return StreamingResponse(
         iter([output.getvalue()]),
         media_type=media_type,
-        headers={"Content-Disposition": f"attachment; filename={filename}"},
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
     )
 
 
@@ -1447,13 +1454,13 @@ def download_bed(
         output.write(f"{chrom}\t{chrom_start}\t{chrom_end}\t{name}\t.\t{strand}\n")
 
     output.seek(0)
-    sp_suffix = f"_{species.lower().replace(' ', '_')}" if species else ""
-    filename = f"isoapa_pa_sites{sp_suffix}.bed"
+    sp_suffix = f"_{_download_filename(species.lower().replace(' ', '_'))}" if species else ""
+    filename = _download_filename(f"isoapa_pa_sites{sp_suffix}.bed")
 
     return StreamingResponse(
         iter([output.getvalue()]),
         media_type="text/plain",
-        headers={"Content-Disposition": f"attachment; filename={filename}"},
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
     )
 
 
@@ -1548,15 +1555,15 @@ def download_abundance_matrix(
         writer.writerow(row_vals)
 
     output.seek(0)
-    sp_suffix = f"_{species.lower().replace(' ', '_')}" if species else ""
+    sp_suffix = f"_{_download_filename(species.lower().replace(' ', '_'))}" if species else ""
     extension = "csv" if format == "csv" else "tsv"
-    filename = f"isoapa_abundance_matrix{sp_suffix}.{extension}"
+    filename = _download_filename(f"isoapa_abundance_matrix{sp_suffix}.{extension}")
     media_type = "text/csv" if format == "csv" else "text/tab-separated-values"
 
     return StreamingResponse(
         iter([output.getvalue()]),
         media_type=media_type,
-        headers={"Content-Disposition": f"attachment; filename={filename}"},
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
     )
 
 
